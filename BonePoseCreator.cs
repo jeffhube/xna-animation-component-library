@@ -45,15 +45,15 @@ namespace Animation
         // A buffer used for storing the latest pose of the model if preserveBones
         // is set to true
         private Matrix[] bones = null;
-        // Current animation time in milliseconds
-        private double curTime;
+        // Current animation time in ticks
+        private long curTime;
         // Stores the current key frame while creating the table.
         // KeyFrameIndices[i] = the current frame for the bone with index i
         private int[] keyFrameIndices;
         private Model model;
         private InterpolationMethod interpMethod;
         // duration of animation
-        private double totalMilliseconds;
+        private long totalTicks;
         // Contains the data for the animation
         private AnimationContent animation;
         // Maps bone names to their blend transform, which, when applied to a bone,
@@ -85,7 +85,7 @@ namespace Animation
             originalBones = new Matrix[model.Bones.Count];
             model.CopyBoneTransformsTo(originalBones);
             this.interpMethod = interpMethod;
-            this.totalMilliseconds = animation.Duration.TotalMilliseconds;
+            this.totalTicks = animation.Duration.Ticks;
             this.preserveBones = preserveBones;
             if (preserveBones)
             {
@@ -103,10 +103,10 @@ namespace Animation
         { get { return model; } }
 
         /// <summary>
-        /// The duration of the animation in milliseconds
+        /// The duration of the animation in ticks
         /// </summary>
-        public double TotalAnimationMilliseconds
-        { get { return totalMilliseconds; } }
+        public long TotalAnimationTicks
+        { get { return animation.Duration.Ticks; } }
 
         /// <summary>
         /// True if model bones shouldn't be changed
@@ -132,8 +132,8 @@ namespace Animation
             AnimationKeyframe curFrame = channel[curFrameIndex], nextFrame =
                 channel[curFrameIndex + 1];
 
-            double interpAmount = (nextFrame.Time - curFrame.Time).TotalMilliseconds;
-            interpAmount = (curTime - curFrame.Time.TotalMilliseconds) / interpAmount;
+            double interpAmount = (nextFrame.Time - curFrame.Time).Ticks;
+            interpAmount = (curTime - curFrame.Time.Ticks) / interpAmount;
 
             if (interpMethod == InterpolationMethod.SphericalLinear)
             {
@@ -200,7 +200,7 @@ namespace Animation
         /// Advances the animation frame but does not do any interpolation
         /// </summary>
         /// <param name="time">The amount of time to advance the animation</param>
-        public void AdvanceTime(double time)
+        public void AdvanceTime(long time)
         {
             curTime += time;
             time = curTime;
@@ -208,12 +208,12 @@ namespace Animation
             foreach (KeyValuePair<string, AnimationChannel> k in animation.Channels)
             {
                 AnimationChannel channel = k.Value;
-                if (time > channel[channel.Count - 1].Time.TotalMilliseconds)
+                if (time > channel[channel.Count - 1].Time.Ticks)
                     time = (time %
-                        channel[channel.Count - 1].Time.TotalMilliseconds);
+                        channel[channel.Count - 1].Time.Ticks);
                 int boneIndex = model.Bones[k.Key].Index;
                 int curFrameIndex = keyFrameIndices[boneIndex];
-                while (time > channel[keyFrameIndices[boneIndex] + 1].Time.TotalMilliseconds)
+                while (time > channel[keyFrameIndices[boneIndex] + 1].Time.Ticks)
                     keyFrameIndices[boneIndex]++;
             }
         }

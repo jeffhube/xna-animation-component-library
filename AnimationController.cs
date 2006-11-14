@@ -46,7 +46,7 @@ namespace Animation
         private int drawOrder = 0;
         // Total time elapsed since start of animation, resets when it
         // passes the total animation time
-        private double elapsedTime = 0;
+        private long elapsedTime = 0;
         // The number of calls to Update(); used for Poor quality animations
         // in which we update every other call
         private int numUpdates = 0;
@@ -96,11 +96,11 @@ namespace Animation
             // with a time step proportional to the quality
             if (options.PrecomputeInterpolations)
             {
-                double timeStep = game.TargetElapsedTime.TotalMilliseconds / 2.0;
+                long timeStep = game.TargetElapsedTime.Ticks / 2;
                 if (options.Quality == AnimationQuality.Poor)
-                    timeStep *= 2.0;
+                    timeStep *= 2;
                 else if (options.Quality == AnimationQuality.Best)
-                    timeStep /= 2.0;
+                    timeStep /= 2;
                 table = new BonePoseTable(creator, timeStep);
             }
             // else createa  buffer to store the on-the-fly interpolations
@@ -200,9 +200,9 @@ namespace Animation
             numUpdates++;
             if (!options.PrecomputeInterpolations && options.Quality != AnimationQuality.Best)
             {
-                elapsedTime = (elapsedTime + gameTime.ElapsedGameTime.TotalMilliseconds)
-                    % creator.TotalAnimationMilliseconds;
-                creator.AdvanceTime(gameTime.ElapsedGameTime.TotalMilliseconds);
+                elapsedTime = (elapsedTime + gameTime.ElapsedGameTime.Ticks)
+                    % creator.TotalAnimationTicks;
+                creator.AdvanceTime(gameTime.ElapsedGameTime.Ticks);
 
                 if (options.Quality == AnimationQuality.Good || numUpdates % 2 == 0)
                     creator.CreatePoseSet(bones);
@@ -222,14 +222,14 @@ namespace Animation
             {
                 // Time is advanced in draw for best precision if we have a high quality option set
                 if (options.PrecomputeInterpolations || options.Quality == AnimationQuality.Best)
-                    elapsedTime = (elapsedTime + gameTime.ElapsedRealTime.TotalMilliseconds)
-                        % creator.TotalAnimationMilliseconds;
+                    elapsedTime = (elapsedTime + gameTime.ElapsedRealTime.Ticks)
+                        % creator.TotalAnimationTicks;
                 // Create absolute bone pose for current frame
                 if (options.PrecomputeInterpolations)
                     bones = table.GetBonePoses(elapsedTime);
                 else if (options.Quality == AnimationQuality.Best)
                 {
-                    creator.AdvanceTime(gameTime.ElapsedRealTime.TotalMilliseconds);
+                    creator.AdvanceTime(gameTime.ElapsedRealTime.Ticks);
                     creator.CreatePoseSet(bones);
                 }
             }

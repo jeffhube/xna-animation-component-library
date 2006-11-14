@@ -41,9 +41,9 @@ namespace Animation
     {
         #region Member Variables
         // The time between pose sets
-        private double timeStep;
+        private long timeStep;
         // The total time of the animation
-        private double totalTime;
+        private long totalTime;
         private BonePoseCreator creator;
         // Stores all of the bone pose sets by frame index
         private Matrix[][] bonePoses;
@@ -62,12 +62,12 @@ namespace Animation
         /// <param name="animation">The animation data</param>
         /// <param name="timeStep">The amount of time in between each frame</param>
         public BonePoseTable(BonePoseCreator creator,
-            double timeStep)
+            long timeStep)
         {
             // Store the passed in data in the appropriate places
             this.timeStep = timeStep;
             this.creator = creator;
-            totalTime = creator.TotalAnimationMilliseconds;
+            totalTime = creator.TotalAnimationTicks;
             numFrames = (int)(totalTime / timeStep);
             bonePoses = new Matrix[numFrames][];
             //normalBonePoses = new Matrix[numFrames][];
@@ -83,7 +83,7 @@ namespace Animation
         public int NumFrames
         { get { return numFrames; } }
 
-        public double TotalMilliseconds
+        public long TotalTicks
         { get { return totalTime; } }
 
         /// <summary>
@@ -91,14 +91,12 @@ namespace Animation
         /// </summary>
         /// <param name="elapsedTime">The elapsed animation time</param>
         /// <returns>A bone pose set of the animation at the given time</returns>
-        public Matrix[] GetBonePoses(double elapsedTime)
+        public Matrix[] GetBonePoses(long elapsedTime)
         {
-            // The total elapsed time in milliseconds, looping if greater than the animations
+            // The total elapsed time in ticks, looping if greater than the animations
             // total time
-            double elapsedMilliseconds = elapsedTime % (totalTime
-                - timeStep);
             // The current frame index for the given time
-            int frameNum = (int)(elapsedMilliseconds / timeStep);
+            int frameNum = (int)((elapsedTime % (totalTime-timeStep))/ timeStep);
             return bonePoses[frameNum];
         }
         /* Will we ever need this?  I don't want to delete it in case a shader doesn't do
@@ -110,13 +108,6 @@ namespace Animation
         /// <returns>An inverse transpose bone pose set of the animation at the given time</returns>
         public Matrix[] GetNormalBonePoses(double elapsedTime)
         {
-            // The total elapsed time in milliseconds, looping if greater than the animations
-            // total time
-            double elapsedMilliseconds = elapsedTime % (totalTime
-                - timeStep);
-            // The current frame index for the given time
-            int frameNum = (int)(elapsedMilliseconds / timeStep);
-            return normalBonePoses[frameNum];
         }
          */
 
