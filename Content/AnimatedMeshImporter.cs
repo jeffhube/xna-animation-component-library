@@ -308,6 +308,8 @@ namespace Animation.Content
                         ImportSkinWeights();
                     else if (next == "MeshMaterialList")
                         ImportMaterialList();
+                    else if (next == "Frame")
+                        mesh.Children.Add(model.ImportNode());
                     else if (next == "{")
                         tokens.SkipNode();
                     else if (next == "}")
