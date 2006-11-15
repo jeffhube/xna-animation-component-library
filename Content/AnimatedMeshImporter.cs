@@ -40,15 +40,50 @@ namespace Animation.Content
         /// </summary>
         private class AnimatedMeshImporter
         {
+            /// <summary>
+            /// Represents a face of the model.  Used internally to buffer mesh data so that
+            /// the mesh can be properly split up into ModelMeshParts such that there is
+            /// 1 part per material
+            /// </summary>
+            private struct Face
+            {
+                // An array that represents the indices of the verts on the mesh that
+                // this face contains
+                public int[] VertexIndices;
+                // The index of materials that determines what material is attached to
+                // this face
+                public int MaterialIndex;
+
+                // Converts a face with 4 verts into 
+                public Face[] ConvertQuadToTriangles()
+                {
+                    Face[] triangles = new Face[2];
+                    triangles[0].VertexIndices = (int[])VertexIndices.Clone();
+                    triangles[1].VertexIndices = new int[3];
+                    triangles[1].VertexIndices[0] = VertexIndices[2];
+                    triangles[1].VertexIndices[1] = VertexIndices[3];
+                    triangles[1].VertexIndices[2] = VertexIndices[0];
+                    triangles[0].MaterialIndex = MaterialIndex;
+                    triangles[1].MaterialIndex = MaterialIndex;
+                    return triangles;
+                }
+            }
+
             #region Member Variables
-            // The number of vertices in this mesh
-            private int numVerts;
-            // The number of faces in this mesh
-            private int numFaces;
+            private Face[] faces;
+            private Vector2[] texCoords = null;
+            // We will calculate our own normals since that is how the X importer does it,
+            // and ours should emulate that to a reasonable extent.  This tracks whterh or not
+            // the mesh contians normal data (and whether or not we should add the channel)
+            private bool hasNormals;
+            // The materials of the mesh
+            private BasicMaterialContent[] materials = null;
+            // The blend weights
+            Vector4[] weights = null;
+            // The blend weight indices
+            Byte4[] weightIndices = null;
             private AnimatedModelImporter model;
             private XFileTokenizer tokens;
-            // This will eventually turn into the ModelMeshPart for this mesh
-            private GeometryContent geom;
             // This will eventually turn into the Mesh
             private MeshContent mesh;
             // Contains a list of BoneWeightCollections, one for each vertex.
@@ -118,10 +153,8 @@ namespace Animation.Content
                 int numInfluences = tokens.NextInt();
                 List<int> influences = new List<int>();
                 List<float> weights = new List<float>();
-
                 for (int i = 0; i < numInfluences; i++)
                     influences.Add(tokens.NextInt());
-
                 for (int i = 0; i < numInfluences; i++)
                     weights.Add(tokens.NextFloat());
 
@@ -140,14 +173,14 @@ namespace Animation.Content
             }
 
             /// <summary>
-            /// Reads in the vertex positions and vertex indices for the geometry object
+            /// Reads in the vertex positions and vertex indices for the mesh
             /// </summary>
-            private void InitializeGeometry()
+            private void InitializeMesh()
             {
                 // This will turn into the ModelMeshPart
-                geom = new GeometryContent();
-                mesh.Geometry.Add(geom);
-                numVerts = tokens.NextInt();
+                //geom = new GeometryContent();
+               // mesh.Geometry.Add(geom);
+                int numVerts = tokens.NextInt();
                 // read the verts and create one boneweight collection for each vert
                 // which will represent that vertex's skinning info (which bones influence it
                 // and the weights of each bone's influence on the vertex)
@@ -159,34 +192,18 @@ namespace Animation.Content
                     // hand
                     v.Z *= -1;
                     mesh.Positions.Add(v);
-                    geom.Vertices.Add(i);
-
                 }
 
-                // Add the indices (turns into the index buffer) that describe the order in which
+                // Add the indices that describe the order in which
                 // the vertices are rendered
                 int numFaces = tokens.NextInt();
+                faces = new Face[numFaces];
                 for (int i = 0; i < numFaces; i++)
                 {
                     int numVertsPerFace = tokens.NextInt();
-
-                    // If the current primitive is a triangle, just add the face indices to the 
-                    // index buffer
-                    if (numVertsPerFace == 3)
-                        for (int j = 0; j < 3; j++)
-                            geom.Indices.Add(tokens.NextInt());
-                    // If it is a quad, split it into two triangles
-                    else if (numVertsPerFace == 4)
-                    {
-                        int startIndex = geom.Indices.Count + 2;
-                        for (int j = 0; j < 3; j++)
-                            geom.Indices.Add(tokens.NextInt());
-                        geom.Indices.Add(geom.Indices[startIndex]);
-                        geom.Indices.Add(tokens.NextInt());
-                        geom.Indices.Add(geom.Indices[startIndex - 2]);
-                    }
-                    else throw new Exception("Invalid primitive type: only quads and triangles supported.");
-
+                    faces[i].VertexIndices = new int[numVertsPerFace];
+                    for (int j = 0; j < numVertsPerFace; j ++)
+                        faces[i].VertexIndices[j] = tokens.NextInt();
                     tokens.SkipToken();
                 }
 
@@ -204,13 +221,11 @@ namespace Animation.Content
             {
                 tokens.SkipName();
                 int numCoords = tokens.NextInt();
-                List<Vector2> texCoords = new List<Vector2>();
+                texCoords = new Vector2[numCoords];
                 for (int i = 0; i < numCoords; i++)
-                    texCoords.Add(tokens.NextVector2());
-
+                    texCoords[i] = tokens.NextVector2();
                 // end of vertex coordinates
                 tokens.SkipToken();
-                geom.Vertices.Channels.Add("TextureCoordinate0", texCoords);
             }
 
             // template MeshNormals
@@ -226,48 +241,21 @@ namespace Animation.Content
             private void ImportNormals()
             {
                 tokens.ReadName();
+                hasNormals = true;
 
-                // Read all the normals
+                // Skip all the normals becuse we will calculate our own :)
                 int numNormals = tokens.NextInt();
-                Vector3[] normals = new Vector3[numNormals];
                 for (int i = 0; i < numNormals; i++)
-                {
-                    normals[i] = tokens.NextVector3();
-                    // Reflect each normal across z axis to convert it from left hand to right
-                    // hand.  We can do this because the inverse transpose of the reflection
-                    // matrix across a principal axis is the same as the reflection matrix.
-                    normals[i].Z *= -1;
-                }
+                    tokens.NextVector3();
 
-                // enumerating Lists is faster than enumerating arrays for IEnumerable, which is what
-                // is used for adding the normals to the geometry channels
-                List<Vector3> vertexNormals = new List<Vector3>(new Vector3[numVerts]);
-                int index = 0;
-                numFaces = tokens.NextInt();
+                int numFaces = tokens.NextInt();
                 for (int i = 0; i < numFaces; i++)
                 {
                     int numNormalsPerFace = tokens.NextInt();
-                    // Add triangle normals
-                    for (int j = 0; j < 3; j++)
-                        vertexNormals[geom.Indices[index++]] = normals[tokens.NextInt()];
-                    // skip last normal if its a quad since we already split the quad into
-                    // two triangeles
-                    if (numNormalsPerFace == 4)
-                    {
-                        tokens.NextInt();
-                        index += 3;
-                    }
-                    else if (numNormalsPerFace != 3)
-                        throw new Exception("Invalid primitive type: only quads and triangles supported.");
-
-                    tokens.SkipToken();
+                    tokens.SkipTokens(2*numNormalsPerFace+1);
                 }
                 // end of mesh normals
                 tokens.SkipToken();
-                // Add a channel to the geometry.  This channel will eventually turn into
-                // the normals for each vertex.
-                geom.Vertices.Channels.Add(VertexElementUsage.Normal.ToString(),
-                    vertexNormals);
             }
 
 
@@ -295,7 +283,7 @@ namespace Animation.Content
                     meshID++;
                 }
                 // Read in vertex positions and vertex indices
-                InitializeGeometry();
+                InitializeMesh();
 
                 // Fill in the geometry channels and materials for this mesh
                 for (string next = tokens.NextToken(); next != "}"; next = tokens.NextToken())
@@ -333,18 +321,20 @@ namespace Animation.Content
             private void ImportMaterialList()
             {
                 int numMaterials = tokens.SkipName().NextInt();
-                int numFaceIndices = tokens.NextInt();
+                materials = new BasicMaterialContent[numMaterials];
+                int numFaces = tokens.NextInt();
 
                 // skip all the indices and their commas/semicolons since
                 // we are just going to apply this material to the entire mesh
-                tokens.SkipTokens(numFaceIndices * 2);
+                for (int i = 0; i < numFaces; i++)
+                    faces[i].MaterialIndex = tokens.NextInt();
                 // account for blenders mistake of putting an extra semicolon here
                 if (tokens.Peek == ";")
                     tokens.SkipToken();
                 for (int i = 0; i < numMaterials; i++)
                 {
                     tokens.SkipToken();
-                    ImportMaterial();
+                    materials[i] = ImportMaterial();
                 }
                 // end of material list
                 tokens.SkipToken();
@@ -362,7 +352,7 @@ namespace Animation.Content
             /// Imports a material, which defines the textures that a mesh uses and the way in which
             /// light reflects off the mesh
             /// </summary>
-            private void ImportMaterial()
+            private BasicMaterialContent ImportMaterial()
             {
                 BasicMaterialContent m = new BasicMaterialContent();
                 // make sure name isn't null
@@ -382,7 +372,6 @@ namespace Animation.Content
                 // light reflects off the mesh
                 m.SpecularColor = tokens.NextVector3();
                 m.EmissiveColor = tokens.NextVector3();
-
                 // Import any textures associated with this material
                 for (string token = tokens.NextToken();
                     token != "}"; )
@@ -402,12 +391,47 @@ namespace Animation.Content
                         tokens.SkipNode();
                     token = tokens.NextToken();
                 }
-                geom.Material = m;
+                return m;
 
             }
             #endregion
 
             #region Other Methods
+
+            /// <summary>
+            /// Adds all the buffered channels to the mesh and merges duplicate positions/verts
+            /// </summary>
+            private void AddAllChannels()
+            {
+                if (hasNormals)
+                    MeshHelper.CalculateNormals(mesh, true);
+                if (texCoords != null)
+                    AddChannel<Vector2>("TextureCoordinate0", texCoords);
+                if (weightIndices != null)
+                    AddChannel<Byte4>(VertexElementUsage.BlendIndices.ToString(), weightIndices);
+                if (weights != null)
+                    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString(), weights);
+                MeshHelper.MergeDuplicatePositions(mesh, 0);
+                MeshHelper.MergeDuplicateVertices(mesh);
+                
+            }
+
+            /// <summary>
+            /// Adds a channel to the mesh
+            /// </summary>
+            /// <typeparam name="T">The structure that stores the channel data</typeparam>
+            /// <param name="channelName">The type of channel</param>
+            /// <param name="channelItems">The buffered items to add to the channel</param>
+            private void AddChannel<T>(string channelName, T[] channelItems)
+            {
+                foreach (GeometryContent geom in mesh.Geometry)
+                {
+                    T[] channelData = new T[geom.Vertices.VertexCount];
+                    for (int i = 0; i < channelData.Length; i ++)
+                        channelData[i] = channelItems[geom.Vertices.PositionIndices[i]];
+                    geom.Vertices.Channels.Add<T>(channelName, channelData);
+                }
+            }
             /// <summary>
             /// Converts the bone weight collections into working vertex channels by using the
             /// provided bone index dictionary.  Converts bone names into indices.
@@ -418,8 +442,8 @@ namespace Animation.Content
                 if (!isSkinned)
                     return;
                 // These two lists hold the data for the two new channels (the weights and indices)
-                List<Vector4> orderedWeights = new List<Vector4>(new Vector4[skinInfo.Count]);
-                List<Byte4> indices = new List<Byte4>(new Byte4[skinInfo.Count]);
+                weights = new Vector4[mesh.Positions.Count];
+                weightIndices = new Byte4[mesh.Positions.Count];
 
                 // The index of the position that this vertex refers to
                 int index = 0;
@@ -448,20 +472,58 @@ namespace Animation.Content
                     if (c.Count > 3 && c[3].BoneName != null) i.W = boneIndices[c[3].BoneName];
                     Byte4 ib = new Byte4(i);
 
-                    // Add the information to the correct vertex
-                    orderedWeights[geom.Vertices.PositionIndices[index]] = w;
-                    indices[geom.Vertices.PositionIndices[index]] = ib;
+                    // We have a list of boneweight/bone index objects that are ordered such that
+                    // BoneWeightCollection[i] is the weight and index for vertex i.
+                    weights[index] = w;
+                    weightIndices[index] = new Byte4(i);
                     index++;
                 }
 
-                // Create the channels
-                geom.Vertices.Channels.Add<Byte4>(VertexElementUsage.BlendIndices.ToString(),
-                    indices);
-                geom.Vertices.Channels.Add<Vector4>(VertexElementUsage.BlendWeight.ToString(),
-                    orderedWeights);
-
             }
             #endregion
+
+            /// <summary>
+            /// Creates the ModelMeshParts-to-be (geometry) by splitting up the mesh
+            /// via materials
+            /// </summary>
+            public void CreateGeometry()
+            {
+                // Number of geometries to create
+                int numPartions = materials == null ? 1 : materials.Length;
+                // An array of the faces that each geometry will contain
+                List<Face>[] partitionedFaces = new List<Face>[numPartions];
+
+                // Partion the faces
+                for (int i = 0; i < partitionedFaces.Length; i++)
+                    partitionedFaces[i] = new List<Face>();
+                for (int i = 0; i < faces.Length; i++)
+                {
+                    if (faces[i].VertexIndices.Length == 4)
+                        partitionedFaces[faces[i].MaterialIndex].AddRange(
+                            faces[i].ConvertQuadToTriangles());
+                    else
+                        partitionedFaces[faces[i].MaterialIndex].Add(faces[i]);
+                }
+
+                // Add the partioned faces to their respective geometries
+                int index = 0;
+                foreach (List<Face> faceList in partitionedFaces)
+                {
+                    GeometryContent geom = new GeometryContent();
+                    mesh.Geometry.Add(geom);
+                    for (int i = 0; i < faceList.Count * 3; i++)
+                        geom.Indices.Add(i);
+                    foreach (Face face in faceList)
+                        geom.Vertices.AddRange(face.VertexIndices);              
+                    if (materials != null)
+                        geom.Material = materials[index++];
+                }
+
+                // Add the channels to the geometries
+                AddAllChannels();
+                
+
+            }
         }
 
 

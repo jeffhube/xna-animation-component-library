@@ -46,9 +46,6 @@ namespace Animation.Content
         {
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
-            // Attach an array of bytes that describes a vertex buffer to each meshes' tag
-            foreach (ModelMeshContent mesh in c.Meshes)
-                mesh.Tag = mesh.VertexBuffer.VertexData;
             
             // Attach the animation and skinning data to the models tag
             ModelInfo info = new ModelInfo();

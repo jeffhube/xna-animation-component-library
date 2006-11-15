@@ -31,9 +31,10 @@ namespace Animation.Content
     /// <summary>
     /// Imports a directx model that contains skinning info.
     /// </summary>
-    [ContentImporter(".X", CacheImportedData = true, DefaultProcessor = "AnimatedModelProcessor")]
+    [ContentImporter(".X", CacheImportedData = false, DefaultProcessor = "AnimatedModelProcessor")]
     public partial class AnimatedModelImporter : ContentImporter<NodeContent>
     {
+
         #region Member Variables
         // The file that we are importing
         private string fileName;
@@ -63,7 +64,6 @@ namespace Animation.Content
         #region Non Animation Importation Methods
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
-
             this.fileName = filename;
             this.context = context;
             // Create an instance of a class that splits a .X file into tokens and provides
@@ -81,7 +81,11 @@ namespace Animation.Content
             // Now that we have mapped bone names to their indices, we can create the vertices
             // in each mesh so that they contain indices and weights
             foreach (AnimatedMeshImporter mesh in meshes)
+            {
                 mesh.AddWeights(boneIndices);
+                mesh.CreateGeometry();
+            }
+
 
             // Allow processor to access any skinning data we might have
             root.OpaqueData.Add("BlendTransforms", blendTransforms);
