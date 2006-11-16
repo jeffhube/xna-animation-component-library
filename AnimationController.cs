@@ -35,17 +35,22 @@ namespace Animation
     /// <summary>
     /// Animates and draws a model that was processed with AnimatedModelProcessor
     /// </summary>
-    public class AnimationController : IDrawable, IUpdateable,
+    public partial class AnimationController : IDrawable, IUpdateable,
         IGameComponent
     {
         #region Member Variables
         // Model to be animated
         private Model model;
+        // Maps bone names to their blend transform, which, when applied to a bone,
+        // creates a matrix that transforms vertices in the bones local space
+        // empty if there is no skinning information
+        private Dictionary<string, Matrix> blendTransforms;
         // If we are precomputing interpolations, this will store all of the
         // bone poses for every frame of the animation
         private BonePoseTable table = null;
         private int updateOrder = 0;
         private int drawOrder = 0;
+        private Game game;
         // Total time elapsed since start of animation, resets when it
         // passes the total animation time
         private long elapsedTime = 0;
@@ -54,17 +59,19 @@ namespace Animation
         private int numUpdates = 0;
         private bool enabled = true;
         private bool visible = true;
+        private bool usingTable = false;
+        private bool preserveBones = false;
         // Contains all animation data for the currently running animation
         private AnimationContent anim;
-        // Contains all the options that determine how the animation runs
-        private AnimationOptions options;
         // This stores all of the "World" matrix parameters for an unskinned model
         private List<EffectParameter> worldParams = new List<EffectParameter>();
         // Used as a buffer for storing the poses of the current frame
         private Matrix[] bones = null;
         // Creates bone poses for the current animation
         private BonePoseCreator creator = null;
-
+        private double speedFactor = 1.0;
+        AnimationQuality quality = AnimationQuality.Good;
+        InterpolationMethod interpMethod = InterpolationMethod.Linear;
         // Required interface events
         public event EventHandler EnabledChanged;
         public event EventHandler UpdateOrderChanged;
@@ -83,32 +90,16 @@ namespace Animation
         /// animation to appear in the file</param>
         /// <param name="options">A set of options that describes how the animation runs</param>
         public AnimationController(Game game, Model model,
-            string animationName,
-            AnimationOptions options)
+            string animationName)
         {
-            this.options = options;
             this.model = model;
             ModelInfo info = (ModelInfo)model.Tag;
+            blendTransforms = info.BlendTransforms;
             anim = info.Animations[animationName];
             // Create the object that manufactures bone poses
-            creator = new BonePoseCreator(model, anim,
-                info.BlendTransforms,options.InterpolationMethod,
-                options.PreserveBones);
-            // If we are precomputing interpolations, create a bone pose table
-            // with a time step proportional to the quality
-            if (options.PrecomputeInterpolations)
-            {
-                long timeStep = game.TargetElapsedTime.Ticks / 2;
-                if (options.Quality == AnimationQuality.Poor)
-                    timeStep *= 2;
-                else if (options.Quality == AnimationQuality.Best)
-                    timeStep /= 2;
-                table = new BonePoseTable(creator, timeStep);
-            }
-            // else createa  buffer to store the on-the-fly interpolations
-            else
-                bones = new Matrix[model.Bones.Count];
-
+            creator = new BonePoseCreator(this);
+            bones = new Matrix[model.Bones.Count];
+            this.game = game;
             game.Components.Add(this);
             
             // Find all the "World" parameters in each effect.  We only need to
@@ -119,6 +110,122 @@ namespace Animation
         }
         #endregion
 
+        #region General Properties
+        /// <summary>
+        /// This returns the time step (precision) used for the bone pose table
+        /// if precomputer interpolations are active, divided by the SpeedFactor
+        /// </summary>
+        public long RawTimeStep
+        {
+            get
+            {
+                long timeStep = game.TargetElapsedTime.Ticks;
+                if (quality == AnimationQuality.Best)
+                    timeStep /= 2;
+                else if (quality == AnimationQuality.Poor)
+                    timeStep *= 2;
+                return timeStep;
+            }
+        }
+
+        /// <summary>
+        /// This is multiplied by game time to update the elapsed time.
+        /// </summary>
+        public double SpeedFactor
+        {
+            get
+            {
+                return speedFactor;
+            }
+            set
+            {
+                speedFactor = value;
+            }
+        }
+
+        /// <summary>
+        /// True if the model's bones should be preserved.
+        /// </summary>
+        public bool PreserveBones
+        {
+            get
+            {
+                return preserveBones;
+            }
+            set
+            {
+                preserveBones = value;
+            }
+        }
+
+        /// <summary>
+        /// The total length of the animation in ticks.
+        /// </summary>
+        public long AnimationDuration
+        {
+            get
+            {
+                return anim.Duration.Ticks;
+            }
+        }
+
+        /// <summary>
+        /// The quality of the animation.
+        /// </summary>
+        public AnimationQuality Quality
+        {
+            get
+            {
+                return quality;
+            }
+            set
+            {
+                quality = value;
+            }
+        }
+
+        /// <summary>
+        /// The interpolation method used by the animation
+        /// </summary>
+        public InterpolationMethod InterpolationMethod
+        {
+            get
+            {
+                return interpMethod;
+            }
+            set
+            {
+                interpMethod = value;
+            }
+        }
+
+        /// <summary>
+        /// If true, then the controller will use precomputed interpolations.
+        /// You must recompute interpolations after the first time this is set to true
+        /// if you want to change the interpolations.
+        /// </summary>
+        public bool UsePrecomputedInterpolations
+        {
+            get
+            {
+                return usingTable;
+            }
+            set
+            {
+                if (value && table == null)
+                    RecomputeInterpolations();
+                usingTable = value;
+            }
+        }
+
+        /// <summary>
+        /// Returns the model associated with this controller.
+        /// </summary>
+        public Model Model
+        { get { return model; } }
+
+        #endregion
+     
         #region Animation and Update Routines
         /// <summary>
         /// Resets the animation
@@ -127,6 +234,16 @@ namespace Animation
         {
             elapsedTime = 0;
             creator.Reset();
+        }
+
+        /// <summary>
+        /// Recomputes the interpolations, but does not make the controller use the 
+        /// interpolations.
+        /// </summary>
+        public void RecomputeInterpolations()
+        {
+            table = new BonePoseTable(this,
+                (long)(RawTimeStep * speedFactor));
         }
 
         /// <summary>
@@ -200,13 +317,15 @@ namespace Animation
         public void Update(GameTime gameTime)
         {
             numUpdates++;
-            if (!options.PrecomputeInterpolations && options.Quality != AnimationQuality.Best)
+            if (!usingTable && quality != AnimationQuality.Best)
             {
-                elapsedTime = (elapsedTime + gameTime.ElapsedGameTime.Ticks)
-                    % creator.TotalAnimationTicks;
-                creator.AdvanceTime(gameTime.ElapsedGameTime.Ticks);
+                elapsedTime = (elapsedTime + (long)(speedFactor * gameTime.ElapsedGameTime.Ticks))
+                    % AnimationDuration;
+                if (elapsedTime < 0)
+                    elapsedTime = AnimationDuration;
+                creator.AdvanceTime((long)(speedFactor * gameTime.ElapsedGameTime.Ticks));
 
-                if (options.Quality == AnimationQuality.Good || numUpdates % 2 == 0)
+                if (quality == AnimationQuality.Good || numUpdates % 2 == 0)
                     creator.CreatePoseSet(bones);
             }
 
@@ -223,15 +342,19 @@ namespace Animation
             if (enabled)
             {
                 // Time is advanced in draw for best precision if we have a high quality option set
-                if (options.PrecomputeInterpolations || options.Quality == AnimationQuality.Best)
-                    elapsedTime = (elapsedTime + gameTime.ElapsedRealTime.Ticks)
-                        % creator.TotalAnimationTicks;
-                // Create absolute bone pose for current frame
-                if (options.PrecomputeInterpolations)
-                    bones = table.GetBonePoses(elapsedTime);
-                else if (options.Quality == AnimationQuality.Best)
+                if (usingTable || quality == AnimationQuality.Best)
                 {
-                    creator.AdvanceTime(gameTime.ElapsedRealTime.Ticks);
+                    elapsedTime = (elapsedTime + (long)(speedFactor * gameTime.ElapsedRealTime.Ticks))
+                        % AnimationDuration;
+                    if (elapsedTime < 0)
+                        elapsedTime = AnimationDuration;
+                }
+                // Create absolute bone pose for current frame
+                if (usingTable)
+                    bones = table.GetBonePoses(elapsedTime);
+                else if (quality  == AnimationQuality.Best)
+                {
+                    creator.AdvanceTime((long)(speedFactor * gameTime.ElapsedRealTime.Ticks));
                     creator.CreatePoseSet(bones);
                 }
             }

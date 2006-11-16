@@ -67,78 +67,8 @@ namespace Animation
         Poor
     }
 
-    /// <summary>
-    /// Contains options that determine how an animation is updated and rendered
-    /// </summary>
-    public struct AnimationOptions
-    {
-        #region Member Variables
-        private InterpolationMethod interpMethod;
-        // True if bone pose table is used
-        private bool precomputeInterp;
-        private AnimationQuality quality;
-        // True if the models bones should never be changed.  Since they are used to
-        // calculate combined transforms, this causes some overhead
-        private bool preserveBones;
-        #endregion
+  
+    
 
-        #region Constructors
-        /// <summary>
-        /// Create a new instance of AnimationOptions.
-        /// </summary>
-        /// <param name="interpMethod">The method of interpolation</param>
-        /// <param name="precomputeInterpolation">True if interpolations should be precomputed</param>
-        /// <param name="quality">Quality of the animation</param>
-        /// <param name="preserveBones">True if the model bones should not be changed by the
-        /// animation controller</param>
-        public AnimationOptions(InterpolationMethod interpMethod,
-            bool precomputeInterpolation,
-            AnimationQuality quality,
-            bool preserveBones)
-        {
-            this.interpMethod = interpMethod;
-            this.precomputeInterp = precomputeInterpolation;
-            this.quality = quality;
-            this.preserveBones = preserveBones;
-        }
-        #endregion
 
-        #region Properties
-        /// <summary>
-        /// The quality of the animation
-        /// </summary>
-        public AnimationQuality Quality
-        {
-            get { return quality; }
-            set { quality = value; }
-        }
-
-        /// <summary>
-        /// The method of interpolation between animation keys
-        /// </summary>
-        public InterpolationMethod InterpolationMethod
-        {
-            get { return interpMethod; }
-            set { interpMethod = value; }
-        }
-
-        /// <summary>
-        /// True if interpolations are precomputed
-        /// </summary>
-        public bool PrecomputeInterpolations
-        {
-            get { return precomputeInterp; }
-            set { precomputeInterp = value; }
-        }
-
-        /// <summary>
-        /// True if the model's bones should never be changed
-        /// </summary>
-        public bool PreserveBones
-        {
-            get { return preserveBones; }
-            set { preserveBones = value; }
-        }
-        #endregion
-    }
 }

@@ -60,11 +60,14 @@ namespace Animation.Content
                 public Face[] ConvertQuadToTriangles()
                 {
                     Face[] triangles = new Face[2];
-                    triangles[0].VertexIndices = (int[])VertexIndices.Clone();
+                    triangles[0].VertexIndices = new int[3];
                     triangles[1].VertexIndices = new int[3];
-                    triangles[1].VertexIndices[0] = VertexIndices[2];
-                    triangles[1].VertexIndices[1] = VertexIndices[3];
-                    triangles[1].VertexIndices[2] = VertexIndices[0];
+                    for (int i = 0; i < 3; i++)
+                    {
+                        triangles[0].VertexIndices[i] = VertexIndices[i];
+                        triangles[1].VertexIndices[i] = VertexIndices[(i + 2) % 4];
+                    }
+
                     triangles[0].MaterialIndex = MaterialIndex;
                     triangles[1].MaterialIndex = MaterialIndex;
                     return triangles;
@@ -74,12 +77,11 @@ namespace Animation.Content
             #region Member Variables
             private Face[] faces;
             private Vector2[] texCoords = null;
-            // We will calculate our own normals since that is how the X importer does it,
-            // and ours should emulate that to a reasonable extent.  This tracks whterh or not
-            // the mesh contians normal data (and whether or not we should add the channel)
+            private Vector3[] normals = null;
+            // We will calculate our own normals if there is not a 1:1 normal to face ratio
             private bool hasNormals;
             // The materials of the mesh
-            private BasicMaterialContent[] materials = null;
+            private BasicMaterialContent[] materials = new BasicMaterialContent[0];
             // The blend weights
             Vector4[] weights = null;
             // The blend weight indices
@@ -245,10 +247,18 @@ namespace Animation.Content
                 tokens.ReadName();
                 hasNormals = true;
 
-                // Skip all the normals becuse we will calculate our own :)
                 int numNormals = tokens.NextInt();
+                if (numNormals == mesh.Positions.Count)
+                    normals = new Vector3[numNormals];
                 for (int i = 0; i < numNormals; i++)
-                    tokens.NextVector3();
+                {
+                    Vector3 norm = tokens.NextVector3();
+                    if (numNormals == mesh.Positions.Count)
+                    {
+                        normals[i] = norm;
+                        normals[i].Z *= -1;
+                    }
+                }
 
                 int numFaces = tokens.NextInt();
                 for (int i = 0; i < numFaces; i++)
@@ -405,7 +415,9 @@ namespace Animation.Content
             /// </summary>
             private void AddAllChannels()
             {
-                if (hasNormals)
+                if (normals != null)
+                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString(), normals);
+                else if (hasNormals)
                     MeshHelper.CalculateNormals(mesh, true);
                 if (texCoords != null)
                     AddChannel<Vector2>("TextureCoordinate0", texCoords);
@@ -415,6 +427,7 @@ namespace Animation.Content
                     AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString(), weights);
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
                 MeshHelper.MergeDuplicateVertices(mesh);
+
                 
             }
 
@@ -491,7 +504,8 @@ namespace Animation.Content
             public void CreateGeometry()
             {
                 // Number of geometries to create
-                int numPartions = materials == null ? 1 : materials.Length;
+                int numPartions = materials.Length == 0
+                    ? 1 : materials.Length;
                 // An array of the faces that each geometry will contain
                 List<Face>[] partitionedFaces = new List<Face>[numPartions];
 
@@ -517,7 +531,7 @@ namespace Animation.Content
                         geom.Indices.Add(i);
                     foreach (Face face in faceList)
                         geom.Vertices.AddRange(face.VertexIndices);              
-                    if (materials != null)
+                    if (materials.Length > 0)
                         geom.Material = materials[index++];
                 }
 

@@ -66,6 +66,7 @@ namespace Animation.Content
         #region Non Animation Importation Methods
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
+           // System.Diagnostics.Debugger.Launch();
             this.fileName = filename;
             this.context = context;
             // Create an instance of a class that splits a .X file into tokens and provides
