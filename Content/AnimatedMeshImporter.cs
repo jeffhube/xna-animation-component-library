@@ -81,7 +81,7 @@ namespace Animation.Content
             // We will calculate our own normals if there is not a 1:1 normal to face ratio
             private bool hasNormals;
             // The materials of the mesh
-            private BasicMaterialContent[] materials = new BasicMaterialContent[0];
+            private MaterialContent[] materials = new MaterialContent[0];
             // The blend weights
             Vector4[] weights = null;
             // The blend weight indices
@@ -333,7 +333,7 @@ namespace Animation.Content
             private void ImportMaterialList()
             {
                 int numMaterials = tokens.SkipName().NextInt();
-                materials = new BasicMaterialContent[numMaterials];
+                materials = new MaterialContent[numMaterials];
                 int numFaces = tokens.NextInt();
 
                 // skip all the indices and their commas/semicolons since
@@ -352,6 +352,56 @@ namespace Animation.Content
                 tokens.SkipToken();
             }
 
+            /// <summary>
+            /// Loads a custom material.  That is, loads a material with a custom effect.
+            /// </summary>
+            /// <returns>The custom material</returns>
+            private MaterialContent ImportCustomMaterial()
+            {
+                EffectMaterialContent content = new EffectMaterialContent();
+                tokens.SkipName();
+                string effectName = model.GetAbsolutePath(tokens.NextString());
+    
+                content.Effect = new ExternalReference<EffectContent>(effectName);
+                
+                // Find value initializers for the effect parameters and set the values
+                // as indicated
+                for (string token = tokens.NextToken(); token != "}"; token = tokens.NextToken())
+                {
+                    if (token == "EffectParamFloats")
+                    {
+                        tokens.SkipName();
+                        string floatsParamName = tokens.NextString();
+                        int numFloats = tokens.NextInt();
+                        float[] floats = new float[numFloats];
+                        for (int i = 0; i < numFloats; i++)
+                            floats[i] = tokens.NextFloat();
+                        tokens.SkipToken();       
+                        content.OpaqueData.Add(floatsParamName, floats);
+                    }
+                    else if (token == "EffectParamDWord")
+                    {
+                        tokens.SkipName();
+                        string dwordParamName = tokens.NextString();
+                        float dword = tokens.NextFloat();
+                        tokens.SkipToken();
+                        content.OpaqueData.Add(dwordParamName, dword);
+                    }
+                    else if (token == "EffectParamString")
+                    {
+                        tokens.SkipName();
+                        string stringParamName = tokens.NextString();
+                        string paramValue = tokens.NextString();
+                        tokens.SkipToken();
+                        content.OpaqueData.Add(stringParamName, paramValue);
+                    }
+                    if (token == "{")
+                        tokens.SkipNode();
+                }
+                return content;
+
+            }
+
             // template Material
             // {
             //      ColorRGBA faceColor;
@@ -364,26 +414,29 @@ namespace Animation.Content
             /// Imports a material, which defines the textures that a mesh uses and the way in which
             /// light reflects off the mesh
             /// </summary>
-            private BasicMaterialContent ImportMaterial()
+            private MaterialContent ImportMaterial()
             {
-                BasicMaterialContent m = new BasicMaterialContent();
+                ExternalReference<TextureContent> texRef = null;
+                BasicMaterialContent basicMaterial = new BasicMaterialContent();
+                MaterialContent returnMaterial = basicMaterial;
                 // make sure name isn't null
-                m.Name = "";
-                m.Name = tokens.ReadName();
+                string materialName = tokens.ReadName();
+                if (materialName == null)
+                    materialName = "";
                 // Diffuse color describes how diffuse (directional) light
                 // reflects off the mesh
-                m.DiffuseColor = new Vector3(tokens.NextFloat(),
+                basicMaterial.DiffuseColor = new Vector3(tokens.NextFloat(),
                     tokens.NextFloat(), tokens.NextFloat());
                 // We dont care about the alpha component of diffuse light.
                 // I don't even understand what this is useful for.
                 tokens.NextFloat();
                 // Specular power is inversely exponentially proportional to the
                 // strength of specular light
-                m.SpecularPower = tokens.SkipToken().NextFloat();
+                basicMaterial.SpecularPower = tokens.SkipToken().NextFloat();
                 // Specular color describes how specular (directional and shiny)
                 // light reflects off the mesh
-                m.SpecularColor = tokens.NextVector3();
-                m.EmissiveColor = tokens.NextVector3();
+                basicMaterial.SpecularColor = tokens.NextVector3();
+                basicMaterial.EmissiveColor = tokens.NextVector3();
                 // Import any textures associated with this material
                 for (string token = tokens.NextToken();
                     token != "}"; )
@@ -392,18 +445,21 @@ namespace Animation.Content
                     {
                         // Get the absolute path of the texture
                         string fileName = tokens.SkipName().NextString();
-                        string absoluteModelPath = Path.GetDirectoryName(Path.GetFullPath(model.fileName));
-                        string absoluteTexturePath = Path.Combine(absoluteModelPath, fileName);
-                        ExternalReference<TextureContent> reference =
-                            new ExternalReference<TextureContent>(absoluteTexturePath);
-                        m.Texture = reference;
+                        texRef =
+                            new ExternalReference<TextureContent>(model.GetAbsolutePath(fileName));
                         tokens.SkipToken();
                     }
+                    else if (token == "EffectInstance")
+                        returnMaterial = ImportCustomMaterial();
                     else if (token == "{")
                         tokens.SkipNode();
                     token = tokens.NextToken();
                 }
-                return m;
+
+                if (returnMaterial is BasicMaterialContent)
+                    basicMaterial.Texture = texRef;
+                returnMaterial.Name = materialName;
+                return returnMaterial;
 
             }
             #endregion
@@ -415,6 +471,7 @@ namespace Animation.Content
             /// </summary>
             private void AddAllChannels()
             {
+
                 if (normals != null)
                     AddChannel<Vector3>(VertexElementUsage.Normal.ToString(), normals);
                 else if (hasNormals)

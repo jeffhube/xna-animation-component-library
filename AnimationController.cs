@@ -93,6 +93,7 @@ namespace Animation
             string animationName)
         {
             this.model = model;
+
             ModelInfo info = (ModelInfo)model.Tag;
             blendTransforms = info.BlendTransforms;
             anim = info.Animations[animationName];

@@ -125,9 +125,10 @@ namespace Animation.Content
         }
 
 
-        // The .X file format is  broad, and allows for custom data nodes to be created.  
-        // We are only interested in the primary ones, so this function skips unneeded data
-        // nodes
+        /// <summary>
+        /// Skips a node in a .X file and all child nodes; should be called after the opening
+        /// brace, "{", has been read.
+        /// </summary>
         public void SkipNode()
         {
             string next = NextToken();
@@ -137,8 +138,11 @@ namespace Animation.Content
 
         }
 
-        // This and functions like it parse the current token/tokens into the
-        // appropriate data type
+
+        /// <summary>
+        /// Parses an integer from a .X file
+        /// </summary>
+        /// <returns>The integer represented by the next token</returns>
         public int NextInt()
         {
             int x = 0;
@@ -155,6 +159,10 @@ namespace Animation.Content
             return x;
         }
 
+        /// <summary>
+        /// Parses a float from a .X file
+        /// </summary>
+        /// <returns>The float represented by the next token</returns>
         public float NextFloat()
         {
             float x = 0;
@@ -173,7 +181,10 @@ namespace Animation.Content
             return x;
         }
 
-
+        /// <summary>
+        /// Parses a string from a .X file
+        /// </summary>
+        /// <returns>The string represented by the next token</returns>
         public string NextString()
         {
             string s = NextToken().Trim('"');
@@ -181,7 +192,10 @@ namespace Animation.Content
             return s;
         }
 
-
+        /// <summary>
+        /// Reads a generic token from a .X file
+        /// </summary>
+        /// <returns>The next token</returns>
         public string NextToken()
         {
             string s = null;

@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline;
+using System.IO;
 #endregion
 
 namespace Animation.Content
@@ -33,7 +34,7 @@ namespace Animation.Content
     /// <summary>
     /// Imports a directx model that contains skinning info.
     /// </summary>
-    [ContentImporter(".X", CacheImportedData = false, DefaultProcessor = "AnimatedModelProcessor")]
+    [ContentImporter(".X", CacheImportedData = false, DefaultProcessor="AnimatedModelProcessor")]
     public partial class AnimatedModelImporter : ContentImporter<NodeContent>
     {
 
@@ -66,13 +67,14 @@ namespace Animation.Content
         #region Non Animation Importation Methods
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
-           // System.Diagnostics.Debugger.Launch();
             this.fileName = filename;
             this.context = context;
             // Create an instance of a class that splits a .X file into tokens and provides
             // functionality for iterating and parsing the tokens
             tokens = new XFileTokenizer(filename);
 
+            // skip header
+            tokens.SkipTokens(3);
             // fill in the tree
             ImportRoot();
 
@@ -123,12 +125,28 @@ namespace Animation.Content
                     // See ImportAnimationSet for template info
                     else if (next == "AnimationSet")
                         ImportAnimationSet();
+                    else if (next == "template")
+                        tokens.SkipName().SkipNode();
                 }
                 while (!tokens.AtEnd);
             }
         }
 
-       
+
+        /// <summary>
+        /// Gets an absolute path of a content item
+        /// </summary>
+        /// <param name="contentItem">The content item's local filename path</param>
+        /// <returns>The absolute filename of the item</returns>
+        public string GetAbsolutePath(string contentItem)
+        {
+            string absoluteModelPath = Path.GetDirectoryName(Path.GetFullPath(fileName));
+            string absolutePath = Path.Combine(absoluteModelPath, contentItem);
+            return absolutePath;
+        }
+
+
+
         // A frame can store any data, but is constrained such that each frame must haveB
         // a transform matrix for .X meshes.
         // template Frame

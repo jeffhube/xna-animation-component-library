@@ -66,6 +66,7 @@ namespace Animation
                     InitializeBasicEffect(effect);
         }
 
+
         /// <summary>
         /// Converts from an array of bytes to any vertex type.
         /// </summary>
