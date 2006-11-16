@@ -368,7 +368,7 @@ namespace Animation
                 for (int i = 0; i < mesh.Effects.Count; i++)
                 {
                     worlds[i] = worldParams[index + i].GetValueMatrix();
-                    worldParams[index].SetValue(worlds[i] * bones[mesh.ParentBone.Index]);
+                    worldParams[index].SetValue(bones[mesh.ParentBone.Index] * worlds[i]  );
                 }
                 mesh.Draw();
                 for (int i = 0; i < worlds.Length; i++, index++)
