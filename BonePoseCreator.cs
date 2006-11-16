@@ -159,6 +159,12 @@ namespace Animation
             public void AdvanceTime(long time)
             {
                 curTime += time;
+                if (curTime > controller.AnimationDuration)
+                {
+                    for (int i = 0; i < keyFrameIndices.Length; i++)
+                        keyFrameIndices[i] = 0;
+                    curTime = 0;
+                }
                 time = curTime;
                 // Update the key frame indices for each channel
                 foreach (KeyValuePair<string, AnimationChannel> k in controller.anim.Channels)

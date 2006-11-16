@@ -34,7 +34,7 @@ namespace Animation.Content
     /// Processes a NodeContent object that was imported by SkinnedModelImporter
     /// and attaches animation data to its tag
     /// </summary>
-    [ContentProcessor]
+    [ContentProcessor(DisplayName="Model - Animation Library")]
     public class AnimatedModelProcessor : ModelProcessor
     {
         // stores all animations for the model

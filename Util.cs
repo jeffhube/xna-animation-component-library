@@ -26,6 +26,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System;
+using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
+using System.Collections.Generic;
 namespace Animation
 {
     public class Util
@@ -65,6 +67,98 @@ namespace Animation
                 foreach (BasicEffect effect in mesh.Effects)
                     InitializeBasicEffect(effect);
         }
+
+
+
+
+        public static List<AnimationKeyframe> MergeKeyFrames(AnimationKeyframe[] scale,
+            AnimationKeyframe[] translation, AnimationKeyframe[] rotation)
+        {
+            List<AnimationKeyframe> frames = new List<AnimationKeyframe>();
+            frames.Add(new AnimationKeyframe(new TimeSpan(),Matrix.Identity));
+            InitFrame(ref scale);
+            InitFrame(ref translation);
+            InitFrame(ref rotation);
+            TimeSpan[] allTimes = new TimeSpan[scale.Length + translation.Length +
+                rotation.Length];
+            int index = 0;
+            for (int i = 0; i < scale.Length; i++)
+                allTimes[index++] = scale[i].Time;
+            for (int i = 0; i < translation.Length; i++)
+                allTimes[index++] = translation[i].Time;
+            for (int i = 0; i < rotation.Length; i++)
+                allTimes[index++] = rotation[i].Time;
+            Array.Sort<TimeSpan>(allTimes);
+            foreach (TimeSpan time in allTimes)
+                if (time > frames[frames.Count-1].Time)
+                    frames.Add(new AnimationKeyframe(time, Matrix.Identity));
+            int rotIndex = 0;
+            int scaleIndex = 0;
+            int transIndex = 0;
+            for (int i = 0; i < frames.Count; i++)
+            {
+                TimeSpan curTime = frames[i].Time;
+                if (rotIndex != rotation.Length-1 && curTime > rotation[rotIndex + 1].Time)
+                    rotIndex++;
+                if (rotIndex == rotation.Length - 1)
+                    frames[i].Transform = rotation[rotIndex].Transform;
+                else
+                {
+                    double slerpAmount = (curTime.Ticks - rotation[rotIndex].Time.Ticks) /
+                        (rotation[rotIndex + 1].Time.Ticks - rotation[rotIndex].Time.Ticks);
+                    Quaternion q1 = Quaternion.CreateFromRotationMatrix(rotation[rotIndex].Transform);
+                    Quaternion q2 = Quaternion.CreateFromRotationMatrix(rotation[rotIndex + 1].Transform);
+                    Quaternion q3;
+                    Quaternion.Slerp(ref q1, ref q2, (float)slerpAmount, out q3);
+                    frames[i].Transform = Matrix.CreateFromQuaternion(q3);
+                }
+
+                if (scaleIndex != scale.Length-1 && curTime > scale[scaleIndex + 1].Time )
+                    scaleIndex++;
+                if (scaleIndex == scale.Length - 1)
+                    frames[i].Transform *= scale[scaleIndex].Transform;
+                else
+                {
+                    double scaleLerpAmount = (curTime.Ticks - scale[scaleIndex].Time.Ticks) /
+                        (scale[scaleIndex + 1].Time.Ticks - scale[scaleIndex].Time.Ticks);
+                    frames[i].Transform *= Matrix.Lerp(scale[scaleIndex].Transform,
+                        scale[scaleIndex + 1].Transform,
+                        (float)scaleLerpAmount);
+                }
+                if (transIndex != translation.Length - 1 && curTime > translation[transIndex + 1].Time )
+                    transIndex++;
+                if (transIndex == translation.Length - 1)
+                    frames[i].Transform *= translation[transIndex].Transform;
+                else
+                {
+                    double transLerpAmount = (curTime.Ticks - translation[transIndex].Time.Ticks) /
+                        (translation[transIndex + 1].Time.Ticks - translation[transIndex].Time.Ticks);
+                    frames[i].Transform *= Matrix.Lerp(translation[transIndex].Transform,
+                        translation[transIndex + 1].Transform,
+                        (float)transLerpAmount);
+                }
+
+            }
+
+            return frames;
+
+        }
+
+
+        private static void InitFrame(ref AnimationKeyframe[] frames)
+        {
+            if (frames == null)
+                frames = new AnimationKeyframe[] {new AnimationKeyframe(new TimeSpan(),
+                    Matrix.Identity), new AnimationKeyframe(new TimeSpan(),
+                    Matrix.Identity)};
+            else
+                Array.Sort<AnimationKeyframe>(frames, new Comparison<AnimationKeyframe>(
+                    delegate(AnimationKeyframe one, AnimationKeyframe two)
+                    {
+                        return one.Time.CompareTo(two.Time);
+                    }));
+        }
+    
 
 
         /// <summary>

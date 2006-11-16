@@ -34,7 +34,8 @@ namespace Animation.Content
     /// <summary>
     /// Imports a directx model that contains skinning info.
     /// </summary>
-    [ContentImporter(".X", CacheImportedData = false, DefaultProcessor="AnimatedModelProcessor")]
+    [ContentImporter(".X", CacheImportedData = false, DefaultProcessor="AnimatedModelProcessor",
+        DisplayName="X File - Animation Library")]
     public partial class AnimatedModelImporter : ContentImporter<NodeContent>
     {
 
@@ -224,6 +225,7 @@ namespace Animation.Content
         /// </summary>
         private void ImportAnimationSet()
         {
+            System.Diagnostics.Debugger.Launch();
             AnimationContent animSet = new AnimationContent();
             animSet.Name = tokens.ReadName();
             // Give each animation a unique name
@@ -306,11 +308,23 @@ namespace Animation.Content
                 // Vectors (scale and translation) have 3,
                 // Matrices have 16
                 int numKeys = tokens.NextInt();
-                Matrix transform = tokens.NextMatrix();
-                ReflectMatrix(ref transform);
-                // Right now, the importer only supports matrices.
-                if (keyType != 3 && keyType != 4)
-                    throw new Exception("Only matrix animation keys are currently supported.");
+                Matrix transform = new Matrix();
+                if (numKeys == 16)
+                    transform = tokens.NextMatrix();
+                else if (numKeys == 4)
+                {
+                    Vector4 v = tokens.NextVector4();
+                    Quaternion q = new Quaternion(v.W, v.X, v.Y, v.Z);
+                    transform = Matrix.CreateFromQuaternion(q);
+                }
+                else if (numKeys == 3)
+                {
+                    Vector3 v = tokens.NextVector3();
+                    if (keyType == 1)
+                        Matrix.CreateScale(ref v, out transform);
+                    else
+                        Matrix.CreateTranslation(ref v, out transform);
+                }
                 tokens.SkipToken();
                 frames[i] = new AnimationKeyframe(time, transform);
             }
@@ -338,7 +352,10 @@ namespace Animation.Content
             // Store the frames in an array, which acts as an intermediate data set
             // This will allow us to more easily provide support for non Matrix
             // animation keys at a later time
-            AnimationKeyframe[] frames = null;
+            AnimationKeyframe[] rotFrames = null;
+            AnimationKeyframe[] transFrames = null;
+            AnimationKeyframe[] scaleFrames = null;
+            AnimationKeyframe[] matrixFrames = null;
             boneName = null;
             tokens.SkipName();
             for (string next = tokens.NextToken(); next != "}"; next = tokens.NextToken())
@@ -346,8 +363,18 @@ namespace Animation.Content
                 // A set of animation keys
                 if (next == "AnimationKey")
                 {
+                    // These keys can be rotation (0),scale(1),translation(2), or matrix(3 or 4) keys.
                     int keyType;
-                    frames = ImportAnimationKey(out keyType);
+                    AnimationKeyframe[] frames = ImportAnimationKey(out keyType);
+                    if (keyType == 0)
+                        rotFrames = frames;
+                    else if (keyType == 1)
+                        scaleFrames = frames;
+                    else if (keyType == 2)
+                        transFrames = frames;
+                    else
+                        matrixFrames = frames;
+
                 }
                 // A possible bone name
                 else if (next == "{")
@@ -360,9 +387,27 @@ namespace Animation.Content
                 }
             }
             // Fill in the channel with the frames
-            if (frames != null)
-                foreach (AnimationKeyframe f in frames)
-                    anim.Add(f);
+            if (matrixFrames != null)
+                for (int i = 0; i < matrixFrames.Length; i++)
+                {
+                    Matrix m = matrixFrames[i].Transform;
+                    ReflectMatrix(ref m);
+                    matrixFrames[i].Transform = m;
+                    anim.Add(matrixFrames[i]);
+                }
+            else
+            {
+                List<AnimationKeyframe> combinedFrames = Util.MergeKeyFrames(
+                    scaleFrames, transFrames, rotFrames);
+                for (int i = 0; i < combinedFrames.Count; i++)
+                {
+                    Matrix m = combinedFrames[i].Transform;
+                    ReflectMatrix(ref m);
+                    combinedFrames[i].Transform = m;
+                    anim.Add(combinedFrames[i]);
+                }
+
+            }
             return anim;
         }
         #endregion
