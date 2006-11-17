@@ -64,13 +64,11 @@ namespace Animation
                 keyFrameIndices = new int[controller.model.Bones.Count];
                 originalBones = new Matrix[controller.model.Bones.Count];
                 controller.model.CopyBoneTransformsTo(originalBones);
-
-                if (controller.preserveBones)
-                {
-                    bones = new Matrix[controller.model.Bones.Count];
-                    controller.model.CopyBoneTransformsTo(bones);
-                }
+                bones = new Matrix[controller.model.Bones.Count];
+                controller.model.CopyBoneTransformsTo(bones);
             }
+
+
             #endregion
 
 
@@ -119,9 +117,7 @@ namespace Animation
             /// should be size of the models bones</param>
             public void CreatePoseSet(Matrix[] poseSet)
             {
-
-                if (controller.preserveBones)
-                    controller.model.CopyBoneTransformsFrom(bones);
+                controller.model.CopyBoneTransformsFrom(bones);
                 // Create each pose
                 foreach (KeyValuePair<string, AnimationChannel> k in controller.anim.Channels)
                     CreatePose(k.Value, controller.model.Bones[k.Key].Index);
@@ -133,12 +129,10 @@ namespace Animation
                     int index = controller.model.Bones[skinTransform.Key].Index;
                     poseSet[index] = skinTransform.Value * poseSet[index];
                 }
-                // Put the bones back in their original position if we are preserving them
-                if (controller.preserveBones)
-                {
-                    controller.model.CopyBoneTransformsTo(bones);
-                    controller.model.CopyBoneTransformsFrom(originalBones);
-                }
+                // Put the bones back in their original position
+                controller.model.CopyBoneTransformsTo(bones);
+                controller.model.CopyBoneTransformsFrom(originalBones);
+            
             }
 
             /// <summary>

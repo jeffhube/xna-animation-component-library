@@ -225,7 +225,6 @@ namespace Animation.Content
         /// </summary>
         private void ImportAnimationSet()
         {
-            System.Diagnostics.Debugger.Launch();
             AnimationContent animSet = new AnimationContent();
             animSet.Name = tokens.ReadName();
             // Give each animation a unique name
@@ -355,7 +354,7 @@ namespace Animation.Content
             AnimationKeyframe[] rotFrames = null;
             AnimationKeyframe[] transFrames = null;
             AnimationKeyframe[] scaleFrames = null;
-            AnimationKeyframe[] matrixFrames = null;
+            List<AnimationKeyframe> matrixFrames = null;
             boneName = null;
             tokens.SkipName();
             for (string next = tokens.NextToken(); next != "}"; next = tokens.NextToken())
@@ -373,7 +372,7 @@ namespace Animation.Content
                     else if (keyType == 2)
                         transFrames = frames;
                     else
-                        matrixFrames = frames;
+                        matrixFrames = new List<AnimationKeyframe>(frames);
 
                 }
                 // A possible bone name
@@ -388,13 +387,23 @@ namespace Animation.Content
             }
             // Fill in the channel with the frames
             if (matrixFrames != null)
-                for (int i = 0; i < matrixFrames.Length; i++)
+            {
+                matrixFrames.Sort(new Comparison<AnimationKeyframe>(delegate(AnimationKeyframe one,
+                    AnimationKeyframe two)
+                    {
+                        return one.Time.CompareTo(two.Time);
+                    }));
+                if (matrixFrames[0].Time != TimeSpan.Zero)
+                    matrixFrames.Insert(0, new AnimationKeyframe(TimeSpan.Zero,
+                        Matrix.Identity));
+                for (int i = 0; i < matrixFrames.Count; i++)
                 {
                     Matrix m = matrixFrames[i].Transform;
                     ReflectMatrix(ref m);
                     matrixFrames[i].Transform = m;
                     anim.Add(matrixFrames[i]);
                 }
+            }
             else
             {
                 List<AnimationKeyframe> combinedFrames = Util.MergeKeyFrames(

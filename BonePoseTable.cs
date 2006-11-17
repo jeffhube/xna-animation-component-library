@@ -90,7 +90,7 @@ namespace Animation
             public int NumFrames
             { get { return numFrames; } }
 
-            
+
 
             /// <summary>
             /// Returns a bone pose set of the animation at the given time
@@ -143,7 +143,7 @@ namespace Animation
         }
 
 
-        #endregion
+            #endregion
 
     }
 }

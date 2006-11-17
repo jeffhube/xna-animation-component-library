@@ -39,6 +39,8 @@ namespace Animation
         IGameComponent
     {
         #region Member Variables
+
+        private Matrix sceneTransform = Matrix.Identity;
         // Model to be animated
         private Model model;
         // Maps bone names to their blend transform, which, when applied to a bone,
@@ -60,7 +62,6 @@ namespace Animation
         private bool enabled = true;
         private bool visible = true;
         private bool usingTable = false;
-        private bool preserveBones = false;
         // Contains all animation data for the currently running animation
         private AnimationContent anim;
         // This stores all of the "World" matrix parameters for an unskinned model
@@ -144,20 +145,27 @@ namespace Animation
             }
         }
 
-        /// <summary>
-        /// True if the model's bones should be preserved.
-        /// </summary>
-        public bool PreserveBones
+        public Matrix SceneTransform
         {
             get
             {
-                return preserveBones;
+                return sceneTransform;
             }
             set
             {
-                preserveBones = value;
+                sceneTransform = value;
             }
         }
+
+
+        /// <summary>
+        /// Copies the absolute transforms of the current frame to the specified array.
+        /// </summary>
+        public void CopyAbsoluteFrameTransformsTo(Matrix[] boneSet)
+        {
+            creator.CreatePoseSet(boneSet);
+        }
+
 
         /// <summary>
         /// The total length of the animation in ticks.
@@ -262,9 +270,11 @@ namespace Animation
             get { return enabled; }
             set
             {
-                if (value != enabled && EnabledChanged != null)
-                    EnabledChanged(this, new EventArgs());
+                bool oldVal = enabled;
                 enabled = value;
+                if (oldVal != enabled && EnabledChanged != null)
+                    EnabledChanged(this, new EventArgs());
+
             }
         }
 
@@ -276,9 +286,11 @@ namespace Animation
             get { return updateOrder; }
             set
             {
-                if (value != updateOrder && UpdateOrderChanged != null)
-                    UpdateOrderChanged(this, new EventArgs());
+                int order = updateOrder;
                 updateOrder = value;
+                if (order != updateOrder && UpdateOrderChanged != null)
+                    UpdateOrderChanged(this, new EventArgs());
+
             }
         }
 
@@ -290,9 +302,11 @@ namespace Animation
             get { return drawOrder; }
             set
             {
-                if (drawOrder != value && DrawOrderChanged != null)
-                    DrawOrderChanged(this, new EventArgs());
+                int order = drawOrder;
                 drawOrder = value;
+                if (order != drawOrder && DrawOrderChanged != null)
+                    DrawOrderChanged(this, new EventArgs());
+
             }
         }
 
@@ -304,9 +318,11 @@ namespace Animation
             get { return visible; }
             set
             {
-                if (visible != value && VisibleChanged != null)
-                    VisibleChanged(this, new EventArgs());
+                bool oldVal = visible;
                 visible = value;
+                if (visible != oldVal && VisibleChanged != null)
+                    VisibleChanged(this, new EventArgs());
+
             }
         }
 
@@ -369,7 +385,7 @@ namespace Animation
                 for (int i = 0; i < mesh.Effects.Count; i++)
                 {
                     worlds[i] = worldParams[index + i].GetValueMatrix();
-                    worldParams[index].SetValue(bones[mesh.ParentBone.Index] * worlds[i]  );
+                    worldParams[index].SetValue(bones[mesh.ParentBone.Index] * sceneTransform);
                 }
                 mesh.Draw();
                 for (int i = 0; i < worlds.Length; i++, index++)

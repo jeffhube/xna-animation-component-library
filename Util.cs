@@ -45,16 +45,31 @@ namespace Animation
             effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
             effect.DirectionalLight0.DiffuseColor = Color.White.ToVector3();
             // Set the camera
-            effect.Projection = Matrix.CreatePerspectiveFieldOfView(
-                  (float)Math.PI / 4.0f,
-                  (float)effect.GraphicsDevice.Viewport.Width /
-                  effect.GraphicsDevice.Viewport.Height,
-                  .1f,
-                  10000.0f);
-            effect.View = Matrix.CreateLookAt(new Vector3(0, 0,20),
+            effect.Projection = GetDefaultProjection(effect);
+            effect.View = DefaultView;
+            effect.World = Matrix.Identity;
+        }
+
+        public static Matrix GetDefaultProjection(Effect effect)
+        {
+
+            return Matrix.CreatePerspectiveFieldOfView(
+              (float)Math.PI / 4.0f,
+              (float)effect.GraphicsDevice.Viewport.Width /
+              effect.GraphicsDevice.Viewport.Height,
+              .1f,
+              10000.0f);
+            
+        }
+
+        public static Matrix DefaultView
+        {
+            get
+            {
+                return Matrix.CreateLookAt(new Vector3(0, 0, 20),
                 new Vector3(0, 0, 0),
                 Vector3.Up);
-            effect.World = Matrix.Identity;
+            }
         }
 
         /// <summary>
@@ -152,11 +167,13 @@ namespace Animation
                     Matrix.Identity), new AnimationKeyframe(new TimeSpan(),
                     Matrix.Identity)};
             else
+            {
                 Array.Sort<AnimationKeyframe>(frames, new Comparison<AnimationKeyframe>(
                     delegate(AnimationKeyframe one, AnimationKeyframe two)
                     {
                         return one.Time.CompareTo(two.Time);
                     }));
+            }
         }
     
 

@@ -143,11 +143,11 @@ namespace Animation.Content
             // (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
             //  directx9_c/dx9_graphics_reference_x_file_format_templates.asp)
             // 
-            /// <summary>
-            /// Reads in a bone that contains skin weights.  It then adds one bone weight
+
+
+            // Reads in a bone that contains skin weights.  It then adds one bone weight
             //  to every vertex that is influenced by ths bone, which contains the name of the bone and the
             //  weight.
-            /// </summary>
             public void ImportSkinWeights()
             {
                 // We have found a skin weight node so this is a skinned model
@@ -484,6 +484,7 @@ namespace Animation.Content
                     AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString(), weights);
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
                 MeshHelper.MergeDuplicateVertices(mesh);
+                MeshHelper.OptimizeForCache(mesh);
 
                 
             }
