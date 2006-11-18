@@ -30,7 +30,10 @@ using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using System.Collections.Generic;
 namespace Animation
 {
-    public class Util
+    /// <summary>
+    /// Provides various animation utilities.
+    /// </summary>
+    public sealed class Util
     {
         /// <summary>
         /// Initializes a basic effect to some reasonable values because I hate doing this
@@ -50,6 +53,12 @@ namespace Animation
             effect.World = Matrix.Identity;
         }
 
+        /// <summary>
+        /// Gets a reasonable projection matrix for easy effect initialization.
+        /// 45 degrees FOV and viewport width/viewport height aspect ratio.
+        /// </summary>
+        /// <param name="effect">The effect attached to a device</param>
+        /// <returns>A reasonable default projection matrix</returns>
         public static Matrix GetDefaultProjection(Effect effect)
         {
 
@@ -62,11 +71,14 @@ namespace Animation
             
         }
 
+        /// <summary>
+        /// Gets a reasonable default view matrix.
+        /// </summary>
         public static Matrix DefaultView
         {
             get
             {
-                return Matrix.CreateLookAt(new Vector3(0, 0, 20),
+                return Matrix.CreateLookAt(new Vector3(0, 20, 20),
                 new Vector3(0, 0, 0),
                 Vector3.Up);
             }
@@ -85,8 +97,8 @@ namespace Animation
 
 
 
-
-        public static List<AnimationKeyframe> MergeKeyFrames(AnimationKeyframe[] scale,
+        
+        internal static List<AnimationKeyframe> MergeKeyFrames(AnimationKeyframe[] scale,
             AnimationKeyframe[] translation, AnimationKeyframe[] rotation)
         {
             List<AnimationKeyframe> frames = new List<AnimationKeyframe>();

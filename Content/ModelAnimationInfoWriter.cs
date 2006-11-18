@@ -39,7 +39,7 @@ namespace Animation.Content
     /// Writes ModelInfo data so it can be read into an object during runtime
     /// </summary>
     [ContentTypeWriter]
-    public class ModelAnimationInfoWriter : ContentTypeWriter<ModelAnimationInfo>
+    internal sealed class ModelAnimationInfoWriter : ContentTypeWriter<ModelAnimationInfo>
     {
 
         /// <summary>

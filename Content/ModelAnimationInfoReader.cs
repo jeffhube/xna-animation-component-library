@@ -36,7 +36,7 @@ namespace Animation.Content
     /// <summary>
     /// A class that reads in an XNB stream and converts it to a ModelInfo object
     /// </summary>
-    public class ModelAnimationInfoReader : ContentTypeReader<ModelAnimationInfo>
+    internal sealed class ModelAnimationInfoReader : ContentTypeReader<ModelAnimationInfo>
     {
         /// <summary>
         /// Reads in an XNB stream and converts it to a ModelInfo object

@@ -35,7 +35,7 @@ using System.IO;
 namespace Animation.Content
 {
 
-    public partial class AnimatedModelImporter
+    internal partial class AnimatedModelImporter
     {
         /// <summary>
         /// A helper for AnimatedModelImporter that loads Mesh nodes in .X files

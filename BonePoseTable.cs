@@ -40,7 +40,7 @@ namespace Animation
         /// A table that contains the bone poses and normal bone poses based on an animation
         /// and the time step between the bone poses.
         /// </summary>
-        internal class BonePoseTable
+        internal sealed class BonePoseTable
         {
 
             #region Member Variables
@@ -60,13 +60,8 @@ namespace Animation
             #endregion
 
             #region Constructors
-            /// <summary>
-            /// Creates a table that contains the bone poses and inverse transpose bone poses
-            /// </summary>
-            /// <param name="model">The model for which the animation is intended</param>
-            /// <param name="animation">The animation data</param>
-            /// <param name="timeStep">The amount of time in between each frame</param>
-            public BonePoseTable(AnimationController controller,
+            // Creates a table that contains the bone poses and inverse transpose bone poses
+            internal BonePoseTable(AnimationController controller,
                 long timeStep)
             {
 

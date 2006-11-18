@@ -34,6 +34,48 @@ using Microsoft.Xna.Framework.Content;
 namespace Animation
 {
     /// <summary>
+    /// A delegate used by the AnimationChanged event.
+    /// </summary>
+    /// <param name="sender">The animation controller whose animation changed</param>
+    /// <param name="args">The AnimationChangedEventArgs</param>
+    public delegate void AnimationChangedEventHandler(object sender, AnimationChangedEventArgs args);
+    /// <summary>
+    /// Contains arguments for when an animation changes.
+    /// </summary>
+    public class AnimationChangedEventArgs : EventArgs
+    {
+        private string oldAnimation;
+        private string newAnimation;
+        internal AnimationChangedEventArgs(string oldAnimation, string newAnimation)
+        {
+            this.oldAnimation = oldAnimation;
+            this.newAnimation = newAnimation;
+        }
+
+        /// <summary>
+        /// The name of the old animation.
+        /// </summary>
+        public string OldAnimationName
+        {
+            get
+            {
+                return oldAnimation;
+            }
+        }
+        
+        /// <summary>
+        /// The name of the new animation.
+        /// </summary>
+        public string NewAnimationName
+        {
+            get
+            {
+                return newAnimation;
+            }
+        }
+    }
+
+    /// <summary>
     /// Animates and draws a model that was processed with AnimatedModelProcessor
     /// </summary>
     public partial class AnimationController : IDrawable, IUpdateable,
@@ -65,6 +107,7 @@ namespace Animation
         private bool usingTable = false;
         // Contains all animation data for the currently running animation
         private AnimationContent anim;
+        private string animationName;
         private AnimationContentDictionary animations;
         // This stores all of the "World" matrix parameters for an unskinned model
         private List<EffectParameter> worldParams = new List<EffectParameter>();
@@ -76,36 +119,48 @@ namespace Animation
         AnimationQuality quality = AnimationQuality.Good;
         InterpolationMethod interpMethod = InterpolationMethod.Linear;
         // Required interface events
+        /// <summary>
+        /// Fired when the enabled property of the AnimationController changes.
+        /// </summary>
         public event EventHandler EnabledChanged;
+        /// <summary>
+        /// Fired when the update order of the AnimationController changes.
+        /// </summary>
         public event EventHandler UpdateOrderChanged;
+        /// <summary>
+        /// Fired when the draw order of the AnimationController changes.
+        /// </summary>
         public event EventHandler DrawOrderChanged;
+        /// <summary>
+        /// Fired when the visible property of the AnimationController changes.
+        /// </summary>
         public event EventHandler VisibleChanged;
+        /// <summary>
+        /// Fired when the animation resets
+        /// </summary>
+        public event EventHandler AnimationReset;
+        /// <summary>
+        /// Fired when the animation changes
+        /// </summary>
+        public event AnimationChangedEventHandler AnimationChanged;
+ 
         #endregion
 
         #region Constructors
-        /// <summary>
-        /// Creates a new instance of AnimationController
-        /// </summary>
-        /// <param name="game">The current game</param>
-        /// <param name="model">The model to be animated</param>
-        /// <param name="animationName">Name of the animation designated in .X file.  If 
-        /// name was blank in file, it will be named "Animationi," where i is the ith unnamed
-        /// animation to appear in the file</param>
-        /// <param name="options">A set of options that describes how the animation runs</param>
-        public AnimationController(Game game, Model model,
-            string animationName)
+
+
+        private AnimationController(Game game, Model model)
         {
             this.model = model;
-            BasicPaletteEffect.ReplaceBasicEffects(game, model);
-            ModelAnimationInfo info = (ModelAnimationInfo)((Dictionary<string,object>)model.Tag)["ModelAnimationInfo"];
+            ContentManager manager = new ContentManager(game.Services);
+            BasicPaletteEffect.ReplaceBasicEffects(manager, model);
+            ModelAnimationInfo info = (ModelAnimationInfo)((Dictionary<string, object>)model.Tag)["ModelAnimationInfo"];
+            model.CopyBoneTransformsTo(mats);
             animations = info.Animations;
             blendTransforms = info.BlendTransforms;
-            anim = animations[animationName];
-            // Create the object that manufactures bone poses
-            creator = new BonePoseCreator(this);
-            bones = new Matrix[model.Bones.Count];
-          //  creator.CreatePoseSet(bones);
             this.game = game;
+            bones = new Matrix[model.Bones.Count];
+
             // Find all the "World" parameters in each effect.  We only need to
             // change the world matrix in an unskinned mesh in order to animate it
             foreach (ModelMesh mesh in model.Meshes)
@@ -114,7 +169,37 @@ namespace Animation
                     worldParams.Add(effect.Parameters["World"]);
                     effect.Parameters["BonePalette"].SetValue(mats);
                 }
+
+
             game.Components.Add(this);
+        }
+        /// <summary>
+        /// Creates a new instance of AnimationController and calls BasicPaletteEffect.ReplaceBasicEffects
+        /// </summary>
+        /// <param name="game">The current game</param>
+        /// <param name="model">The model to be animated</param>
+        /// <param name="animationName">Name of the animation designated in .X file.  If 
+        /// name was blank in file, it will be named "Animationi," where i is the ith unnamed
+        /// animation to appear in the file</param>
+        public AnimationController(Game game, Model model,
+            string animationName) : this(game,model)
+        {
+            creator = new BonePoseCreator(this);
+            ChangeAnimation(animationName);
+        }
+
+        /// <summary>
+        /// Creates a new instance of AnimationController and calls BasicPaletteEffect.ReplaceBasicEffects
+        /// </summary>
+        /// <param name="game">The current game</param>
+        /// <param name="model">The model to be animated</param>
+        /// <param name="animationIndex">The index of the animation in the X file.</param>
+        public AnimationController(Game game, Model model,
+            int animationIndex)
+            : this(game, model)
+        {
+            creator = new BonePoseCreator(this);
+            ChangeAnimation(animationIndex);
         }
         #endregion
 
@@ -151,6 +236,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Sets or gets the world matrix for the animation scene.
+        /// </summary>
         public Matrix World
         {
             get
@@ -242,13 +330,72 @@ namespace Animation
         #endregion
      
         #region Animation and Update Routines
+
+        /// <summary>
+        /// Changes the current animation.
+        /// </summary>
+        /// <param name="animationIndex">An animation index in the .X file.</param>
+        public virtual void ChangeAnimation(int animationIndex)
+        {
+            int i = 0;
+            string animName = null;
+            if (animationIndex >= animations.Count)
+                throw new Exception("Invalid animation index.");
+            foreach (KeyValuePair<string, AnimationContent> k in animations)
+            {
+                if (i == animationIndex)
+                {
+                    animName = k.Key;
+                    break;
+                }
+                i++;
+            }
+            ChangeAnimation(animName);
+
+        }
+
+        /// <summary>
+        /// Changes the current animation.
+        /// </summary>
+        /// <param name="animationName">The name of the animation.</param>
+        public virtual void ChangeAnimation(string animationName)
+        {
+            if (animationName == this.animationName)
+                return;
+            string oldAnimName = this.animationName;
+            this.animationName = animationName;
+            UsePrecomputedInterpolations = false;
+            if (!animations.ContainsKey(animationName))
+                throw new Exception("The specified animation, " + animationName + ", does not exist.");
+            anim = animations[animationName];
+            // Create the object that manufactures bone poses
+            elapsedTime = 0;
+            creator.Reset();
+            creator.CreatePoseSet(bones);
+            if (oldAnimName != null && AnimationChanged != null)
+                AnimationChanged(this, new AnimationChangedEventArgs(oldAnimName, animationName));
+        }
+
+        /// <summary>
+        /// Gets the name of the currently running animation.
+        /// </summary>
+        public string AnimationName
+        {
+            get
+            {
+                return animationName;
+            }
+        }
+
         /// <summary>
         /// Resets the animation
         /// </summary>
-        public void Reset()
+        public virtual void Reset()
         {
             elapsedTime = 0;
             creator.Reset();
+            if (AnimationReset != null)
+                AnimationReset(this, new EventArgs());
         }
 
         /// <summary>
@@ -390,17 +537,18 @@ namespace Animation
                 Matrix[] worlds = new Matrix[mesh.Effects.Count];
                 for (int i = 0; i < mesh.Effects.Count; i++)
                 {
-                    if (mesh.Effects[i] is BasicPaletteEffect)
-                        mesh.Effects[i].Parameters["BonePalette"].SetValue(bones);
-
                     worlds[i] = worldParams[index + i].GetValueMatrix();
-                    worldParams[index].SetValue(bones[mesh.ParentBone.Index] * world);
+                    if (mesh.Effects[i] is BasicPaletteEffect)
+                    {
+                        mesh.Effects[i].Parameters["BonePalette"].SetValue(bones);
+                        worldParams[index].SetValue(world);
+                    }
+                    else
+                    {
+                        worldParams[index].SetValue(bones[mesh.ParentBone.Index] * world);
+                    }
                 }
-          
-                {
-
-                    mesh.Draw();
-                }
+                mesh.Draw();
   
                 for (int i = 0; i < worlds.Length; i++, index++)
                     worldParams[index].SetValue(worlds[i]);

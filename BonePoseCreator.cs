@@ -71,6 +71,13 @@ namespace Animation
 
             #endregion
 
+            public Matrix[] OriginalBones
+            {
+                get
+                {
+                    return originalBones;
+                }
+            }
 
             #region Methods
             /// <summary>
@@ -80,6 +87,11 @@ namespace Animation
             /// <param name="boneIndex">The index of the bone attached to the channel</param>
             private void CreatePose(AnimationChannel channel, int boneIndex)
             {
+                if (channel.Count == 1)
+                {
+                    controller.model.Bones[boneIndex].Transform = channel[0].Transform;
+                    return;
+                }
                 // Index in the channel of the current key frame
                 int curFrameIndex = keyFrameIndices[boneIndex];
                 // References to current and next frame
@@ -161,11 +173,15 @@ namespace Animation
                         keyFrameIndices[i] = 0;
                     curTime = 0;
                 }
-                time = curTime;
+
                 // Update the key frame indices for each channel
                 foreach (KeyValuePair<string, AnimationChannel> k in controller.anim.Channels)
                 {
+                    if (k.Value.Count == 1)
+                        continue;
+                    time = curTime;
                     AnimationChannel channel = k.Value;
+                    
                     if (time > channel[channel.Count - 1].Time.Ticks)
                         time = (time %
                             channel[channel.Count - 1].Time.Ticks);

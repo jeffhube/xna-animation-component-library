@@ -33,8 +33,11 @@ using Microsoft.Xna.Framework.Content;
 namespace Animation
 {
 
-        
-    public class BasicPaletteEffect : Effect
+    /// <summary>
+    /// Provides functionality similar to that of BasicEffect, but uses phong shading
+    /// and a matrix palette.
+    /// </summary>
+    public sealed class BasicPaletteEffect : Effect
     {
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
@@ -42,7 +45,9 @@ namespace Animation
         private BasicDirectionalLight light0, light1, light2;
         private Vector3 eye;
         private static Vector3 zero = Vector3.Zero;
-        public BasicPaletteEffect(GraphicsDevice device,
+
+
+        internal BasicPaletteEffect(GraphicsDevice device,
             Effect cloneSource)
             : base(device, cloneSource)
         {
@@ -64,6 +69,11 @@ namespace Animation
             light2 = new BasicDirectionalLight(this, 2);
         }
 
+        /// <summary>
+        /// Creates a new instance of BasicPaletteEffect.
+        /// </summary>
+        /// <param name="content">The content containg the games services.</param>
+        /// <returns>A new instance of BasicPaletteEffect</returns>
         public static BasicPaletteEffect FromContent(ContentManager content)
         {
             IGraphicsDeviceService deviceService = (IGraphicsDeviceService)content.ServiceProvider.GetService(
@@ -73,12 +83,22 @@ namespace Animation
                 cloneSource);
             return effect;
         }
+
+        /// <summary>
+        /// Clones the current BasicPaletteEffect class.
+        /// </summary>
+        /// <param name="device">The device to contain the new instance.</param>
+        /// <returns>A clone of the current instance.</returns>
         public override Effect Clone(GraphicsDevice device)
         {
             return new BasicPaletteEffect(device,base.Clone(device));
         }
 
 
+        /// <summary>
+        /// Sets the parameters of this effect from a BasicEffect instance.
+        /// </summary>
+        /// <param name="effect">An instance containing the parameters to be copied.</param>
         public void SetParamsFromBasicEffect(BasicEffect effect)
         {
             AmbientLightColor = effect.AmbientLightColor;
@@ -107,9 +127,14 @@ namespace Animation
             target.DiffuseColor = source.DiffuseColor;
         }
 
-        internal static void ReplaceBasicEffects(Game game, Model model)
+        /// <summary>
+        /// Replaces all instances of BasicEffect with BasicPaletteEffect for meshes
+        /// that contain skinning info.
+        /// </summary>
+        /// <param name="content">The content manager containg the game's services.</param>
+        /// <param name="model">The model</param>
+        public static void ReplaceBasicEffects(ContentManager content, Model model)
         {
-            ContentManager content = new ContentManager(game.Services);
             foreach (ModelMesh mesh in model.Meshes)
             {
                 foreach (ModelMeshPart part in mesh.MeshParts)
@@ -139,7 +164,9 @@ namespace Animation
             }
         }
 
-
+        /// <summary>
+        /// A basic directional light that uses phong shading.
+        /// </summary>
         public sealed class BasicDirectionalLight
         {
             private BasicPaletteEffect effect;
@@ -148,7 +175,7 @@ namespace Animation
             private EffectParameter lightEnabledParam;
             private EffectParameter specColorParam;
 
-            public BasicDirectionalLight(BasicPaletteEffect effect, int lightNum)
+            internal BasicDirectionalLight(BasicPaletteEffect effect, int lightNum)
             {
                 this.effect = effect;
                 this.lightDirParam = effect.Parameters["LightDirection" + lightNum.ToString()];
@@ -157,6 +184,9 @@ namespace Animation
                 this.lightEnabledParam = effect.Parameters["LightEnabled" + lightNum.ToString()];
             }
 
+            /// <summary>
+            /// Enables or disables this light.
+            /// </summary>
             public bool Enabled
             {
                 get
@@ -169,6 +199,9 @@ namespace Animation
                 }
             }
 
+            /// <summary>
+            /// Gets or sets the direction of this light.
+            /// </summary>
             public Vector3 Direction
             {
                 get
@@ -182,7 +215,9 @@ namespace Animation
             }
 
 
-
+            /// <summary>
+            /// Gets or sets the specular color of this light.
+            /// </summary>
             public Vector3 SpecularColor
             {
                 get
@@ -195,6 +230,9 @@ namespace Animation
                 }
             }
 
+            /// <summary>
+            /// Gets or sets the diffuse color of this light.
+            /// </summary>
             public Vector3 DiffuseColor
             {
                 get
@@ -208,6 +246,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the texture associated with this effect.
+        /// </summary>
         public Texture2D Texture
         {
             get
@@ -220,6 +261,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// True if textures are enabled.
+        /// </summary>
         public bool TextureEnabled
         {
             get
@@ -231,6 +275,10 @@ namespace Animation
                 texEnabledParam.SetValue(value);
             }
         }
+
+        /// <summary>
+        /// Gets or sets the bone palette values.
+        /// </summary>
         public Matrix[] BonePalette
         {
             get
@@ -244,9 +292,14 @@ namespace Animation
 
         }
 
+        /// <summary>
+        /// The max number of bones in the effects matrix palette.
+        /// </summary>
         public const int PALETTE_SIZE = 50;
 
-
+        /// <summary>
+        /// Gets directional light zero.
+        /// </summary>
         public BasicDirectionalLight DirectionalLight0
         {
             get
@@ -255,6 +308,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets directional light one.
+        /// </summary>
         public BasicDirectionalLight DirectionalLight1
         {
             get
@@ -263,6 +319,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets directional light two.
+        /// </summary>
         public BasicDirectionalLight DirectionalLight2
         {
             get
@@ -271,6 +330,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the additive ambient color of this effect.
+        /// </summary>
         public Vector3 AmbientLightColor
         {
             get
@@ -284,6 +346,9 @@ namespace Animation
 
         }
 
+        /// <summary>
+        /// Gets or sets the specular color of this effect.
+        /// </summary>
         public Vector3 SpecularColor
         {
             get
@@ -296,6 +361,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the specular power of this effect.
+        /// </summary>
         public float SpecularPower
         {
             get
@@ -308,6 +376,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the diffuse color of this effect.
+        /// </summary>
         public Vector3 DiffuseColor
         {
             get
@@ -320,6 +391,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Enables or disables lighting.
+        /// </summary>
         public bool LightingEnabled
         {
             get
@@ -332,6 +406,9 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the emissive color of this effect.
+        /// </summary>
         public Vector3 EmissiveColor
         {
             get
@@ -344,7 +421,9 @@ namespace Animation
             }
         }
 
-
+        /// <summary>
+        /// Gets or sets the world matrix of this effect.
+        /// </summary>
         public Matrix World
         {
             get
@@ -357,6 +436,10 @@ namespace Animation
             }
         }
 
+
+        /// <summary>
+        /// Gets or sets the view matrix of this effect.
+        /// </summary>
         public Matrix View
         {
             get
@@ -366,12 +449,15 @@ namespace Animation
             set
             {
                 Vector3.Transform(ref zero, ref value, out eye);
-
+                eye.Z *= -1;
                 viewParam.SetValue(value);
                 eyeParam.SetValue(eye);
             }
         }
 
+        /// <summary>
+        /// Gets or sets the projection matrix of this effect.
+        /// </summary>
         public Matrix Projection
         {
             get

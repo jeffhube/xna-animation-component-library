@@ -34,9 +34,9 @@ namespace Animation.Content
     /// <summary>
     /// Imports a directx model that contains skinning info.
     /// </summary>
-    [ContentImporter(".X", CacheImportedData = false, DefaultProcessor="AnimatedModelProcessor",
+    [ContentImporter(".X", CacheImportedData = true, DefaultProcessor="AnimatedModelProcessor",
         DisplayName="X File - Animation Library")]
-    public partial class AnimatedModelImporter : ContentImporter<NodeContent>
+    internal partial class AnimatedModelImporter : ContentImporter<NodeContent>
     {
 
         #region Member Variables

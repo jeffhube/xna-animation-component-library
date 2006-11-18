@@ -34,7 +34,7 @@ namespace Animation.Content
     /// <summary>
     /// Tokenizes a .X file and provides methods to parse those tokens.
     /// </summary>
-    public class XFileTokenizer
+    public sealed class XFileTokenizer
     {
         #region Member Variables
         // Used to build each token so that we don't have to deal with the inefficiency of
@@ -53,6 +53,10 @@ namespace Animation.Content
         #endregion
 
         #region Constructors
+        /// <summary>
+        /// Creates a new instance of XFileTokenizer.
+        /// </summary>
+        /// <param name="fileName">The .X file to tokenize.</param>
         public XFileTokenizer(string fileName)
         {
             string s = File.ReadAllText(fileName);
@@ -61,10 +65,15 @@ namespace Animation.Content
         #endregion
 
         #region Properties
-        // Returns current token while ITERATING through the tokens
+        /// <summary>
+        /// Returns current token while ITERATING through the tokens
+        /// </summary>
         public string CurrentToken
         { get { return tokens[tokenIndex - 1]; } }
 
+        /// <summary>
+        /// Returns the next token without advancing the stream index
+        /// </summary>
         public string Peek
         { get { return tokens[tokenIndex]; } }
 
@@ -72,10 +81,15 @@ namespace Animation.Content
         private string CurrentString
         { get { return sb.ToString(index, length); } }
 
-        // Are we at the end of the token stream while a client is iterating the tokens?
+        /// <summary>
+        /// True if the index is at the end of the stream.
+        /// </summary>
         public bool AtEnd
         { get { return tokenIndex >= tokens.Length - 1; } }
 
+        /// <summary>
+        /// The number of tokens in the stream.
+        /// </summary>
         public int Count
         { get { return tokens.Length; } }
 
@@ -217,6 +231,10 @@ namespace Animation.Content
             return s;
         }
 
+        /// <summary>
+        /// Reads the next Vector2 in the stream.
+        /// </summary>
+        /// <returns>The parsed Vector2</returns>
         public Vector2 NextVector2()
         {
             try
@@ -237,6 +255,10 @@ namespace Animation.Content
             return Vector2.Zero;
         }
 
+        /// <summary>
+        /// Reads the next Vector3 in the stream.
+        /// </summary>
+        /// <returns>The parsed Vector3</returns>
         public Vector3 NextVector3()
         {
 
@@ -259,6 +281,10 @@ namespace Animation.Content
             return Vector3.Zero;
         }
 
+        /// <summary>
+        /// Reads the next Vector4 in the stream.
+        /// </summary>
+        /// <returns>The parsed Vector4</returns>
         public Vector4 NextVector4()
         {
             tokenIndex += 9;
@@ -278,7 +304,10 @@ namespace Animation.Content
             return Vector4.Zero;
         }
 
-
+        /// <summary>
+        /// Reads the next Matrix in the stream.
+        /// </summary>
+        /// <returns>The parsed Matrix</returns>
         public Matrix NextMatrix()
         {
 
@@ -308,22 +337,30 @@ namespace Animation.Content
 
 
 
-
+        /// <summary>
+        /// Skips tokens in the stream.
+        /// </summary>
+        /// <returns>The number of tokens to skip.</returns>
         public void SkipTokens(int numToSkip)
         { tokenIndex += numToSkip; }
 
 
 
-        // All nodes in directx can have names, but we don't care about
-        // the names of many nodes.
+
+        /// <summary>
+        /// Skips a nodes name and its opening curly bracket.
+        /// </summary>
+        /// <returns>The current instance for cascaded calls.</returns>
         public XFileTokenizer SkipName()
         {
             ReadName();
             return this;
         }
 
-        // This returns null if there is no name for the current node.  It
-        // also skips the left brace that comes after the name.
+        /// <summary>
+        /// Reads a nodes name and its opening curly bracket.
+        /// </summary>
+        /// <returns>Null if the node does not contain a name, the nodes name otherwise.</returns>
         public string ReadName()
         {
             string next = tokens[tokenIndex++];
@@ -335,12 +372,19 @@ namespace Animation.Content
             return null;
         }
 
+        /// <summary>
+        /// Skips a token in the stream.
+        /// </summary>
+        /// <returns>The current tokenizer for cascaded calls.</returns>
         public XFileTokenizer SkipToken()
         {
             tokenIndex++;
             return this;
         }
 
+        /// <summary>
+        /// Resets the tokenizer to the beginning of the stream.
+        /// </summary>
         public void Reset()
         {
             tokenIndex = 0;

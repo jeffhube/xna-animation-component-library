@@ -30,10 +30,18 @@ using Microsoft.Xna.Framework;
 
 namespace Animation.Content
 {
+    /// <summary>
+    /// Contains animation info for a model.
+    /// </summary>
     public struct ModelAnimationInfo
     {
+        /// <summary>
+        /// The set of animations for a model.
+        /// </summary>
         public AnimationContentDictionary Animations;
-        // The transforms that transform vertices into bones' local space
+        /// <summary>
+        /// The transforms that transform vertices into bone's local space
+        /// </summary>
         public Dictionary<string, Matrix> BlendTransforms;
     }
 }
