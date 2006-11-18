@@ -1,5 +1,5 @@
 /*
- * ModelInfoWriter.cs
+ * ModelAnimationInfoWriter.cs
  * Writes animation and vertex blending information to XNB format
  * a ModelInfo object
  * Part of XNA Animation Component library, which is a library for animation
@@ -28,6 +28,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 #endregion
 
 namespace Animation.Content
@@ -37,15 +39,17 @@ namespace Animation.Content
     /// Writes ModelInfo data so it can be read into an object during runtime
     /// </summary>
     [ContentTypeWriter]
-    public class ModelInfoWriter : ContentTypeWriter<ModelInfo>
+    public class ModelAnimationInfoWriter : ContentTypeWriter<ModelAnimationInfo>
     {
+
         /// <summary>
         /// Writes a ModelInfo object into XNB data
         /// </summary>
         /// <param name="output">The stream that contains the written data</param>
         /// <param name="value">The instance to be serialized</param>
-        protected override void Write(ContentWriter output, ModelInfo value)
+        protected override void Write(ContentWriter output, ModelAnimationInfo value)
         {
+
             // This contains all the animations
             AnimationContentDictionary dict = value.Animations;
             // First write hte number of animations (0 if the dictionary is null)
@@ -80,6 +84,7 @@ namespace Animation.Content
             }
             // Write the blend transforms
             output.WriteRawObject<Dictionary<string, Matrix>>(value.BlendTransforms);
+
         }
 
         /// <summary>
@@ -90,7 +95,7 @@ namespace Animation.Content
         /// <returns>The string that describes the reader used for a ModelInfo object</returns>
         public override string GetRuntimeReader(TargetPlatform targetPlatform)
         {
-            return typeof(ModelInfoReader).AssemblyQualifiedName;
+            return typeof(ModelAnimationInfoReader).AssemblyQualifiedName;
         }
         
         /// <summary>
@@ -102,7 +107,7 @@ namespace Animation.Content
         /// the stream</returns>
         public override string GetRuntimeType(TargetPlatform targetPlatform)
         {
-            return typeof(ModelInfo).AssemblyQualifiedName;
+            return typeof(ModelAnimationInfo).AssemblyQualifiedName;
         }
     }
  

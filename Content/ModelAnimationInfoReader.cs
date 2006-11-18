@@ -1,5 +1,5 @@
 /*
- * ModelInfoReader.cs
+ * ModelAnimationInfoReader.cs
  * Reads animation and blend transform data from a stream and converts it to
  * a ModelInfo object
  * Part of XNA Animation Component library, which is a library for animation
@@ -36,7 +36,7 @@ namespace Animation.Content
     /// <summary>
     /// A class that reads in an XNB stream and converts it to a ModelInfo object
     /// </summary>
-    public class ModelInfoReader : ContentTypeReader<ModelInfo>
+    public class ModelAnimationInfoReader : ContentTypeReader<ModelAnimationInfo>
     {
         /// <summary>
         /// Reads in an XNB stream and converts it to a ModelInfo object
@@ -44,10 +44,10 @@ namespace Animation.Content
         /// <param name="input">The stream from which the data will be read</param>
         /// <param name="existingInstance">Not used</param>
         /// <returns>The unserialized ModelInfo object</returns>
-        protected override ModelInfo Read(ContentReader input, ModelInfo existingInstance)
+        protected override ModelAnimationInfo Read(ContentReader input, ModelAnimationInfo existingInstance)
         {
             // Create the new object
-            ModelInfo info = new ModelInfo();
+            ModelAnimationInfo info = new ModelAnimationInfo();
             int numAnimations = input.ReadInt32();
             AnimationContentDictionary dict = new AnimationContentDictionary();
             // Read each animation

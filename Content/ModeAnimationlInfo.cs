@@ -1,5 +1,5 @@
 /*
- * ModelInfo.cs
+ * ModelAnimationInfo.cs
  * Data structure that stores information passed from the content pipeline to the
  * client program
  * Part of XNA Animation Component library, which is a library for animation
@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework;
 
 namespace Animation.Content
 {
-    public struct ModelInfo
+    public struct ModelAnimationInfo
     {
         public AnimationContentDictionary Animations;
         // The transforms that transform vertices into bones' local space
