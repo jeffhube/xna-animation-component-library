@@ -152,6 +152,8 @@ namespace Animation
             /// <param name="time">The amount of time to advance the animation</param>
             public void AdvanceTime(long time)
             {
+                if (time == 0)
+                    return;
                 curTime += time;
                 if (curTime > controller.AnimationDuration)
                 {

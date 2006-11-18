@@ -27,6 +27,9 @@ using Microsoft.Xna.Framework.Content.Pipeline;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System.IO;
+using System.Collections;
 
 namespace Animation.Content
 {
@@ -37,20 +40,34 @@ namespace Animation.Content
     [ContentProcessor(DisplayName="Model - Animation Library")]
     public class AnimatedModelProcessor : ModelProcessor
     {
+        static bool paletteBuilt = false;
         // stores all animations for the model
         private AnimationContentDictionary animations = new AnimationContentDictionary();
-
         /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
         /// <param name="input">The root of the X file tree</param>
         /// <param name="context">The context for this processor</param>
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
+
+
+            if (!paletteBuilt)
+            {
+                string curDir = Directory.GetCurrentDirectory();
+                string path = Path.Combine(curDir, BasicPaletteEffect.RelativeFilename);
+                StreamWriter sw = new StreamWriter(path);
+                sw.Write(BasicPaletteEffect.SourceCode);
+                sw.Flush();
+                sw.Close();
+                context.BuildAsset<EffectContent, CompiledEffect>(new ExternalReference<EffectContent>(path),
+                    "EffectProcessor", new OpaqueDataDictionary(), "EffectImporter", BasicPaletteEffect.AssetName);
+                paletteBuilt = true;
+            }
+
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
-            
             // Attach the animation and skinning data to the models tag
-            ModelInfo info = new ModelInfo();
+            ModelAnimationInfo info = new ModelAnimationInfo();
             FindAnimations(input);
             info.Animations = animations;
             // If we used default importer we can't do any skinning
@@ -58,10 +75,14 @@ namespace Animation.Content
                 info.BlendTransforms = (Dictionary<string, Matrix>)input.OpaqueData["BlendTransforms"];
             else
                 info.BlendTransforms = new Dictionary<string, Matrix>();
-            c.Tag = info;
+            Dictionary<string, object> dict = new Dictionary<string, object>();
+            dict.Add("ModelAnimationInfo", info);
+            c.Tag = dict;
 
             return c;
         }
+
+
 
         /// <summary>
         /// Searches through the NodeContent tree for all animations and puts them in
@@ -77,7 +98,11 @@ namespace Animation.Content
                     animations.Add("Animation" + animations.Count.ToString(), k.Value);
             foreach (NodeContent child in root.Children)
                 FindAnimations(child);
+
         }
+
 
     }
 }
+
+

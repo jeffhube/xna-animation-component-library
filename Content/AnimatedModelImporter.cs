@@ -69,6 +69,7 @@ namespace Animation.Content
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
             this.fileName = filename;
+
             this.context = context;
             // Create an instance of a class that splits a .X file into tokens and provides
             // functionality for iterating and parsing the tokens
@@ -91,6 +92,7 @@ namespace Animation.Content
                 mesh.AddWeights(boneIndices);
                 mesh.CreateGeometry();
             }
+
 
 
             // Allow processor to access any skinning data we might have

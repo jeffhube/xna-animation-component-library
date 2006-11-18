@@ -85,7 +85,7 @@ namespace Animation.Content
             // The blend weights
             Vector4[] weights = null;
             // The blend weight indices
-            Byte4[] weightIndices = null;
+            Short4[] weightIndices = null;
             private AnimatedModelImporter model;
             private XFileTokenizer tokens;
             // This will eventually turn into the Mesh
@@ -425,18 +425,20 @@ namespace Animation.Content
                     materialName = "";
                 // Diffuse color describes how diffuse (directional) light
                 // reflects off the mesh
-                basicMaterial.DiffuseColor = new Vector3(tokens.NextFloat(),
+                Vector3 diffuseColor = new Vector3(tokens.NextFloat(),
                     tokens.NextFloat(), tokens.NextFloat());
                 // We dont care about the alpha component of diffuse light.
                 // I don't even understand what this is useful for.
                 tokens.NextFloat();
                 // Specular power is inversely exponentially proportional to the
                 // strength of specular light
-                basicMaterial.SpecularPower = tokens.SkipToken().NextFloat();
+                float specularPower = tokens.SkipToken().NextFloat();
                 // Specular color describes how specular (directional and shiny)
                 // light reflects off the mesh
-                basicMaterial.SpecularColor = tokens.NextVector3();
-                basicMaterial.EmissiveColor = tokens.NextVector3();
+                Vector3 specularColor = tokens.NextVector3();
+                Vector3 emissiveColor = tokens.NextVector3();
+
+                
                 // Import any textures associated with this material
                 for (string token = tokens.NextToken();
                     token != "}"; )
@@ -459,7 +461,10 @@ namespace Animation.Content
                 if (returnMaterial is BasicMaterialContent)
                     basicMaterial.Texture = texRef;
                 returnMaterial.Name = materialName;
-                return returnMaterial;
+                //return returnMaterial;
+               // return cont;
+
+                return returnMaterial ;
 
             }
             #endregion
@@ -479,7 +484,7 @@ namespace Animation.Content
                 if (texCoords != null)
                     AddChannel<Vector2>("TextureCoordinate0", texCoords);
                 if (weightIndices != null)
-                    AddChannel<Byte4>(VertexElementUsage.BlendIndices.ToString(), weightIndices);
+                    AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString(), weightIndices);
                 if (weights != null)
                     AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString(), weights);
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
@@ -516,16 +521,16 @@ namespace Animation.Content
                     return;
                 // These two lists hold the data for the two new channels (the weights and indices)
                 weights = new Vector4[mesh.Positions.Count];
-                weightIndices = new Byte4[mesh.Positions.Count];
+                weightIndices = new Short4[mesh.Positions.Count];
 
                 // The index of the position that this vertex refers to
-                int index = 0;
+                int index = 0; ;
                 foreach (BoneWeightCollection c in skinInfo)
                 {
                     // The number of weights associated with the current vertex
                     int ct = c.Count;
                     Vector4 w = new Vector4();
-                    Vector4 i = new Vector4();
+                    short i0=0,i1=0,i2=0,i3=0;
                     // Fill in the weights
                     w.X = ct > 0 ? c[0].Weight : 0;
                     w.Y = ct > 1 ? c[1].Weight : 0;
@@ -535,20 +540,19 @@ namespace Animation.Content
                     // If the vertex cotnains no skinning info, assign it to the mesh's root
                     // bone with a weight of 1
                     if (ct > 0 && c[0].BoneName != null)
-                        i.X = boneIndices[c[0].BoneName];
+                        i0 = (short)boneIndices[c[0].BoneName];
                     if (ct == 0)
                         w.X = 1.0f;
 
                     // Fill in the indices
-                    if (c.Count > 1 && c[1].BoneName != null) i.Y = boneIndices[c[1].BoneName];
-                    if (c.Count > 2 && c[2].BoneName != null) i.Z = boneIndices[c[2].BoneName];
-                    if (c.Count > 3 && c[3].BoneName != null) i.W = boneIndices[c[3].BoneName];
-                    Byte4 ib = new Byte4(i);
+                    if (c.Count > 1 && c[1].BoneName != null) i1 = (short)boneIndices[c[1].BoneName];
+                    if (c.Count > 2 && c[2].BoneName != null) i2 = (short)boneIndices[c[2].BoneName];
+                    if (c.Count > 3 && c[3].BoneName != null) i3 = (short)boneIndices[c[3].BoneName];
 
                     // We have a list of boneweight/bone index objects that are ordered such that
                     // BoneWeightCollection[i] is the weight and index for vertex i.
                     weights[index] = w;
-                    weightIndices[index] = new Byte4(i);
+                    weightIndices[index] = new Short4(i0, i1, i2, i3);
                     index++;
                 }
 

@@ -27,6 +27,7 @@ using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using System.Collections.Generic;
 using System;
 using Animation.Content;
+using Microsoft.Xna.Framework.Content;
 #endregion
 
 
@@ -40,7 +41,7 @@ namespace Animation
     {
         #region Member Variables
 
-        private Matrix sceneTransform = Matrix.Identity;
+        private Matrix world = Matrix.Identity;
         // Model to be animated
         private Model model;
         // Maps bone names to their blend transform, which, when applied to a bone,
@@ -64,6 +65,7 @@ namespace Animation
         private bool usingTable = false;
         // Contains all animation data for the currently running animation
         private AnimationContent anim;
+        private AnimationContentDictionary animations;
         // This stores all of the "World" matrix parameters for an unskinned model
         private List<EffectParameter> worldParams = new List<EffectParameter>();
         // Used as a buffer for storing the poses of the current frame
@@ -94,21 +96,25 @@ namespace Animation
             string animationName)
         {
             this.model = model;
-
-            ModelInfo info = (ModelInfo)model.Tag;
+            BasicPaletteEffect.ReplaceBasicEffects(game, model);
+            ModelAnimationInfo info = (ModelAnimationInfo)((Dictionary<string,object>)model.Tag)["ModelAnimationInfo"];
+            animations = info.Animations;
             blendTransforms = info.BlendTransforms;
-            anim = info.Animations[animationName];
+            anim = animations[animationName];
             // Create the object that manufactures bone poses
             creator = new BonePoseCreator(this);
             bones = new Matrix[model.Bones.Count];
+          //  creator.CreatePoseSet(bones);
             this.game = game;
-            game.Components.Add(this);
-            
             // Find all the "World" parameters in each effect.  We only need to
             // change the world matrix in an unskinned mesh in order to animate it
             foreach (ModelMesh mesh in model.Meshes)
                 foreach (Effect effect in mesh.Effects)
+                {
                     worldParams.Add(effect.Parameters["World"]);
+                    effect.Parameters["BonePalette"].SetValue(mats);
+                }
+            game.Components.Add(this);
         }
         #endregion
 
@@ -145,15 +151,15 @@ namespace Animation
             }
         }
 
-        public Matrix SceneTransform
+        public Matrix World
         {
             get
             {
-                return sceneTransform;
+                return world;
             }
             set
             {
-                sceneTransform = value;
+                world = value;
             }
         }
 
@@ -348,7 +354,7 @@ namespace Animation
 
         }
 
-
+        private Matrix[] mats = new Matrix[50];
         /// <summary>
         /// Draws the current frame
         /// </summary>
@@ -384,10 +390,18 @@ namespace Animation
                 Matrix[] worlds = new Matrix[mesh.Effects.Count];
                 for (int i = 0; i < mesh.Effects.Count; i++)
                 {
+                    if (mesh.Effects[i] is BasicPaletteEffect)
+                        mesh.Effects[i].Parameters["BonePalette"].SetValue(bones);
+
                     worlds[i] = worldParams[index + i].GetValueMatrix();
-                    worldParams[index].SetValue(bones[mesh.ParentBone.Index] * sceneTransform);
+                    worldParams[index].SetValue(bones[mesh.ParentBone.Index] * world);
                 }
-                mesh.Draw();
+          
+                {
+
+                    mesh.Draw();
+                }
+  
                 for (int i = 0; i < worlds.Length; i++, index++)
                     worldParams[index].SetValue(worlds[i]);
             }
