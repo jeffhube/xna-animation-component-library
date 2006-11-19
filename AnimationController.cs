@@ -546,7 +546,6 @@ namespace Animation
             // Animate the mesh by applying the absolute bone transform the current world transform
             // for each effect, drawing the mesh, and then returning the World matrix to its old state.
             int index = 0;
-            Console.Clear();
             foreach (ModelMesh mesh in model.Meshes)
             {
                 for (int i = 0; i < mesh.Effects.Count; i++,index++)

@@ -88,7 +88,6 @@ namespace Animation
                 }
                 // Index in the channel of the current key frame
                 int curFrameIndex = keyFrameIndices[boneIndex];
-                Console.WriteLine(curFrameIndex);
                 // References to current and next frame
                 AnimationKeyframe curFrame = channel[curFrameIndex], nextFrame =
                     channel[curFrameIndex + 1];
