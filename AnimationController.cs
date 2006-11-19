@@ -111,11 +111,13 @@ namespace Animation
         private AnimationContentDictionary animations;
         // This stores all of the "World" matrix parameters for an unskinned model
         private List<EffectParameter> worldParams = new List<EffectParameter>();
+        private Matrix[] worldBuffer;
         // Used as a buffer for storing the poses of the current frame
         private Matrix[] bones = null;
         // Creates bone poses for the current animation
         private BonePoseCreator creator = null;
         private double speedFactor = 1.0;
+        private Matrix[] mats =null;
         AnimationQuality quality = AnimationQuality.Good;
         InterpolationMethod interpMethod = InterpolationMethod.Linear;
         // Required interface events
@@ -155,7 +157,7 @@ namespace Animation
             ContentManager manager = new ContentManager(game.Services);
             BasicPaletteEffect.ReplaceBasicEffects(manager, model);
             ModelAnimationInfo info = (ModelAnimationInfo)((Dictionary<string, object>)model.Tag)["ModelAnimationInfo"];
-            model.CopyBoneTransformsTo(mats);
+
             animations = info.Animations;
             blendTransforms = info.BlendTransforms;
             this.game = game;
@@ -164,11 +166,22 @@ namespace Animation
             // Find all the "World" parameters in each effect.  We only need to
             // change the world matrix in an unskinned mesh in order to animate it
             foreach (ModelMesh mesh in model.Meshes)
+            {
                 foreach (Effect effect in mesh.Effects)
                 {
                     worldParams.Add(effect.Parameters["World"]);
-                    effect.Parameters["BonePalette"].SetValue(mats);
+                    if (effect is BasicPaletteEffect)
+                    {
+                        if (mats == null)
+                        {
+                            mats = new Matrix[BasicPaletteEffect.PALETTE_SIZE];
+                            model.CopyAbsoluteBoneTransformsTo(mats);
+                        }
+                        effect.Parameters["BonePalette"].SetValue(mats);
+                    }
                 }
+            }
+            worldBuffer = new Matrix[worldParams.Count];
 
 
             game.Components.Add(this);
@@ -501,13 +514,14 @@ namespace Animation
 
         }
 
-        private Matrix[] mats = new Matrix[50];
+
         /// <summary>
         /// Draws the current frame
         /// </summary>
         /// <param name="gameTime"></param>
         public void Draw(GameTime gameTime)
         {
+
             // Do not advance frame if we are not receiving updates
             if (enabled)
             {
@@ -532,12 +546,12 @@ namespace Animation
             // Animate the mesh by applying the absolute bone transform the current world transform
             // for each effect, drawing the mesh, and then returning the World matrix to its old state.
             int index = 0;
+            Console.Clear();
             foreach (ModelMesh mesh in model.Meshes)
             {
-                Matrix[] worlds = new Matrix[mesh.Effects.Count];
-                for (int i = 0; i < mesh.Effects.Count; i++)
+                for (int i = 0; i < mesh.Effects.Count; i++,index++)
                 {
-                    worlds[i] = worldParams[index + i].GetValueMatrix();
+                    worldBuffer[index] = worldParams[index].GetValueMatrix();
                     if (mesh.Effects[i] is BasicPaletteEffect)
                     {
                         mesh.Effects[i].Parameters["BonePalette"].SetValue(bones);
@@ -549,9 +563,10 @@ namespace Animation
                     }
                 }
                 mesh.Draw();
-  
-                for (int i = 0; i < worlds.Length; i++, index++)
-                    worldParams[index].SetValue(worlds[i]);
+            }
+            for (int i = 0; i < worldParams.Count; i++)
+            {
+                worldParams[i].SetValue(worldBuffer[i]);
             }
         }
         #endregion

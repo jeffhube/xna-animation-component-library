@@ -512,7 +512,7 @@ float3 LightDiffuseColor2;
 float3 LightSpecularColor0;
 float3 LightSpecularColor1;
 float3 LightSpecularColor2;
-uniform extern float4x4 BonePalette[50];
+uniform extern float4x4 BonePalette[" + BasicPaletteEffect.PALETTE_SIZE.ToString()+@"];
 float SpecularPower;
 bool TextureEnabled;
 bool LightingEnabled = false;

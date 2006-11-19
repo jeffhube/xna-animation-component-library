@@ -459,7 +459,13 @@ namespace Animation.Content
                 }
 
                 if (returnMaterial is BasicMaterialContent)
+                {
                     basicMaterial.Texture = texRef;
+                    basicMaterial.DiffuseColor = diffuseColor;
+                    basicMaterial.EmissiveColor = emissiveColor;
+                    basicMaterial.SpecularColor = specularColor;
+                    basicMaterial.SpecularPower = specularPower;
+                }
                 returnMaterial.Name = materialName;
                 //return returnMaterial;
                // return cont;

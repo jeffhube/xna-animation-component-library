@@ -514,7 +514,8 @@ namespace Animation.Content
                             // now we can accept a wide variety of characters
                             case 2:
                                 if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-                                    || c == '_' || (c >= '0' && c <= '9') || c == '.' || c == '-')
+                                    || c == '_' || (c >= '0' && c <= '9') || c == '.' || c == '-'
+                                    || c== '/' || c=='\\' || c==':')
                                 {
                                     AddChar(c);
                                     break;

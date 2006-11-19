@@ -396,8 +396,8 @@ namespace Animation.Content
                         return one.Time.CompareTo(two.Time);
                     }));
                 if (matrixFrames[0].Time != TimeSpan.Zero)
-                    matrixFrames.Insert(0, new AnimationKeyframe(TimeSpan.Zero,
-                        Matrix.Identity));
+                    matrixFrames.Insert(0, new AnimationKeyframe(new TimeSpan(),
+                        matrixFrames[0].Transform));
                 for (int i = 0; i < matrixFrames.Count; i++)
                 {
                     Matrix m = matrixFrames[i].Transform;
@@ -453,7 +453,7 @@ namespace Animation.Content
         /// <param name="root">The root of the tree that is traversed</param>
         private void GetBoneIndices(NodeContent root)
         {
-            if (root.Name != null)
+            if (root.Name != null && !(root is MeshContent))
                 boneIndices.Add(root.Name, curIndex);
             curIndex++;
             foreach (NodeContent c in root.Children)

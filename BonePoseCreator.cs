@@ -43,12 +43,8 @@ namespace Animation
             // Current animation time for the creator
             private long curTime;
             private AnimationController controller;
-            // The original bones of the animated model, used for resetting the pose
-            // position and if preserveBones is true
+            // The original bones of the animated model
             private Matrix[] originalBones;
-            // A buffer used for storing the latest pose of the model if preserveBones
-            // is set to true
-            private Matrix[] bones = null;
             // Stores the current key frame while creating the table.
             // KeyFrameIndices[i] = the current frame for the bone with index i
             private int[] keyFrameIndices;
@@ -64,8 +60,7 @@ namespace Animation
                 keyFrameIndices = new int[controller.model.Bones.Count];
                 originalBones = new Matrix[controller.model.Bones.Count];
                 controller.model.CopyBoneTransformsTo(originalBones);
-                bones = new Matrix[controller.model.Bones.Count];
-                controller.model.CopyBoneTransformsTo(bones);
+
             }
 
 
@@ -89,11 +84,11 @@ namespace Animation
             {
                 if (channel.Count == 1)
                 {
-                    controller.model.Bones[boneIndex].Transform = channel[0].Transform;
                     return;
                 }
                 // Index in the channel of the current key frame
                 int curFrameIndex = keyFrameIndices[boneIndex];
+                Console.WriteLine(curFrameIndex);
                 // References to current and next frame
                 AnimationKeyframe curFrame = channel[curFrameIndex], nextFrame =
                     channel[curFrameIndex + 1];
@@ -103,11 +98,12 @@ namespace Animation
 
                 if (controller.interpMethod == InterpolationMethod.SphericalLinear)
                 {
-                    Matrix curMatrix = curFrame.Transform;
+                    Matrix curMatrix =  curFrame.Transform;
                     Matrix nextMatrix = nextFrame.Transform;
                     // An expensive operation that decomposes both matrices and interpolates with
                     // quaternions and vectors
-                    controller.model.Bones[boneIndex].Transform = Util.SlerpMatrix(
+                    controller.model.Bones[boneIndex].Transform = 
+                        Util.SlerpMatrix(
                         curMatrix,
                         nextMatrix,
                         interpAmount);
@@ -116,6 +112,7 @@ namespace Animation
                 else if (controller.interpMethod == InterpolationMethod.Linear)
                 {
                     // simple linear interpolation
+
                     controller.model.Bones[boneIndex].Transform = Matrix.Lerp(curFrame.Transform,
                          nextFrame.Transform,
                         (float)interpAmount);
@@ -129,11 +126,12 @@ namespace Animation
             /// should be size of the models bones</param>
             public void CreatePoseSet(Matrix[] poseSet)
             {
-                controller.model.CopyBoneTransformsFrom(bones);
+
                 // Create each pose
                 foreach (KeyValuePair<string, AnimationChannel> k in controller.anim.Channels)
+                {
                     CreatePose(k.Value, controller.model.Bones[k.Key].Index);
-
+                }
                 controller.model.CopyAbsoluteBoneTransformsTo(poseSet);
                 // apply any skin transforms
                 foreach (KeyValuePair<string, Matrix> skinTransform in controller.blendTransforms)
@@ -141,9 +139,7 @@ namespace Animation
                     int index = controller.model.Bones[skinTransform.Key].Index;
                     poseSet[index] = skinTransform.Value * poseSet[index];
                 }
-                // Put the bones back in their original position
-                controller.model.CopyBoneTransformsTo(bones);
-                controller.model.CopyBoneTransformsFrom(originalBones);
+  
             
             }
 
@@ -153,9 +149,6 @@ namespace Animation
             public void Reset()
             {
                 curTime = 0;
-                controller.model.CopyBoneTransformsFrom(originalBones);
-                if (bones != null)
-                    controller.model.CopyBoneTransformsTo(bones);
             }
 
             /// <summary>
@@ -166,6 +159,7 @@ namespace Animation
             {
                 if (time == 0)
                     return;
+
                 curTime += time;
                 if (curTime > controller.AnimationDuration)
                 {
