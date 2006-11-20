@@ -79,8 +79,18 @@ namespace Animation
             IGraphicsDeviceService deviceService = (IGraphicsDeviceService)content.ServiceProvider.GetService(
                 typeof(IGraphicsDeviceService));
             Effect cloneSource = content.Load<Effect>(AssetName);
-            BasicPaletteEffect effect = new BasicPaletteEffect(deviceService.GraphicsDevice,
-                cloneSource);
+            BasicPaletteEffect effect = null;
+            try
+            {
+                effect = new BasicPaletteEffect(deviceService.GraphicsDevice,
+                    cloneSource);
+            }
+            catch
+            {
+                throw new Exception("The BasicPaletteEffect failed to load.  Please make sure you have " +
+                    "added the provided file, " + RelativeFilename + ", as a content item with asset name " +
+                    AssetName + ".");
+            }
             return effect;
         }
 
@@ -474,7 +484,7 @@ namespace Animation
         {
             get
             {
-                return "_____BasicPaletteEffect_____";
+                return "_____BasicPaletteEffect";
             }
         }
 

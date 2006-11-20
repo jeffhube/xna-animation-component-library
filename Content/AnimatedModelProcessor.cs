@@ -40,7 +40,6 @@ namespace Animation.Content
     [ContentProcessor(DisplayName="Model - Animation Library")]
     public class AnimatedModelProcessor : ModelProcessor
     {
-        static bool paletteBuilt = false;
         // stores all animations for the model
         private AnimationContentDictionary animations = new AnimationContentDictionary();
         /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
@@ -49,21 +48,6 @@ namespace Animation.Content
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
-
-
-            if (!paletteBuilt)
-            {
-                string curDir = Directory.GetCurrentDirectory();
-                string path = Path.Combine(curDir, BasicPaletteEffect.RelativeFilename);
-                StreamWriter sw = new StreamWriter(path);
-                sw.Write(BasicPaletteEffect.SourceCode);
-                sw.Flush();
-                sw.Close();
-                context.BuildAsset<EffectContent, CompiledEffect>(new ExternalReference<EffectContent>(path),
-                    "EffectProcessor", new OpaqueDataDictionary(), "EffectImporter", BasicPaletteEffect.AssetName);
-                paletteBuilt = true;
-            }
-
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
             // Attach the animation and skinning data to the models tag
