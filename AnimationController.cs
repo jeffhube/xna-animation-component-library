@@ -79,7 +79,7 @@ namespace Animation
     /// Animates and draws a model that was processed with AnimatedModelProcessor
     /// </summary>
     public partial class AnimationController : IDrawable, IUpdateable,
-        IGameComponent
+        IGameComponent, ICloneable
     {
         #region Member Variables
 
@@ -199,6 +199,7 @@ namespace Animation
         {
             creator = new BonePoseCreator(this);
             ChangeAnimation(animationName);
+            UsePrecomputedInterpolations = true;
         }
 
         /// <summary>
@@ -213,6 +214,41 @@ namespace Animation
         {
             creator = new BonePoseCreator(this);
             ChangeAnimation(animationIndex);
+            UsePrecomputedInterpolations = true;
+        }
+
+        /// <summary>
+        /// Creates a new instance of AnimationController and calls BasicPaletteEffect.ReplaceBasicEffects
+        /// </summary>
+        /// <param name="game">The current game</param>
+        /// <param name="model">The model to be animated</param>
+        /// <param name="animationIndex">The index of the animation in the X file.</param>
+        /// <param name="usePrecomputedInterpolations">Whether or not to compute all interpolates for the
+        /// given animation upon construction</param>
+        public AnimationController(Game game, Model model,
+            int animationIndex, bool usePrecomputedInterpolations)
+            : this(game, model)
+        {
+            creator = new BonePoseCreator(this);
+            ChangeAnimation(animationIndex);
+            UsePrecomputedInterpolations = usePrecomputedInterpolations;
+        }
+
+        /// <summary>
+        /// Creates a new instance of AnimationController and calls BasicPaletteEffect.ReplaceBasicEffects
+        /// </summary>
+        /// <param name="game">The current game</param>
+        /// <param name="model">The model to be animated</param>
+        /// <param name="animationIndex">The index of the animation in the X file.</param>
+        /// <param name="usePrecomputedInterpolations">Whether or not to compute all interpolates for the
+        /// given animation upon construction</param>
+        public AnimationController(Game game, Model model,
+            string animationName, bool usePrecomputedInterpolations)
+            : this(game, model)
+        {
+            creator = new BonePoseCreator(this);
+            ChangeAnimation(animationName);
+            UsePrecomputedInterpolations = usePrecomputedInterpolations;
         }
         #endregion
 
@@ -568,6 +604,26 @@ namespace Animation
                 worldParams[i].SetValue(worldBuffer[i]);
             }
         }
+        #endregion
+
+        #region ICloneable Members
+
+        public object Clone()
+        {
+            Animation.AnimationController controller = new AnimationController(this.game,
+                model, this.animationName,false);
+            controller.speedFactor = this.speedFactor;
+            controller.quality = this.quality;
+            controller.InterpolationMethod = this.InterpolationMethod;
+            if (UsePrecomputedInterpolations)
+            {
+                controller.usingTable = true;
+                controller.table = this.table;
+            }
+            return controller;
+            
+        }
+
         #endregion
     }
 }
