@@ -39,6 +39,7 @@ namespace Animation
     /// </summary>
     public sealed class BasicPaletteEffect : Effect
     {
+
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
             specColorParam, specPowerParam,texEnabledParam, texParam, paletteParam;
@@ -47,12 +48,22 @@ namespace Animation
         private static Vector3 zero = Vector3.Zero;
 
 
-        internal BasicPaletteEffect(GraphicsDevice device,
-            Effect cloneSource)
+        internal BasicPaletteEffect(GraphicsDevice device, byte[] byteCode)
+            : base(device, byteCode, CompilerOptions.NoPreShader | CompilerOptions.PreferFlowControl, null)
+        {
+            InitializeParameters();
+        }
+
+        internal BasicPaletteEffect(GraphicsDevice device, Effect cloneSource)
             : base(device, cloneSource)
         {
-            paletteParam = Parameters["BonePalette"];
-            texParam = Parameters["Texture"];
+            InitializeParameters();
+        }
+
+        private void InitializeParameters()
+        {
+            paletteParam = Parameters["MatrixPalette"];
+            texParam = Parameters["BasicTexture"];
             texEnabledParam = Parameters["TextureEnabled"];
             worldParam = Parameters["World"];
             viewParam = Parameters["View"];
@@ -60,7 +71,7 @@ namespace Animation
             ambientParam = Parameters["AmbientLightColor"];
             eyeParam = Parameters["EyePosition"];
             emissiveParam = Parameters["EmissiveColor"];
-            lightEnabledParam = Parameters["LightingEnabled"];
+            lightEnabledParam = Parameters["LightingEnable"];
             diffuseParam = Parameters["DiffuseColor"];
             specColorParam = Parameters["SpecularColor"];
             specPowerParam = Parameters["SpecularPower"];
@@ -69,30 +80,7 @@ namespace Animation
             light2 = new BasicDirectionalLight(this, 2);
         }
 
-        /// <summary>
-        /// Creates a new instance of BasicPaletteEffect.
-        /// </summary>
-        /// <param name="content">The content containg the games services.</param>
-        /// <returns>A new instance of BasicPaletteEffect</returns>
-        public static BasicPaletteEffect FromContent(ContentManager content)
-        {
-            IGraphicsDeviceService deviceService = (IGraphicsDeviceService)content.ServiceProvider.GetService(
-                typeof(IGraphicsDeviceService));
-            Effect cloneSource = content.Load<Effect>(AssetName);
-            BasicPaletteEffect effect = null;
-            try
-            {
-                effect = new BasicPaletteEffect(deviceService.GraphicsDevice,
-                    cloneSource);
-            }
-            catch
-            {
-                throw new Exception("The BasicPaletteEffect failed to load.  Please make sure you have " +
-                    "added the provided file, " + RelativeFilename + ", as a content item with asset name " +
-                    AssetName + ".");
-            }
-            return effect;
-        }
+
 
         /// <summary>
         /// Clones the current BasicPaletteEffect class.
@@ -101,7 +89,7 @@ namespace Animation
         /// <returns>A clone of the current instance.</returns>
         public override Effect Clone(GraphicsDevice device)
         {
-            return new BasicPaletteEffect(device,base.Clone(device));
+            return new BasicPaletteEffect(device, this);
         }
 
 
@@ -138,43 +126,6 @@ namespace Animation
         }
 
         /// <summary>
-        /// Replaces all instances of BasicEffect with BasicPaletteEffect for meshes
-        /// that contain skinning info.
-        /// </summary>
-        /// <param name="content">The content manager containg the game's services.</param>
-        /// <param name="model">The model</param>
-        public static void ReplaceBasicEffects(ContentManager content, Model model)
-        {
-            foreach (ModelMesh mesh in model.Meshes)
-            {
-                foreach (ModelMeshPart part in mesh.MeshParts)
-                {
-                    if (!(part.Effect is BasicEffect))
-                        continue;
-                    VertexDeclaration decl = part.VertexDeclaration;
-                    VertexElement[] elements = decl.GetVertexElements();
-                    bool isSkinned = false;
-                    foreach (VertexElement e in elements)
-                    {
-                        if (e.VertexElementUsage == VertexElementUsage.BlendWeight ||
-                            e.VertexElementUsage == VertexElementUsage.BlendIndices)
-                        {
-                            isSkinned = true;
-                            break;
-                        }
-                    }
-                    if (isSkinned)
-                    {
-                        BasicPaletteEffect effect = FromContent(content);
-                        BasicEffect basic = (BasicEffect)part.Effect;
-                        effect.SetParamsFromBasicEffect(basic);
-                        part.Effect = effect;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// A basic directional light that uses phong shading.
         /// </summary>
         public sealed class BasicDirectionalLight
@@ -188,10 +139,11 @@ namespace Animation
             internal BasicDirectionalLight(BasicPaletteEffect effect, int lightNum)
             {
                 this.effect = effect;
-                this.lightDirParam = effect.Parameters["LightDirection" + lightNum.ToString()];
-                this.difColorParam = effect.Parameters["LightDiffuseColor" + lightNum.ToString()];
-                this.specColorParam = effect.Parameters["LightSpecularColor" + lightNum.ToString()];
-                this.lightEnabledParam = effect.Parameters["LightEnabled" + lightNum.ToString()];
+                string lightString = "DirLight" + lightNum;
+                this.lightDirParam = effect.Parameters[lightString + "Direction"];
+                this.difColorParam = effect.Parameters[lightString+ "DiffuseColor"];
+                this.specColorParam = effect.Parameters[lightString+ "SpecularColor"];
+                this.lightEnabledParam = effect.Parameters[lightString+"Enable"];
             }
 
             /// <summary>
@@ -289,7 +241,7 @@ namespace Animation
         /// <summary>
         /// Gets or sets the bone palette values.
         /// </summary>
-        public Matrix[] BonePalette
+        public Matrix[] MatrixPalette
         {
             get
             {
@@ -480,60 +432,217 @@ namespace Animation
             }
         }
 
-        internal static string AssetName
-        {
-            get
-            {
-                return "_____BasicPaletteEffect";
-            }
-        }
-
-        internal static string RelativeFilename
-        {
-            get
-            {
-                return "_____BasicPaletteEffect.fx";
-            }
-        }
-
-        internal static string SourceCode
+        private static string LightingCode
         {
             get
             {
                 return @"
+
+
+    float3 totalDiffuse = DiffuseColor*
+         ((DirLight0Enable ? dot(-DirLight0Direction,normal) * DirLight0DiffuseColor : 0) +
+		 (DirLight1Enable ? dot(-DirLight1Direction,normal) * DirLight1DiffuseColor : 0) +
+		 (DirLight2Enable ?  dot(-DirLight2Direction,normal) * DirLight2DiffuseColor : 0));
+
+
+    // This is the vector between the camera and the object in world space, which is used
+    // for phong lighting calculation in the pixel shader
+	float3 viewDirection = normalize(EyePosition - mul(output.position, World));
+    float3 spec0,spec1,spec2;
+    if (DirLight0Enable)
+    {
+        float val = 2.0 * dot(DirLight0Direction,normal);
+        if (val > 0)
+        {
+            spec0 = float3(0,0,0);
+        }
+        else
+        {
+            spec0 = DirLight0SpecularColor *
+                pow(dot(viewDirection, DirLight0Direction - (val * normal)),SpecularPower);
+        }
+    }
+    else
+        spec0=float3(0,0,0);
+
+    if (DirLight1Enable)
+    {
+        float val = 2.0 * dot(DirLight1Direction,normal);
+        if (val > 0)
+        {
+            spec1 = float3(0,0,0);
+        }
+        else
+        {
+            spec1 = DirLight1SpecularColor *
+                pow(dot(viewDirection, DirLight1Direction - (val * normal)),SpecularPower);
+        }
+    }
+    else
+        spec1=float3(0,0,0);
+
+    if (DirLight2Enable)
+    {
+        float val = 2.0 * dot(DirLight2Direction,normal);
+        if (val > 0)
+        {
+            spec2 = float3(0,0,0);
+        }
+        else
+        {
+            spec2 = DirLight2SpecularColor *
+                pow(dot(viewDirection, DirLight2Direction - (val * normal)),SpecularPower);
+        }
+    }
+    else
+        spec2=float3(0,0,0);
+    
+
+	float3 totalSpecular = SpecularColor * (spec0+spec1+spec2);
+	output.color.xyz = saturate(AmbientLightColor+totalDiffuse + totalSpecular);
+    output.color.w=1.0;
+	output.texcoord = input.texcoord;
+";
+            }
+        }
+
+        private static string SkinFourBonesCode
+        {
+            get
+            {
+                return @"
+	// Apply the vertex blending formula to the input vertex
+    output.position = input.weights[0] * mul(input.position,MatrixPalette[input.indices[0]]) +
+        input.weights[1] * mul(input.position,MatrixPalette[input.indices[1]]) +
+        input.weights[2] * mul(input.position,MatrixPalette[input.indices[2]]) +
+        (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
+		 * mul(input.position,MatrixPalette[input.indices[3]]);
+	
+	// Now we apply the same formula as above for each bone's influence, except this time we
+	// calculate the new normal
+	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
+	    input.weights[1] * mul(input.normal, MatrixPalette[input.indices[1]]) +
+	    input.weights[2] * mul(input.normal, MatrixPalette[input.indices[2]]) +
+	    (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
+		 * mul(input.normal,MatrixPalette[input.indices[3]]);
+
+	// This is the final position of the vertex, and where it will be drawn on the screen
+	output.position = mul(output.position,mul(World,mul(View,Projection)));
+
+	// Same for the normal
+    normal = normalize(mul(normal,World));";
+            }
+        }
+
+        private static string SkinThreeBonesCode
+        {
+            get
+            {
+                return @"
+	// Apply the vertex blending formula to the input vertex
+    output.position = input.weights[0] * mul(input.position,MatrixPalette[input.indices[0]]) +
+        input.weights[1] * mul(input.position,MatrixPalette[input.indices[1]]) +
+        (1-(input.weights[2]+input.weights[1]+input.weights[0]))
+		 * mul(input.position,MatrixPalette[input.indices[2]]);
+	
+	// Now we apply the same formula as above for each bone's influence, except this time we
+	// calculate the new normal
+	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
+	    input.weights[1] * mul(input.normal, MatrixPalette[input.indices[1]]) +
+	    (1-(input.weights[2]+input.weights[1]+input.weights[0]))
+		 * mul(input.normal,MatrixPalette[input.indices[2]]);
+
+	// This is the final position of the vertex, and where it will be drawn on the screen
+	output.position = mul(output.position,mul(World,mul(View,Projection)));
+
+	// Same for the normal
+    normal = normalize(mul(normal,World));";
+            }
+        }
+
+        private static string SkinTwoBonesCode
+        {
+            get
+            {
+                return @"
+	// Apply the vertex blending formula to the input vertex
+    output.position = input.weights[0] * mul(input.position,MatrixPalette[input.indices[0]]) +
+        (1-input.weights[0]) * mul(input.position,MatrixPalette[input.indices[1]]);
+	
+	// Now we apply the same formula as above for each bone's influence, except this time we
+	// calculate the new normal
+	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
+	    (1-input.weights[0]) * mul(input.normal,MatrixPalette[input.indices[1]]);
+
+	// This is the final position of the vertex, and where it will be drawn on the screen
+	output.position = mul(output.position,mul(World,mul(View,Projection)));
+
+	// Same for the normal
+    normal = normalize(mul(normal,World));";
+            }
+        }
+
+        private static string SkinOneBoneCode
+        {
+            get
+            {
+                return @"
+	// Apply the vertex blending formula to the input vertex
+    output.position = mul(input.position,MatrixPalette[input.indices[0]]);
+	
+	// Now we apply the same formula as above for each bone's influence, except this time we
+	// calculate the new normal
+	normal = mul(input.normal, MatrixPalette[input.indices[0]]);
+
+	// This is the final position of the vertex, and where it will be drawn on the screen
+	output.position = mul(output.position,mul(World,mul(View,Projection)));
+
+	// Same for the normal
+    normal = normalize(mul(normal,World));";
+            }
+        }
+
+        /// <summary>
+        /// Returns the source code for BasicPaletteEffect
+        /// </summary>
+        public static string SourceCode
+        {
+            get
+            {
+                return @"
+
 
 float4x4 World;
 float4x4 View;
 float4x4 Projection;
 float3 DiffuseColor;
 float3 SpecularColor;
-float3 AmbientLightColor;
+float3 AmbientLightColor = float3(0,0,0);
 float3 EmissiveColor;
 float3 EyePosition;
-bool   LightEnabled0;
-bool   LightEnabled1;
-bool   LightEnabled2;
-float3 LightDirection0;
-float3 LightDirection1;
-float3 LightDirection2;
-float3 LightDiffuseColor0;
-float3 LightDiffuseColor1;
-float3 LightDiffuseColor2;
-float3 LightSpecularColor0;
-float3 LightSpecularColor1;
-float3 LightSpecularColor2;
-uniform extern float4x4 BonePalette[" + BasicPaletteEffect.PALETTE_SIZE.ToString()+@"];
+bool   DirLight0Enable;
+bool   DirLight1Enable;
+bool   DirLight2Enable;
+float3 DirLight0Direction;
+float3 DirLight1Direction;
+float3 DirLight2Direction;
+float3 DirLight0DiffuseColor;
+float3 DirLight1DiffuseColor;
+float3 DirLight2DiffuseColor;
+float3 DirLight0SpecularColor;
+float3 DirLight1SpecularColor;
+float3 DirLight2SpecularColor;
+uniform extern float4x4 MatrixPalette[" + PALETTE_SIZE.ToString()+ @"];
 float SpecularPower;
 bool TextureEnabled;
-bool LightingEnabled = false;
-texture Texture;
+bool LightingEnable = false;
+texture BasicTexture;
 
 
-	
 
-sampler BaseSampler = sampler_state
+sampler TextureSampler = sampler_state
 {
-   Texture = (Texture);
+   Texture = (BasicTexture);
    ADDRESSU = WRAP;
    ADDRESSV = WRAP;
    MAGFILTER = LINEAR;
@@ -556,8 +665,6 @@ struct VS_OUTPUT
 	float4 position : POSITION;
 	float4 color : COLOR;
 	float2 texcoord : TEXCOORD0;
-	float3 normal : TEXCOORD1;
-	float3 viewDirection : TEXCOORD2;
 };
 
 struct PS_OUTPUT
@@ -567,61 +674,71 @@ struct PS_OUTPUT
 
 void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
 {
-	float4 v0 = input.weights[0] * mul(input.position,BonePalette[input.indices[0]]);
-	float4 v1 = input.weights[1] * mul(input.position,BonePalette[input.indices[1]]);
-	float4 v2 = input.weights[2] * mul(input.position,BonePalette[input.indices[2]]);
-	float4 v3 = (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(input.position,BonePalette[input.indices[3]]);
-    output.position = v0+v1+v2+v3;
-	float3 objectPosition = mul(output.position, World);
-	v0 = input.weights[0] * mul(input.normal, BonePalette[input.indices[0]]);
-	v1 = input.weights[1] * mul(input.normal, BonePalette[input.indices[1]]);
-	v2 = input.weights[2] * mul(input.normal, BonePalette[input.indices[2]]);
-	v3 = (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(input.normal,BonePalette[input.indices[3]]);
-	output.position = mul(output.position,mul(World,mul(View,Projection)));
-
-    output.normal = mul(v0+v1+v2+v3,World);
-	output.color = input.color;
-	output.texcoord = input.texcoord;
-	output.viewDirection = objectPosition - EyePosition;
+    float3 normal;
+    if (input.weights[3]==0)
+    {
+    " + SkinThreeBonesCode + @"
+    }
+    else if (input.weights[2]==0)
+    {
+    " + SkinTwoBonesCode + @"
+    }
+    else if (input.weights[1]==0)
+    {
+    " + SkinOneBoneCode + @"
+    }
+    else
+    {
+    " + SkinFourBonesCode + @"
+    }
+    " + LightingCode + @"
 }
 
+
+// This takes the transformed normal as influenced by the bones (all the matrix palette transformations
+// occur in TransformVertex), and applies 3 directional phong lights to them
 void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
 {
-	if (LightingEnabled == false && TextureEnabled)
+	// The general formula for the final color without lights is (original color + diffuse color +
+	// emissive color).  When textures are active, we multiply this by the color of the texture
+	// at the current texture coordinate for this vertex.
+	if (LightingEnable == false && TextureEnabled)
     {
-		output.color.xyz = tex2D(BaseSampler,input.texcoord).xyz
-            * saturate(EmissiveColor + DiffuseColor);
+		output.color.xyz = tex2D(TextureSampler,input.texcoord).xyz * saturate(EmissiveColor + DiffuseColor);
     }
-    else if (LightingEnabled == false)
+    // Same as above, except no texture
+    else if (LightingEnable == false)
     {
-        output.color.xyz = saturate(EmissiveColor + DiffuseColor);
+       output.color.xyz = saturate(EmissiveColor + DiffuseColor);
     }
 	else
 	{
-
-		float3 viewDirection = normalize(input.viewDirection);
-		float3 normal = normalize(input.normal);
+		// We need to normalize the normal and vector between the camera and object position
+		// It won't even work if we normalize it in the vertex shader.
+	//	float3 viewDirection = normalize(input.viewDirection);
+    //	float3 normal = normalize(input.normal);
 		
-		float3 totalDiffuse = 
-             (LightEnabled0 ? DiffuseColor * dot(-LightDirection0,normal) * LightDiffuseColor0 : 0) +
-			 (LightEnabled1 ? DiffuseColor * dot(-LightDirection1,normal) * LightDiffuseColor1 : 0) +
-			 (LightEnabled2 ? DiffuseColor * dot(-LightDirection2,normal) * LightDiffuseColor2 : 0);
-		float3 totalSpecular = 
-			(LightEnabled0 ? SpecularColor * 
-				pow(saturate(dot(LightDirection0-2*normal*clamp(dot(LightDirection0,normal),-1,0)
-					,viewDirection)),SpecularPower) * LightSpecularColor0 : 0) +
-			(LightEnabled1 ? SpecularColor * 
-				pow(saturate(dot(LightDirection1-2*normal*clamp(dot(LightDirection2,normal),-1,0)
-					,viewDirection)),SpecularPower) * LightSpecularColor1 : 0) +
-			(LightEnabled2 ? SpecularColor * 
-				pow(saturate(dot(LightDirection2-2*normal*clamp(dot(LightDirection2,normal),-1,0)
-					,viewDirection)),SpecularPower) * LightSpecularColor2 : 0);
+		// For phong shading, the final color of a pixel is equal to 
+		// (sum of influence of lights + ambient constant) * texture color at given tex coord
+		// First we find the diffuse light, which is simply the dot product of -1*light direction
+		// and the normal.  This gives us the component of the reverse light direction in the
+		// direction of the normal.  We then multiply the sum of each lights influence by a 
+		// diffuse constant.
 
-		output.color.xyz = TextureEnabled ? tex2D(BaseSampler, input.texcoord).xyz 
-            * saturate(AmbientLightColor+totalDiffuse+totalSpecular)
-            : saturate(AmbientLightColor+totalDiffuse+totalSpecular);
+		
+		// Now we do a similar strategy for specular light; sum the lights then multiply by
+		// a specular constant.  In this formula, for each light, we find the dot product between
+		// our viewDirection vector and the vector of reflection for the light ray.  This simulates
+		// the glare or shinyness that occurs when looking at an object with a reflective surface
+		// and when light can bounce of the surface and hit our eyes.
+		// We need to be careful with what values we saturate and clamp, otherwise both sides
+		// of the object will be lit, or other strange phenomenon will occur.
+
+
+		// Now we apply the aforementioned phong formulate to get the final color
+		output.color.xyz = TextureEnabled ? tex2D(TextureSampler, input.texcoord).xyz  * input.color.xyz
+            : input.color.xyz;
+        //    : saturate(AmbientLightColor+totalDiffuse);
 		output.color.w   = input.color.w;
 	}
 }

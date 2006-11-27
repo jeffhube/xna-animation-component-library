@@ -34,113 +34,126 @@ using Animation;
 
 namespace Animation
 {
-    public partial class AnimationController
-    {
-        /// <summary>
-        /// A table that contains the bone poses and normal bone poses based on an animation
-        /// and the time step between the bone poses.
-        /// </summary>
-        internal sealed class BonePoseTable
+
+        internal sealed class InterpolationTableCollection
         {
-
-            #region Member Variables
-            // The time between pose sets
-            private long timeStep;
-            // The total time of the animation
-            private long totalTime;
-            private AnimationController controller;
-            // Stores all of the bone pose sets by frame index
-            private Matrix[][] bonePoses;
-            // See commented out method for ... comments
-            // Stores all of the bone pose sets for vertex normals by frame index
-            // private Matrix[][] normalBonePoses;
-            // The number of frames in the animation
+            private InterpolationTable[] tables;
+            private BonePoseCreator creator;
             private int numFrames;
+            private long timeStep;
+            private long totalTime;
+            private bool tablesCreated = false;
+            private List<SkinTransform[]> skinTransforms;
 
-            #endregion
-
-            #region Constructors
-            // Creates a table that contains the bone poses and inverse transpose bone poses
-            internal BonePoseTable(AnimationController controller,
-                long timeStep)
+            public InterpolationTableCollection(BonePoseCreator creator,
+                List<SkinTransform[]> skinTransforms)
             {
+                this.creator = creator;
+                this.skinTransforms=skinTransforms;
+                tables = new InterpolationTable[creator.Model.Meshes.Count];
 
-                // Store the passed in data in the appropriate places
-                this.timeStep = timeStep;
-                this.controller = controller;
-                totalTime = controller.AnimationDuration;
-                numFrames = (int)(totalTime / timeStep);
-
-                bonePoses = new Matrix[numFrames][];
-                //normalBonePoses = new Matrix[numFrames][];
-                // After storing data and doing general initialization, create the table
-                CreateTable();
             }
-            #endregion
 
-            #region Methods and Properties
-            /// <summary>
-            /// The number of frames in the animation represented by the bone pose table.
-            /// </summary>
+            public bool TablesCreated
+            { get { return tablesCreated; } }
+
+            public Matrix[] GetMeshPose(ref int meshIndex, ref int frameNum)
+            {
+                return tables[meshIndex].GetPose(ref frameNum);
+            }
+
+            public long TimeStep
+            { get { return timeStep; } }
+
             public int NumFrames
             { get { return numFrames; } }
 
-
-
-            /// <summary>
-            /// Returns a bone pose set of the animation at the given time
-            /// </summary>
-            /// <param name="elapsedTime">The elapsed animation time</param>
-            /// <returns>A bone pose set of the animation at the given time</returns>
-            public Matrix[] GetBonePoses(long elapsedTime)
+            public void CreateTables(long timeStep)
             {
-                // The total elapsed time in ticks, looping if greater than the animations
-                // total time
-                // The current frame index for the given time
-                int frameNum = (int)((elapsedTime % (totalTime - timeStep)) / timeStep);
-                return bonePoses[frameNum];
-            }
-            /* Will we ever need this?  I don't want to delete it in case a shader doesn't do
-             * the inverse transpose calcutions
-            /// <summary>
-            /// Returns an inverse transpose bone pose set of the animation at the given time
-            /// </summary>
-            /// <param name="elapsedTime">The elapsed animation time</param>
-            /// <returns>An inverse transpose bone pose set of the animation at the given time</returns>
-            public Matrix[] GetNormalBonePoses(double elapsedTime)
-            {
-            }
-             */
-
-
-            /// <summary>
-            /// Creates the table by using the BonePoseCreator for each frame, and simulates
-            /// stepping through each frame
-            /// </summary>
-            private void CreateTable()
-            {
-                int numBones = controller.model.Bones.Count;
-                Matrix[] originalBones = new Matrix[numBones];
-                controller.model.CopyBoneTransformsTo(originalBones);
-                // This loop does the actual creation. 
-                for (int i = 0; i < numFrames; i++)
+                Matrix[] modelBones = new Matrix[creator.Model.Bones.Count];
+                this.timeStep = timeStep;
+                totalTime = creator.Animation.Duration.Ticks;
+                numFrames = timeStep == 0 ? 1 : (int)(totalTime / timeStep);
+                if (!tablesCreated)
                 {
-                    controller.creator.AdvanceTime(timeStep);
-                    bonePoses[i] = new Matrix[numBones];
-                    controller.creator.CreatePoseSet(bonePoses[i]);
-                    //      normalBonePoses[i] = new Matrix[numBones];
-                    //       for (int j = 0; j < bonePoses[i].Length; j++)
-                    //           normalBonePoses[i][j] = Matrix.Invert(Matrix.Transpose(bonePoses[i][j]));
+                    for (int i = 0; i < tables.Length; i++)
+                    {
+                        tables[i] = new InterpolationTable(this,
+                            skinTransforms[i],
+                            creator.Model.Meshes[i].ParentBone.Index);
+                    }
                 }
-                controller.model.CopyBoneTransformsFrom(originalBones);
-                controller.creator.Reset();
+
+                for (int curFrame = 0; curFrame < numFrames; curFrame++)
+                {
+                    creator.CreateModelPoseSet(modelBones);
+                    for (int i = 0; i < tables.Length; i++)
+                    {
+                        tables[i].CreateFrame(curFrame,modelBones);
+                    }
+                    creator.AdvanceTime(timeStep);
+                }
+                tablesCreated = true;
             }
+
+            /// <summary>
+            /// A table that contains the bone poses and normal bone poses based on an animation
+            /// and the time step between the bone poses.
+            /// </summary>
+            internal sealed class InterpolationTable
+            {
+
+                #region Member Variables
+                private InterpolationTableCollection tables;
+                // Stores all of the bone pose sets by frame index
+                private Matrix[][] bonePoses;
+                private SkinTransform[] skinTransforms;
+                private int meshBoneIndex;
+                #endregion
+
+                #region Constructors
+                // Creates a table that contains the bone poses and inverse transpose bone poses
+                internal InterpolationTable(
+                    InterpolationTableCollection tables,
+                    SkinTransform[] skinTransforms,
+                    int meshBoneIndex)
+                {
+                    this.meshBoneIndex = meshBoneIndex;
+                    this.tables = tables;
+                    this.skinTransforms = skinTransforms;
+                    bonePoses = new Matrix[tables.numFrames][];
+                }
+                #endregion
+
+
+                #region Methods and Properties
+
+                public Matrix[] GetPose(ref int frameNum)
+                {
+                    return bonePoses[frameNum];
+                }
+                
+                /// <summary>
+                /// Creates the table by using the BonePoseCreator for each frame, and simulates
+                /// stepping through each frame
+                /// </summary>
+                internal void CreateFrame(int frameNum, Matrix[] modelPoses)
+                {
+                    bonePoses[frameNum] = new Matrix[skinTransforms == null ? 1 : skinTransforms.Length];
+                    tables.creator.CreateMeshPoseSet(
+                        bonePoses[frameNum],
+                        modelPoses,
+                        skinTransforms,
+                        meshBoneIndex);
+                }
+            }
+
+
+                #endregion
         }
 
 
-            #endregion
-
-    }
+    
 }
 
 

@@ -30,6 +30,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.IO;
 using System.Collections;
+using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
+using Microsoft.Xna.Framework.Content;
 
 namespace Animation.Content
 {
@@ -40,6 +42,11 @@ namespace Animation.Content
     [ContentProcessor(DisplayName="Model - Animation Library")]
     public class AnimatedModelProcessor : ModelProcessor
     {
+
+        // Stores the byte code for the BasicPaletteEffect
+        internal static byte[] paletteByteCode = null;
+        private static bool paletteLoadAttempted = false;
+        private ContentProcessorContext context;
         // stores all animations for the model
         private AnimationContentDictionary animations = new AnimationContentDictionary();
         /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
@@ -48,6 +55,27 @@ namespace Animation.Content
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
+
+            if (!paletteLoadAttempted)
+            {
+                EffectContent effect = new EffectContent();
+                effect.EffectCode = BasicPaletteEffect.SourceCode;
+                EffectProcessor processor = new EffectProcessor();
+                CompiledEffect compiledEffect = processor.Process(effect, context);
+                if (compiledEffect.Success != false)
+                {
+                    paletteByteCode = compiledEffect.GetEffectCode();
+                }
+                else
+                    throw new Exception(
+                           "Compilation of BasicPaletteEffect failed.  If you are attempting to animate " +
+                           "skinned meshes using the Animation library, please make sure your "
+                        +  "graphics card has shader version 2.0.");
+                paletteLoadAttempted = true;
+            }
+
+
+            this.context = context;
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
             // Attach the animation and skinning data to the models tag
@@ -55,16 +83,40 @@ namespace Animation.Content
             FindAnimations(input);
             info.Animations = animations;
             // If we used default importer we can't do any skinning
-            if (input.OpaqueData.ContainsKey("BlendTransforms"))
-                info.BlendTransforms = (Dictionary<string, Matrix>)input.OpaqueData["BlendTransforms"];
+            if (input.OpaqueData.ContainsKey("SkinTransforms"))
+                info.SkinTransforms = (List<SkinTransform[]>)input.OpaqueData["SkinTransforms"];
             else
-                info.BlendTransforms = new Dictionary<string, Matrix>();
+                info.SkinTransforms = new List<SkinTransform[]>(new SkinTransform[c.Meshes.Count][]);
             Dictionary<string, object> dict = new Dictionary<string, object>();
             dict.Add("ModelAnimationInfo", info);
-            c.Tag = dict;
 
+            foreach (ModelMeshContent meshContent in c.Meshes)
+                ReplaceBasicEffects(meshContent);
+            c.Tag = dict;
+            
             return c;
         }
+
+        private void ReplaceBasicEffects(ModelMeshContent input)
+        {
+            foreach (ModelMeshPartContent part in input.MeshParts)
+            {
+                if (Util.IsSkinned(part.GetVertexDeclaration()))
+                {
+
+                    BasicMaterialContent basic = part.Material as BasicMaterialContent;
+                    if (basic != null)
+                    {
+                        PaletteMaterialContent paletteContent =
+                            new PaletteMaterialContent(basic, paletteByteCode,
+                            context);
+                        part.Material = paletteContent;
+                    }
+                }
+            }
+
+        }
+
 
 
 
@@ -84,9 +136,10 @@ namespace Animation.Content
                 FindAnimations(child);
 
         }
-
-
     }
+
+
+
 }
 
 

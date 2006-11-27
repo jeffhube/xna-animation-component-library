@@ -44,30 +44,7 @@ namespace Animation
         /// </summary>
         SphericalLinear
     }
-
-    /// <summary>
-    /// Determines the quality of an animation
-    /// </summary>
-    public enum AnimationQuality
-    {
-        /// <summary>
-        /// If interpolations are precomputed, time step is very small, else, interpolation
-        /// will be performed during the draw method
-        /// </summary>
-        Best,
-        /// <summary>
-        /// If interpolations are precomputed, time step is equal to game update time, else,
-        /// interpolation will be performed during the update method
-        /// </summary>
-        Good,
-        /// <summary>
-        /// If interpolations are precomputed, time step is large, else, interpolation
-        /// will be performed during every other update method
-        /// </summary>
-        Poor
-    }
-
-  
+ 
     
 
 

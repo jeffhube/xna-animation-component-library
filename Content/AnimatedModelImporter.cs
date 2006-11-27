@@ -48,16 +48,14 @@ namespace Animation.Content
         // Stores the number of units that represent one second in animation data
         // Is null if the file contains no information, and a default value will be used
         private int? animTicksPerSecond;
-        private const int DEFAULT_TICKS_PER_SECOND = 100;
+        private const int DEFAULT_TICKS_PER_SECOND = 3500;
         // Stores information about the current build for the content pipeline
         private ContentImporterContext context;
         // A list of meshes that have been imported
         private List<AnimatedMeshImporter> meshes = new List<AnimatedMeshImporter>();
         // Stores the current bone index while traversing the NodeContent tree
         int curIndex = 0;
-        // Contains the skin transform for a particular bone.  See ImportSkinWeights for more
-        // info
-        private Dictionary<string, Matrix> blendTransforms = new Dictionary<string, Matrix>();
+
         // Contains a collection of bone name keys that map to the index of the given bone.
         // This allows us to replace BoneWeightCollection lists for each mesh.  These collections
         // originally store the bone name attached to the weight, and boneIndices allows us to
@@ -69,7 +67,6 @@ namespace Animation.Content
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
             this.fileName = filename;
-
             this.context = context;
             // Create an instance of a class that splits a .X file into tokens and provides
             // functionality for iterating and parsing the tokens
@@ -85,18 +82,20 @@ namespace Animation.Content
             // in a preorder tree traversal.
             GetBoneIndices(root);
 
+            List<SkinTransform[]> skinTransforms = new List<SkinTransform[]>();
             // Now that we have mapped bone names to their indices, we can create the vertices
             // in each mesh so that they contain indices and weights
             foreach (AnimatedMeshImporter mesh in meshes)
             {
                 mesh.AddWeights(boneIndices);
                 mesh.CreateGeometry();
+                skinTransforms.Add(mesh.SkinTransforms);
             }
 
 
 
             // Allow processor to access any skinning data we might have
-            root.OpaqueData.Add("BlendTransforms", blendTransforms);
+            root.OpaqueData.Add("SkinTransforms", skinTransforms);
             return root;
         }
 
@@ -208,7 +207,7 @@ namespace Animation.Content
             Matrix m = tokens.SkipName().NextMatrix();
             // Reflect the matrix across the Z axis to swap from left hand to right hand
             // coordinate system
-            ReflectMatrix(ref m);
+            Util.ReflectMatrix(ref m);
             // skip the "}" at the end of the node
             tokens.SkipToken();
             return m;
@@ -294,7 +293,7 @@ namespace Animation.Content
             int numFrames = tokens.NextInt();
             AnimationKeyframe[] frames = new AnimationKeyframe[numFrames];
             // Find the ticks per millisecond that defines how fast the animation should go
-            double ticksPerMS = animTicksPerSecond == null ? DEFAULT_TICKS_PER_SECOND / 1000.0 
+            double ticksPerMS = animTicksPerSecond == null ? DEFAULT_TICKS_PER_SECOND /1000.0 
                 : (double)animTicksPerSecond / 1000.0;
 
             // fill in the frames
@@ -315,16 +314,30 @@ namespace Animation.Content
                 else if (numKeys == 4)
                 {
                     Vector4 v = tokens.NextVector4();
-                    Quaternion q = new Quaternion(v.W, v.X, v.Y, v.Z);
+                    Quaternion q = new Quaternion(
+                        new Vector3(v.W, v.Z, v.Y),
+                        v.X);
+
+
                     transform = Matrix.CreateFromQuaternion(q);
                 }
                 else if (numKeys == 3)
                 {
                     Vector3 v = tokens.NextVector3();
+                    float tmp = v.X;
+                    v.X = v.Z;
+                    v.Z = tmp;
                     if (keyType == 1)
+                    {
+
+
                         Matrix.CreateScale(ref v, out transform);
+                    }
                     else
+                    {
+
                         Matrix.CreateTranslation(ref v, out transform);
+                    }
                 }
                 tokens.SkipToken();
                 frames[i] = new AnimationKeyframe(time, transform);
@@ -401,7 +414,7 @@ namespace Animation.Content
                 for (int i = 0; i < matrixFrames.Count; i++)
                 {
                     Matrix m = matrixFrames[i].Transform;
-                    ReflectMatrix(ref m);
+                    Util.ReflectMatrix(ref m);
                     matrixFrames[i].Transform = m;
                     anim.Add(matrixFrames[i]);
                 }
@@ -413,9 +426,10 @@ namespace Animation.Content
                 for (int i = 0; i < combinedFrames.Count; i++)
                 {
                     Matrix m = combinedFrames[i].Transform;
-                    ReflectMatrix(ref m);
-                    combinedFrames[i].Transform = m;
+                    Util.ReflectMatrix(ref m);
+                    combinedFrames[i].Transform = m; //* Matrix.CreateRotationX(MathHelper.PiOver2);
                     anim.Add(combinedFrames[i]);
+                    
                 }
 
             }
@@ -425,22 +439,7 @@ namespace Animation.Content
 
         #region Other Methods
 
-        /// <summary>
-        /// Reflects a matrix across the Z axis by multiplying both the Z
-        /// column and the Z row by -1 such that the Z,Z element stays intact.
-        /// </summary>
-        /// <param name="m">The matrix to be reflected across the Z axis</param>
-        private void ReflectMatrix(ref Matrix m)
-        {
-            m.M13 *= -1;
-            m.M23 *= -1;
-            m.M33 *= -1;
-            m.M43 *= -1;
-            m.M31 *= -1;
-            m.M32 *= -1;
-            m.M33 *= -1;
-            m.M34 *= -1;
-        }
+
 
 
         // This allows us to replace BoneWeightCollection lists for each mesh.  These collections
@@ -453,7 +452,8 @@ namespace Animation.Content
         /// <param name="root">The root of the tree that is traversed</param>
         private void GetBoneIndices(NodeContent root)
         {
-            if (root.Name != null && !(root is MeshContent))
+            if (root.Name != null && !(root is MeshContent) 
+                && !boneIndices.ContainsKey(root.Name))
                 boneIndices.Add(root.Name, curIndex);
             curIndex++;
             foreach (NodeContent c in root.Children)

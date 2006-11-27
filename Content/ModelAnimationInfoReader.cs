@@ -82,7 +82,7 @@ namespace Animation.Content
             }
             info.Animations = dict;
             // Read the blend transform data
-            info.BlendTransforms = input.ReadRawObject<Dictionary<string, Matrix>>();
+            info.SkinTransforms = input.ReadRawObject<List<SkinTransform[]>>();
             return info;
         }
     }

@@ -95,97 +95,169 @@ namespace Animation
                     InitializeBasicEffect(effect);
         }
 
+        internal static bool IsSkinned(VertexElement[] elements)
+        {
+            foreach (VertexElement e in elements)
+                if (e.VertexElementUsage == VertexElementUsage.BlendIndices ||
+                    e.VertexElementUsage == VertexElementUsage.BlendWeight)
+                    return true;
+            return false;
 
+        }
 
-        
+        static bool doit = false;
         internal static List<AnimationKeyframe> MergeKeyFrames(AnimationKeyframe[] scale,
             AnimationKeyframe[] translation, AnimationKeyframe[] rotation)
         {
-            List<AnimationKeyframe> frames = new List<AnimationKeyframe>();
-            frames.Add(new AnimationKeyframe(new TimeSpan(),Matrix.Identity));
-            InitFrame(ref scale);
-            InitFrame(ref translation);
-            InitFrame(ref rotation);
-            TimeSpan[] allTimes = new TimeSpan[scale.Length + translation.Length +
-                rotation.Length];
-            int index = 0;
-            for (int i = 0; i < scale.Length; i++)
-                allTimes[index++] = scale[i].Time;
-            for (int i = 0; i < translation.Length; i++)
-                allTimes[index++] = translation[i].Time;
-            for (int i = 0; i < rotation.Length; i++)
-                allTimes[index++] = rotation[i].Time;
-            Array.Sort<TimeSpan>(allTimes);
-            foreach (TimeSpan time in allTimes)
-                if (time > frames[frames.Count-1].Time)
-                    frames.Add(new AnimationKeyframe(time, Matrix.Identity));
-            int rotIndex = 0;
-            int scaleIndex = 0;
-            int transIndex = 0;
-            for (int i = 0; i < frames.Count; i++)
+            if (scale == null)
+                throw new Exception("Animation data is not stored as matrices and " +
+                    "has no scale component.");
+            if (translation == null)
+                throw new Exception("Animation data is not stored as matrices and " +
+                    "has no translation component.");
+            if (rotation == null)
+                throw new Exception("Animation data is not stored as matrices and " +
+                    "has no rotation component");
+            doit = !(scale[0].Transform == Matrix.Identity);
+            InitializeFrames(ref scale);
+            InitializeFrames(ref translation);
+            InitializeFrames(ref rotation);
+            SortedList<TimeSpan, object> keyframeTimes
+                = new SortedList<TimeSpan, object>();
+            foreach (AnimationKeyframe frame in scale)
+                if (!keyframeTimes.ContainsKey(frame.Time))
+                    keyframeTimes.Add(frame.Time, null);
+            foreach(AnimationKeyframe frame in translation)
+                if (!keyframeTimes.ContainsKey(frame.Time))
+                    keyframeTimes.Add(frame.Time, null);
+            foreach (AnimationKeyframe frame in rotation)
+                if (!keyframeTimes.ContainsKey(frame.Time))
+                    keyframeTimes.Add(frame.Time, null);
+            IList<TimeSpan> times = keyframeTimes.Keys;
+            Matrix[] newScales = new Matrix[keyframeTimes.Count];
+            Matrix[] newTrans = new Matrix[keyframeTimes.Count];
+            Matrix[] newRot = new Matrix[keyframeTimes.Count];
+            List<AnimationKeyframe> returnFrames = new List<AnimationKeyframe>();
+
+            InterpFrames(ref scale, ref newScales, times);
+            InterpFrames(ref translation, ref newTrans, times);
+            
+            InterpFrames(ref rotation, ref newRot, times);
+            for (int i = 0; i < times.Count; i++)
             {
-                TimeSpan curTime = frames[i].Time;
-                if (rotIndex != rotation.Length-1 && curTime > rotation[rotIndex + 1].Time)
-                    rotIndex++;
-                if (rotIndex == rotation.Length - 1)
-                    frames[i].Transform = rotation[rotIndex].Transform;
-                else
-                {
-                    double slerpAmount = (curTime.Ticks - rotation[rotIndex].Time.Ticks) /
-                        (rotation[rotIndex + 1].Time.Ticks - rotation[rotIndex].Time.Ticks);
-                    Quaternion q1 = Quaternion.CreateFromRotationMatrix(rotation[rotIndex].Transform);
-                    Quaternion q2 = Quaternion.CreateFromRotationMatrix(rotation[rotIndex + 1].Transform);
-                    Quaternion q3;
-                    Quaternion.Slerp(ref q1, ref q2, (float)slerpAmount, out q3);
-                    frames[i].Transform = Matrix.CreateFromQuaternion(q3);
-                }
 
-                if (scaleIndex != scale.Length-1 && curTime > scale[scaleIndex + 1].Time )
-                    scaleIndex++;
-                if (scaleIndex == scale.Length - 1)
-                    frames[i].Transform *= scale[scaleIndex].Transform;
-                else
-                {
-                    double scaleLerpAmount = (curTime.Ticks - scale[scaleIndex].Time.Ticks) /
-                        (scale[scaleIndex + 1].Time.Ticks - scale[scaleIndex].Time.Ticks);
-                    frames[i].Transform *= Matrix.Lerp(scale[scaleIndex].Transform,
-                        scale[scaleIndex + 1].Transform,
-                        (float)scaleLerpAmount);
-                }
-                if (transIndex != translation.Length - 1 && curTime > translation[transIndex + 1].Time )
-                    transIndex++;
-                if (transIndex == translation.Length - 1)
-                    frames[i].Transform *= translation[transIndex].Transform;
-                else
-                {
-                    double transLerpAmount = (curTime.Ticks - translation[transIndex].Time.Ticks) /
-                        (translation[transIndex + 1].Time.Ticks - translation[transIndex].Time.Ticks);
-                    frames[i].Transform *= Matrix.Lerp(translation[transIndex].Transform,
-                        translation[transIndex + 1].Transform,
-                        (float)transLerpAmount);
-                }
 
+                Matrix m = newRot[i];
+                m = newScales[i] * m;
+                m = m * newTrans[i];
+      
+
+                returnFrames.Add(new AnimationKeyframe(times[i], m));
             }
 
-            return frames;
+            return returnFrames;
 
         }
 
 
-        private static void InitFrame(ref AnimationKeyframe[] frames)
+        private static void InterpFrames(
+            ref AnimationKeyframe[] source,
+            ref Matrix[] dest,
+            IList<TimeSpan> times)
         {
-            if (frames == null)
-                frames = new AnimationKeyframe[] {new AnimationKeyframe(new TimeSpan(),
-                    Matrix.Identity), new AnimationKeyframe(new TimeSpan(),
-                    Matrix.Identity)};
-            else
+            int sourceIndex = 0;
+            for (int i = 0; i < times.Count; i++)
             {
-                Array.Sort<AnimationKeyframe>(frames, new Comparison<AnimationKeyframe>(
-                    delegate(AnimationKeyframe one, AnimationKeyframe two)
-                    {
-                        return one.Time.CompareTo(two.Time);
-                    }));
+                if (source.Length==1)
+                {
+                    dest[i] = source[sourceIndex].Transform;
+                    continue;
+                }
+                while (source[sourceIndex + 1].Time < times[i])
+                {
+                    sourceIndex++;
+                }
+                if (source[sourceIndex].Time == times[i])
+                {
+                    dest[i] = source[sourceIndex].Transform;
+                }
+                else
+                {
+                    double interpAmount = ((double)times[i].Ticks - source[sourceIndex].Time.Ticks) /
+                        ((double)source[sourceIndex + 1].Time.Ticks - source[sourceIndex].Time.Ticks);
+
+                    
+                    Matrix m1 = source[sourceIndex].Transform;
+                    Matrix m2 = source[sourceIndex+1].Transform;
+
+                    dest[i] = Matrix.Lerp(m1, m2, (float)interpAmount);
+
+
+                    
+
+                }
+                   
             }
+
+        }
+
+
+        /// <summary>
+        /// Reflects a matrix across the Z axis by multiplying both the Z
+        /// column and the Z row by -1 such that the Z,Z element stays intact.
+        /// </summary>
+        /// <param name="m">The matrix to be reflected across the Z axis</param>
+        public static  void ReflectMatrix(ref Matrix m)
+        {
+            m.M13 *= -1;
+            m.M23 *= -1;
+            m.M33 *= -1;
+            m.M43 *= -1;
+            m.M31 *= -1;
+            m.M32 *= -1;
+            m.M33 *= -1;
+            m.M34 *= -1;
+        }
+
+        private static void InitializeFrames(ref AnimationKeyframe[] frames)
+        {
+            SortFrames(ref frames);
+            if (frames[0].Time != TimeSpan.Zero)
+            {
+                AnimationKeyframe[] newFrames = new AnimationKeyframe[frames.Length + 1];
+                Array.ConstrainedCopy(frames, 0, newFrames, 1, frames.Length);
+                newFrames[0] = frames[0];
+                frames = newFrames;
+            }
+        }
+
+        private static T Max<T>(params T[] items) where T : IComparable
+        {
+            IComparable max = null;
+            foreach (IComparable c in items)
+            {
+                if (max == null)
+                    max = c;
+                else
+                {
+                    if (c.CompareTo(max) > 0)
+                        max = c;
+                }
+            }
+            return (T)max;
+        }
+
+
+
+        private static void SortFrames(ref AnimationKeyframe[] frames)
+        {
+
+            Array.Sort<AnimationKeyframe>(frames, new Comparison<AnimationKeyframe>(
+                delegate(AnimationKeyframe one, AnimationKeyframe two)
+                {
+                    return one.Time.CompareTo(two.Time);
+                }));
+
         }
     
 

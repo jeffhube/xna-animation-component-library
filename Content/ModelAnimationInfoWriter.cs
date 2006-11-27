@@ -83,7 +83,7 @@ namespace Animation.Content
                 }
             }
             // Write the blend transforms
-            output.WriteRawObject<Dictionary<string, Matrix>>(value.BlendTransforms);
+            output.WriteRawObject<List<SkinTransform[]>>(value.SkinTransforms);
 
         }
 

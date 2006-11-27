@@ -26,6 +26,9 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework;
+using System.Runtime.Serialization;
+using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
+using Microsoft.Xna.Framework.Content;
 #endregion
 
 namespace Animation.Content
@@ -42,6 +45,8 @@ namespace Animation.Content
         /// <summary>
         /// The transforms that transform vertices into bone's local space
         /// </summary>
-        public Dictionary<string, Matrix> BlendTransforms;
+        public List<SkinTransform[]> SkinTransforms;
     }
+
+
 }

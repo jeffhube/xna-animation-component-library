@@ -95,6 +95,9 @@ namespace Animation.Content
             // of the bone to which that weight belongs.
             private List<BoneWeightCollection> skinInfo =
                 new List<BoneWeightCollection>();
+            private SortedDictionary<string, Matrix> skinTransformDictionary =
+                new SortedDictionary<string, Matrix>();
+            private List<SkinTransform> skinTransforms = new List<SkinTransform>();
             // Is set to true if skinning information has been found for this mesh;
             // this determines whether or not skin weight and skin weight index channels
             // are added
@@ -165,8 +168,8 @@ namespace Animation.Content
                 // Add the matrix that transforms the vertices to the space of the bone.
                 // we will need this for skinned animation.
                 Matrix blendOffset = tokens.NextMatrix();
-                model.ReflectMatrix(ref blendOffset);
-                model.blendTransforms.Add(boneName, blendOffset);
+                Util.ReflectMatrix(ref blendOffset);
+                skinTransformDictionary.Add(boneName, blendOffset);
                 // end of skin weights
                 tokens.SkipToken();
 
@@ -525,6 +528,23 @@ namespace Animation.Content
             {
                 if (!isSkinned)
                     return;
+
+                Dictionary<string, int> meshBoneIndices = new Dictionary<string, int>();
+                int currentIndex = 0;
+                // The bone indices are already sorted by index
+                foreach (KeyValuePair<string, int> k in boneIndices)
+                {
+                    if (skinTransformDictionary.ContainsKey(k.Key))
+                    {
+                        meshBoneIndices.Add(k.Key, currentIndex++);
+                        SkinTransform transform = new SkinTransform();
+                        transform.BoneName = k.Key;
+                        transform.Transform = skinTransformDictionary[k.Key];
+                        skinTransforms.Add(transform);
+                    }
+                }
+
+
                 // These two lists hold the data for the two new channels (the weights and indices)
                 weights = new Vector4[mesh.Positions.Count];
                 weightIndices = new Short4[mesh.Positions.Count];
@@ -546,14 +566,14 @@ namespace Animation.Content
                     // If the vertex cotnains no skinning info, assign it to the mesh's root
                     // bone with a weight of 1
                     if (ct > 0 && c[0].BoneName != null)
-                        i0 = (short)boneIndices[c[0].BoneName];
+                        i0 = (short)meshBoneIndices[c[0].BoneName];
                     if (ct == 0)
                         w.X = 1.0f;
 
                     // Fill in the indices
-                    if (c.Count > 1 && c[1].BoneName != null) i1 = (short)boneIndices[c[1].BoneName];
-                    if (c.Count > 2 && c[2].BoneName != null) i2 = (short)boneIndices[c[2].BoneName];
-                    if (c.Count > 3 && c[3].BoneName != null) i3 = (short)boneIndices[c[3].BoneName];
+                    if (c.Count > 1 && c[1].BoneName != null) i1 = (short)meshBoneIndices[c[1].BoneName];
+                    if (c.Count > 2 && c[2].BoneName != null) i2 = (short)meshBoneIndices[c[2].BoneName];
+                    if (c.Count > 3 && c[3].BoneName != null) i3 = (short)meshBoneIndices[c[3].BoneName];
 
                     // We have a list of boneweight/bone index objects that are ordered such that
                     // BoneWeightCollection[i] is the weight and index for vertex i.
@@ -607,6 +627,11 @@ namespace Animation.Content
                 AddAllChannels();
                 
 
+            }
+
+            public SkinTransform[] SkinTransforms
+            {
+                get { return skinTransforms.Count > 0 ? skinTransforms.ToArray() : null; }
             }
         }
 
