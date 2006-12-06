@@ -82,16 +82,21 @@ namespace Animation.Content
             context.Logger.LogWarning("", contentId, "using skeleton from {0}", asfFilename);
             bones = asfImporter.Bones;
 
-            int frameNumber = 0;
+            int frameNumber = 1;
             int maxFrameNumber = 0;
             string line;
-            while ((line=readLine())!=null)
+            animation.Channels.Add("root", new AnimationChannel());
+            while ((line = readLine()) != null)
             {
                 if (line[0]!='#' && line[0]!=':')
                 {
-                    if (int.TryParse(line, out frameNumber))
+                    int fn = 0;
+                    if (int.TryParse(line, out fn))
                     {
+                        ++frameNumber;// = int.Parse(line);
                         maxFrameNumber = Math.Max(frameNumber, maxFrameNumber);
+                        TimeSpan time = TimeSpan.FromTicks(frameNumber * ticksPerFrame);
+                        animation.Channels["root"].Add(new AnimationKeyframe(time, Matrix.Identity));
                     }
                     else
                     {
