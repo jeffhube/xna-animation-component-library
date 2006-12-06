@@ -49,7 +49,7 @@ namespace Animation
 
 
         internal BasicPaletteEffect(GraphicsDevice device, byte[] byteCode)
-            : base(device, byteCode, CompilerOptions.NoPreShader | CompilerOptions.PreferFlowControl, null)
+            : base(device, byteCode, CompilerOptions.PreferFlowControl, null)
         {
             InitializeParameters();
         }
@@ -58,6 +58,24 @@ namespace Animation
             : base(device, cloneSource)
         {
             InitializeParameters();
+        }
+
+        public void EnableDefaultLighting()
+        {
+            this.LightingEnabled = true;
+
+            this.light0.DiffuseColor = Color.White.ToVector3();
+            this.light0.SpecularColor = Color.Black.ToVector3();
+            this.light0.Direction = Vector3.Normalize(new Vector3(-1,0,-1));
+            this.light0.SpecularColor = Color.White.ToVector3();
+            this.light1.DiffuseColor = Color.Black.ToVector3();
+            this.light1.SpecularColor = Color.Black.ToVector3();
+            this.light2.DiffuseColor = Color.Black.ToVector3();
+            this.light2.SpecularColor = Color.Black.ToVector3();
+            this.SpecularPower = 8.0f;
+            this.light0.Enabled = true;
+            this.light1.Enabled = false;
+            this.light2.Enabled = false;
         }
 
         private void InitializeParameters()
@@ -151,14 +169,14 @@ namespace Animation
             /// </summary>
             public bool Enabled
             {
-                get
+               get
                 {
                     return lightEnabledParam.GetValueBoolean();
                 }
                 set
                 {
-                    lightEnabledParam.SetValue(value);
-                }
+                   lightEnabledParam.SetValue(value);
+               }
             }
 
             /// <summary>
@@ -188,6 +206,7 @@ namespace Animation
                 }
                 set
                 {
+ 
                     specColorParam.SetValue(value);
                 }
             }
@@ -410,8 +429,9 @@ namespace Animation
             }
             set
             {
-                Vector3.Transform(ref zero, ref value, out eye);
-                eye.Z *= -1;
+                Matrix inverseView = Matrix.Invert(value);
+                Vector3.Transform(ref zero, ref inverseView, out eye);
+
                 viewParam.SetValue(value);
                 eyeParam.SetValue(eye);
             }
@@ -439,6 +459,8 @@ namespace Animation
                 return @"
 
 
+
+
     float3 totalDiffuse = DiffuseColor*
          ((DirLight0Enable ? dot(-DirLight0Direction,normal) * DirLight0DiffuseColor : 0) +
 		 (DirLight1Enable ? dot(-DirLight1Direction,normal) * DirLight1DiffuseColor : 0) +
@@ -447,7 +469,7 @@ namespace Animation
 
     // This is the vector between the camera and the object in world space, which is used
     // for phong lighting calculation in the pixel shader
-	float3 viewDirection = normalize(EyePosition - mul(output.position, World));
+	float3 viewDirection = normalize(EyePosition - mul(output.position,World));
     float3 spec0,spec1,spec2;
     if (DirLight0Enable)
     {
@@ -470,7 +492,7 @@ namespace Animation
         float val = 2.0 * dot(DirLight1Direction,normal);
         if (val > 0)
         {
-            spec1 = float3(0,0,0);
+           spec1 = float3(0,0,0);
         }
         else
         {
@@ -502,7 +524,10 @@ namespace Animation
 	output.color.xyz = saturate(AmbientLightColor+totalDiffuse + totalSpecular);
     output.color.w=1.0;
 	output.texcoord = input.texcoord;
+	// This is the final position of the vertex, and where it will be drawn on the screen
+	output.position = mul(output.position,mul(World,mul(View,Projection)));
 ";
+
             }
         }
 
@@ -526,8 +551,6 @@ namespace Animation
 	    (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
 		 * mul(input.normal,MatrixPalette[input.indices[3]]);
 
-	// This is the final position of the vertex, and where it will be drawn on the screen
-	output.position = mul(output.position,mul(World,mul(View,Projection)));
 
 	// Same for the normal
     normal = normalize(mul(normal,World));";
@@ -552,8 +575,6 @@ namespace Animation
 	    (1-(input.weights[2]+input.weights[1]+input.weights[0]))
 		 * mul(input.normal,MatrixPalette[input.indices[2]]);
 
-	// This is the final position of the vertex, and where it will be drawn on the screen
-	output.position = mul(output.position,mul(World,mul(View,Projection)));
 
 	// Same for the normal
     normal = normalize(mul(normal,World));";
@@ -574,8 +595,7 @@ namespace Animation
 	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
 	    (1-input.weights[0]) * mul(input.normal,MatrixPalette[input.indices[1]]);
 
-	// This is the final position of the vertex, and where it will be drawn on the screen
-	output.position = mul(output.position,mul(World,mul(View,Projection)));
+
 
 	// Same for the normal
     normal = normalize(mul(normal,World));";
@@ -594,8 +614,6 @@ namespace Animation
 	// calculate the new normal
 	normal = mul(input.normal, MatrixPalette[input.indices[0]]);
 
-	// This is the final position of the vertex, and where it will be drawn on the screen
-	output.position = mul(output.position,mul(World,mul(View,Projection)));
 
 	// Same for the normal
     normal = normalize(mul(normal,World));";
@@ -622,7 +640,7 @@ float3 EmissiveColor;
 float3 EyePosition;
 bool   DirLight0Enable;
 bool   DirLight1Enable;
-bool   DirLight2Enable;
+extern bool    DirLight2Enable;
 float3 DirLight0Direction;
 float3 DirLight1Direction;
 float3 DirLight2Direction;

@@ -54,15 +54,26 @@ namespace Animation.Content
             BasicPaletteEffect effect = new BasicPaletteEffect(graphics.GraphicsDevice,
                 effectCode);
             if (input.ReadBoolean())
+            {
                 effect.Texture = input.ReadExternalReference<Texture2D>();
+                effect.TextureEnabled = true;
+            }
             if (input.ReadBoolean())
                 effect.SpecularPower = input.ReadSingle();
+            else
+                effect.SpecularPower = 8.0f;
             if (input.ReadBoolean())
                 effect.SpecularColor = input.ReadVector3();
+            else
+                effect.SpecularColor = Color.Black.ToVector3();
             if (input.ReadBoolean())
                 effect.EmissiveColor = input.ReadVector3();
+            else
+                effect.EmissiveColor = Color.Black.ToVector3();
             if (input.ReadBoolean())
                 effect.DiffuseColor = input.ReadVector3();
+            else
+                effect.DiffuseColor = Color.Black.ToVector3();
 
 
             return effect;
