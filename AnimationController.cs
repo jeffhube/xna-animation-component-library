@@ -602,7 +602,7 @@ namespace Animation
                         Matrix[] pose = tables.GetMeshPose(ref i, ref frameNum);
                         foreach (Effect effect in mesh.Effects)
                         {
-                            if (skinned)
+                            if (skinned && matrixPaletteParams[index]!=null)
                             {
                                 worldParams[index].SetValue(world);
                                 matrixPaletteParams[index].SetValue(pose);
