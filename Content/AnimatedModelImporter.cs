@@ -27,6 +27,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline;
 using System.IO;
+using System.Globalization;
 #endregion
 
 namespace Animation.Content
@@ -72,6 +73,10 @@ namespace Animation.Content
             // functionality for iterating and parsing the tokens
             tokens = new XFileTokenizer(filename);
 
+            CultureInfo culture = new CultureInfo("en-US");
+            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
+            currentThread.CurrentCulture = culture;
+            currentThread.CurrentUICulture = culture;
             // skip header
             tokens.SkipTokens(3);
             // fill in the tree

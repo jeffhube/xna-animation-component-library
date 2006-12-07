@@ -48,7 +48,6 @@ namespace Animation.Content
         private NamedValueDictionary<BoneContent> bones;
         private ContentIdentity contentId;
         private int currentLine=0;
-        private IFormatProvider format = (IFormatProvider)CultureInfo.InvariantCulture.NumberFormat;
         private ContentIdentity cId
         {
             get
@@ -68,6 +67,10 @@ namespace Animation.Content
         /// </summary>
         public override BoneContent Import(string filename, ContentImporterContext context)
         {
+            CultureInfo culture = new CultureInfo("en-US");
+            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
+            currentThread.CurrentCulture = culture;
+            currentThread.CurrentUICulture = culture;
             this.context = context;
             contentId = new ContentIdentity(filename);
             BoneContent root = new BoneContent();
@@ -176,7 +179,7 @@ namespace Animation.Content
             float[] f=new float[strings.Length];
             for (int i = 0; i < strings.Length; i++)
             {
-                f[i] = float.Parse(strings[i],format);
+                f[i] = float.Parse(strings[i]);
             }
             return f;
         }

@@ -48,7 +48,6 @@ namespace Animation.Content
         private ContentImporterContext context;
         private StreamReader reader;
         private ContentIdentity contentId;
-        private IFormatProvider format = (IFormatProvider)CultureInfo.InvariantCulture.NumberFormat;
         private int currentLine = 0;
 
         private ContentIdentity cId
@@ -69,6 +68,11 @@ namespace Animation.Content
         /// </summary>
         public override BoneContent Import(string filename, ContentImporterContext context)
         {
+            CultureInfo culture = new CultureInfo("en-US");
+            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
+            currentThread.CurrentCulture = culture;
+            currentThread.CurrentUICulture = culture;
+
             this.context = context;
             contentId = new ContentIdentity(filename);
             reader = new StreamReader(filename);
@@ -145,7 +149,7 @@ namespace Animation.Content
                 float rz=0;
                 for (int i = 0; i < dataLength; i++)
                 {
-                    float data = float.Parse(s[i + 1],format);
+                    float data = float.Parse(s[i + 1]);
                     if (dof[i] == "tx")
                         t.X = data;
                     else if (dof[i] == "ty")
