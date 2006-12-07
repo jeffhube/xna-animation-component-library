@@ -82,7 +82,7 @@ namespace Animation
         IGameComponent, ICloneable
     {
         #region Member Variables
-
+        // Stores the world transform for the animation controller.
         private Matrix world = Matrix.Identity;
         // Model to be animated
         private readonly Model model;
@@ -109,6 +109,7 @@ namespace Animation
         private bool isClone = false;
         // store this for quick access
         private long animationDuration;
+        // Name of the currently running animation
         private string animationName;
         private readonly AnimationContentDictionary animations;
         // This stores all of the "World" matrix parameters for an unskinned model
@@ -116,10 +117,18 @@ namespace Animation
         
         // Used for storing the elapsed ticks since the last draw call
         private static long elapsed;
+        // used as a buffer to store the current frame of the animation in update routines;
+        // allocated here so that we dont have to reallocate every frame
         private static int frameNum;
 
+        // Store the number of meshes in the model; gives a slight performance boost when
+        // updating, and performance is everything
+        private readonly int numMeshes;
         // Used as a buffer for storing the poses of the current frame
         private readonly Matrix[] bones = null;
+        // Used as a set of buffers for animations.  The length of the 0th dimension is equal
+        // to the number of meshes (so one array per mesh).  The length of the 1st dimension is
+        // equal to the number of bones that the respective mesh uses for animation.
         private readonly Matrix[][] interpolationBuffers;
         // Creates bone poses for the current animation
         private readonly BonePoseCreator creator = null;
@@ -156,12 +165,23 @@ namespace Animation
 
         #region Constructors
 
+        // A private copy constructor called from Clone()
+        // This creates a relatively shallow copy of the model, and allows users to clone animation
+        // controllers so that the controllers can render the same animation but use the same buffers
         private AnimationController(AnimationController source)
         {
+            // All of these lines are just direct copies from the source controller to the current one
+            // shallow copy
             model = source.model;
+            // deep copy (value type)
             speedFactor = source.speedFactor;
+            // deep copy (the creator doesn't store much data, and since it stores the current animation
+            // time to compute the bone poses for the current frame, a deep copy needs to be made)
             creator = new BonePoseCreator(model, source.interpMethod);
+            // deep copy (value type)
             interpMethod = source.InterpolationMethod;
+            // If the source i using an interpolation table, do a shallow copy.  Otherwise, don't bother
+            // copying the table
             if (source.UsePrecomputedInterpolations)
             {
                 usingTable = true;
@@ -169,24 +189,35 @@ namespace Animation
             }
             else
                 usingTable = false;
+            // shallow copy
             bones = source.bones;
+            // shallow copy
             worldParams = source.worldParams;
+            // shallow copy
             matrixPaletteParams = source.matrixPaletteParams;
+            // deep copy (value type)
             drawOrder = source.drawOrder;
+            // deep copy (value type)
             updateOrder = source.updateOrder;
-            speedFactor = source.speedFactor;
-
-            creator = new BonePoseCreator(model, interpMethod);
+            // deep copy (value type)
             enabled = source.enabled;
+            // deep copy (value type)
             visible = source.visible;
+            // shallow copy
             animations = source.animations;
-            bones = source.bones;
+            // (string)
             animationName = source.animationName;
+            // shallow copy
             anim = source.anim;
+            // shallow copy
             game = source.game;
+            // deep copy (value type)
             animationDuration = source.animationDuration;
+            // deep copy (value type)
             elapsedTime = source.elapsedTime;
+            // shallow copy
             skinTransforms = source.skinTransforms;
+            // shallow copy
             this.interpolationBuffers = source.interpolationBuffers;
             isClone = true;
             game.Components.Add(this);
@@ -196,34 +227,53 @@ namespace Animation
         private AnimationController(Game game, Model model)
         {
             this.model = model;
-            ContentManager manager = new ContentManager(game.Services);
+            this.game = game;
+            numMeshes = model.Meshes.Count;
+            // Grab the tag that was set in the processor; this is a dictionary so that users can extend
+            // the processor and pass their own data into the program without messing up the animation data
             Dictionary<string, object> modelTagData = (Dictionary<string, object>)model.Tag;
+            // An AnimationLibrary processor was not used if this is null
             if (modelTagData == null)
                 throw new Exception("Model contains no animation info; the tag is not an instance of " +
                     "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
             if (!modelTagData.ContainsKey("ModelAnimationInfo"))
                 throw new Exception("Model contains no animation info; please use the \"Model - Animation Library\"" +
                     " processor or a subclass.");
+            // Now grab the animation info and store local references
             ModelAnimationInfo info = (ModelAnimationInfo)modelTagData["ModelAnimationInfo"];
-
             animations = info.Animations;
             skinTransforms = info.SkinTransforms;
-            this.game = game;
+
+            // Create the buffers used for animation
             bones = new Matrix[model.Bones.Count];
             interpolationBuffers = new Matrix[model.Meshes.Count][];
+            // see comments for interpolationBuffers member variable
             for (int i = 0; i < interpolationBuffers.Length; i++)
             {
+                // If this is null, then the current mesh is unskinned, so only one bone will be important
+                // for animation
                 if (skinTransforms[i] == null)
                     interpolationBuffers[i] = new Matrix[1];
                 else
+                {
+                    // Otherwise the # of bones used in animation is equal to the number of bones with skinning
+                    // information
+                    if (skinTransforms[i].Length > BasicPaletteEffect.PALETTE_SIZE)
+                        throw new Exception("Model uses to many bones for animation.\nMax number of bones: " +
+                            BasicPaletteEffect.PALETTE_SIZE.ToString() + "\nNumber of bones used: " +
+                                skinTransforms[i].Length.ToString());
                     interpolationBuffers[i] = new Matrix[skinTransforms[i].Length];
+                }
             }
+            // Find total number of effects used by the model
             int numEffects = 0;
             foreach (ModelMesh mesh in model.Meshes)
                 foreach (Effect effect in mesh.Effects)
                     numEffects++;
+            // Initialize the arrays that store effect parameters
             worldParams = new EffectParameter[numEffects];
             matrixPaletteParams = new EffectParameter[numEffects];
+            // Now store the parameters in the arrays so the values they refer to can quickly be set
             int index = 0;
             foreach (ModelMesh mesh in model.Meshes)
             {
@@ -234,7 +284,9 @@ namespace Animation
                     index++;
                 }
             }
+            // Create the object that will create our absolute bone transformations
             creator = new BonePoseCreator(model, interpMethod);
+            // Create a collection of interpolation tables; one for each mesh
             tables = new InterpolationTableCollection(creator,skinTransforms);
 
             game.Components.Add(this);
@@ -304,7 +356,7 @@ namespace Animation
 
         #region General Properties
         /// <summary>
-        /// This returns the time step (precision) used for the bone pose table
+        /// Gets the time step (precision) used for the bone pose table
         /// if precomputer interpolations are active, divided by the SpeedFactor
         /// </summary>
         public long RawTimeStep
@@ -317,7 +369,7 @@ namespace Animation
         }
 
         /// <summary>
-        /// This is multiplied by game time to update the elapsed time.
+        /// Gets or sets the value that is multiplied by game time to update the elapsed time.
         /// </summary>
         public double SpeedFactor
         {
@@ -332,7 +384,7 @@ namespace Animation
         }
 
         /// <summary>
-        /// Sets or gets the world matrix for the animation scene.
+        /// Gets or sets the world matrix for the animation scene.
         /// </summary>
         public Matrix World
         {
@@ -349,7 +401,7 @@ namespace Animation
 
 
         /// <summary>
-        /// The total length of the animation in ticks.
+        /// Gets the total length of the animation in ticks.
         /// </summary>
         public long AnimationDuration
         {
@@ -361,7 +413,7 @@ namespace Animation
 
 
         /// <summary>
-        /// The interpolation method used by the animation
+        /// Gets or sets the interpolation method used by the animation
         /// </summary>
         public InterpolationMethod InterpolationMethod
         {
@@ -377,9 +429,9 @@ namespace Animation
         }
 
         /// <summary>
-        /// If true, then the controller will use precomputed interpolations.
-        /// You must recompute interpolations after the first time this is set to true
-        /// if you want to change the interpolations.
+        /// Gets or sets a value that determines  whether or not the controller will use precomputed interpolations. 
+        /// You must recompute interpolations after the first time this is set to true if you want to change the 
+        /// interpolations.
         /// </summary>
         public bool UsePrecomputedInterpolations
         {
@@ -396,7 +448,7 @@ namespace Animation
         }
 
         /// <summary>
-        /// Returns the model associated with this controller.
+        /// Gets the model associated with this controller.
         /// </summary>
         public Model Model
         { get { return model; } }
@@ -413,8 +465,10 @@ namespace Animation
         {
             int i = 0;
             string animName = null;
+            // check to see if the index is out of range
             if (animationIndex >= animations.Count)
                 throw new Exception("Invalid animation index.");
+            // Find the name of the index
             foreach (KeyValuePair<string, AnimationContent> k in animations)
             {
                 if (i == animationIndex)
@@ -434,6 +488,7 @@ namespace Animation
         /// <param name="animationName">The name of the animation.</param>
         public virtual void ChangeAnimation(string animationName)
         {
+            // Dont do anything if the name is equal to the current animation
             if (animationName == this.animationName)
                 return;
             string oldAnimName = this.animationName;
@@ -442,10 +497,10 @@ namespace Animation
                 throw new Exception("The specified animation, " + animationName + ", does not exist.");
             anim = animations[animationName];
             animationDuration = anim.Duration.Ticks;
-            // Create the object that manufactures bone poses
             elapsedTime = 0;
             creator.Animation = anim;
             creator.CreateModelPoseSet(bones);
+            // Call the animation changed event if appropriate
             if (oldAnimName != null && AnimationChanged != null)
                 AnimationChanged(this, new AnimationChangedEventArgs(oldAnimName, animationName));
             if (UsePrecomputedInterpolations)
@@ -497,7 +552,7 @@ namespace Animation
         }
 
         /// <summary>
-        /// True if the animation frames will be advanced on update/draw calls
+        /// Gets or sets a value that determines whether or not the animation frames will be advanced
         /// </summary>
         public bool Enabled
         {
@@ -513,7 +568,7 @@ namespace Animation
         }
 
         /// <summary>
-        /// Returns the update order for the animation
+        /// Gets or sets the update order for the animation
         /// </summary>
         public int UpdateOrder
         {
@@ -529,7 +584,7 @@ namespace Animation
         }
 
         /// <summary>
-        /// Returns the draw order for the animation
+        /// Gets or sets the draw order for the animation
         /// </summary>
         public int DrawOrder
         {
@@ -545,7 +600,9 @@ namespace Animation
         }
 
         /// <summary>
-        /// True if animation will be rendered
+        /// Gets or sets a value that determines whether or not the animation will be rendered
+        /// Note that for precision, the time is updated in the Draw calls, so setting this to false
+        /// will also stop the animation from being updated
         /// </summary>
         public bool Visible
         {
@@ -561,11 +618,10 @@ namespace Animation
         }
 
         /// <summary>
-        /// Updates the animation frame if the interpolations are not precomputed
-        /// and if we aren't using the best animation quality
+        /// Does nothing; provided for subclasses
         /// </summary>
-        /// <param name="gameTime"></param>
-        public void Update(GameTime gameTime)
+        /// <param name="gameTime">The game time</param>
+        public virtual void Update(GameTime gameTime)
         {
 
         }
@@ -573,12 +629,18 @@ namespace Animation
 
 
         /// <summary>
-        /// Draws the current frame
+        /// Advances the animation time and draws the current frame
         /// </summary>
-        /// <param name="gameTime"></param>
+        /// <param name="gameTime">The game time</param>
         public void Draw(GameTime gameTime)
         {
+            // Note this function is long, but this is a bit deceptive.  It is lengthened to increase
+            // efficiency, and most of the loops will only iterate over < 5 values for most models
+            // There are also 4 distinct factors that require the update to be done differently:
+            // mesh is skinned, mesh is not skinned, interpolations are precomputed, interpolations are not
+            // precomputed
 
+            // If enabled, advance the animation time
             if (enabled)
             {
                 elapsed = (long)(speedFactor * gameTime.ElapsedRealTime.Ticks);
@@ -589,57 +651,87 @@ namespace Animation
                         elapsedTime = AnimationDuration;
                 }
 
-                if (usingTable)
+            }
+            // If using precomputed interpolations,  we need to find the current
+            // frame based on the animation time, and use this value to get the current
+            // absolute bone positions for each mesh
+            if (usingTable)
+            {
+                // Get the current frame and avoid potential divide by zero exceptions
+                frameNum = tables.TimeStep==0 ? 0 : (int)(elapsedTime / tables.TimeStep);
+                // Account for the case in which the time is advanced too much 
+                if (frameNum >= tables.NumFrames)
+                    frameNum--;
+                int index = 0;
+                for (int i = 0; i < numMeshes; i++)
                 {
-                    frameNum = tables.TimeStep==0 ? 0 : (int)(elapsedTime / tables.TimeStep);
-                    if (frameNum >= tables.NumFrames)
-                        frameNum--;
-                    int index = 0;
-                    for (int i = 0; i < model.Meshes.Count; i++)
+                    ModelMesh mesh = model.Meshes[i];
+                    // determine if the current mesh is skinned
+                    bool skinned = skinTransforms[i] != null;
+                    // get the current absolute bone transforms for the current frame and the current
+                    // mesh
+                    Matrix[] pose = tables.GetMeshPose(ref i, ref frameNum);
+                    // If the mesh is skinned we need to set the matrix palettes
+                    if (skinned && matrixPaletteParams[index] != null)
                     {
-                        ModelMesh mesh = model.Meshes[i];
-                        bool skinned = skinTransforms[i] != null;
-                        Matrix[] pose = tables.GetMeshPose(ref i, ref frameNum);
+
                         foreach (Effect effect in mesh.Effects)
                         {
-                            if (skinned && matrixPaletteParams[index]!=null)
-                            {
-                                worldParams[index].SetValue(world);
-                                matrixPaletteParams[index].SetValue(pose);
-                            }
-                            else
-                                worldParams[index].SetValue( pose[0] * world);
+                            worldParams[index].SetValue(world);
+                            matrixPaletteParams[index].SetValue(pose);
                             index++;
                         }
-                        mesh.Draw();
+                    }
+                    else
+                    {
+                        foreach (Effect effect in mesh.Effects)
+                        {
+                            worldParams[index].SetValue(pose[0] * world);
+                            index++;
+                        }
+                    }
+                    mesh.Draw();
+                }
+
+            }
+            else // Not using precomputed interpolations
+            {
+                // Get the entire absolute bone transform set for the current frame
+                creator.CreateModelPoseSet(bones);
+                int index = 0;
+                for (int i = 0; i < numMeshes; i++)
+                {
+                    ModelMesh mesh = model.Meshes[i];
+                    bool skinned = skinTransforms[i] != null;
+                    // Get the absolute transforms for the bones used in animation for the
+                    // current mesh
+                    creator.CreateMeshPoseSet(interpolationBuffers[i], bones,
+                        skinTransforms[i], mesh.ParentBone.Index);
+                    // If the mesh is skinned we need to set the matrix palette
+                    if (skinned)
+                    {
+                        foreach (Effect effect in mesh.Effects)
+                        {
+                            worldParams[index].SetValue(world);
+                            matrixPaletteParams[index].SetValue(interpolationBuffers[i]);
+                            index++;
+                        }
+                    }
+                    else
+                    {
+                        foreach (Effect effect in mesh.Effects)
+                        {
+                            worldParams[index].SetValue(interpolationBuffers[i][0] * world);
+                            index++;
+                        }
+                        
                     }
 
+                    mesh.Draw();
                 }
-                else
-                {
-                    creator.CreateModelPoseSet(bones);
-                    int index = 0;
-                    for (int i = 0; i < model.Meshes.Count; i++)
-                    {
-                        bool skinned = skinTransforms[i] != null;
-                        creator.CreateMeshPoseSet(interpolationBuffers[i], bones,
-                            skinTransforms[i], model.Meshes[i].ParentBone.Index);
-                        foreach (Effect effect in model.Meshes[i].Effects)
-                        {
-                            if (skinned)
-                            {
-                                worldParams[index].SetValue(world);
-                                matrixPaletteParams[index].SetValue(interpolationBuffers[i]);
-                            }
-                            else
-                                worldParams[index].SetValue(interpolationBuffers[i][0] * world);
-                            index++;
-                        }
-                        model.Meshes[i].Draw();
-                    }
-                    creator.AdvanceTime(elapsed);
-                }
+                creator.AdvanceTime(elapsed);
             }
+            
 
      
 
@@ -652,9 +744,10 @@ namespace Animation
         /// Makes a shallow copy of the AnimationController.  Recommended for multiple animations
         /// that share the same effect.
         /// </summary>
-        /// <returns>A shallow copy of the current instance</returns>
+        /// <returns>A relatively shallow copy of the current instance</returns>
         public object Clone()
         {
+            // See private copy constructor for details
             Animation.AnimationController controller = new AnimationController(this);
             return controller;
             

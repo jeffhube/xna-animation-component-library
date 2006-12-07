@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using System.Text;
 using System.IO;
+using System.Globalization;
 #endregion
 
 
@@ -37,6 +38,9 @@ namespace Animation.Content
     public sealed class XFileTokenizer
     {
         #region Member Variables
+        // Use an invariant number formatter so the parse methods will work on computers from all
+        // nations
+        private IFormatProvider format = (IFormatProvider)CultureInfo.InvariantCulture.NumberFormat;
         // Used to build each token so that we don't have to deal with the inefficiency of
         // string concatenation.
         private StringBuilder sb = new StringBuilder();
@@ -182,7 +186,7 @@ namespace Animation.Content
             float x = 0;
             try
             {
-                x = float.Parse(tokens[tokenIndex++]);
+                x = float.Parse(tokens[tokenIndex++],format);
             }
             catch
             {
@@ -240,8 +244,8 @@ namespace Animation.Content
             try
             {
                 Vector2 v = new Vector2(
-                    float.Parse(tokens[tokenIndex]),
-                    float.Parse(tokens[tokenIndex + 2]));
+                    float.Parse(tokens[tokenIndex],format),
+                    float.Parse(tokens[tokenIndex + 2],format));
                 return v;
             }
             catch
@@ -265,9 +269,9 @@ namespace Animation.Content
             try
             {
                 Vector3 v = new Vector3(
-                    float.Parse(tokens[tokenIndex]),
-                    float.Parse(tokens[tokenIndex + 2]),
-                    float.Parse(tokens[tokenIndex + 4]));
+                    float.Parse(tokens[tokenIndex],format),
+                    float.Parse(tokens[tokenIndex + 2],format),
+                    float.Parse(tokens[tokenIndex + 4],format));
                 return v;
             }
             catch
@@ -291,10 +295,10 @@ namespace Animation.Content
             try
             {
                 Vector4 v = new Vector4(
-                    float.Parse(tokens[tokenIndex - 9]),
-                    float.Parse(tokens[tokenIndex - 7]),
-                    float.Parse(tokens[tokenIndex - 5]),
-                    float.Parse(tokens[tokenIndex - 3]));
+                    float.Parse(tokens[tokenIndex - 9],format),
+                    float.Parse(tokens[tokenIndex - 7],format),
+                    float.Parse(tokens[tokenIndex - 5],format),
+                    float.Parse(tokens[tokenIndex - 3],format));
                 return v;
             }
             catch
@@ -314,14 +318,14 @@ namespace Animation.Content
             try
             {
                 Matrix m = new Matrix(
-                    float.Parse(tokens[tokenIndex]), float.Parse(tokens[tokenIndex + 2]),
-                    float.Parse(tokens[tokenIndex + 4]), float.Parse(tokens[tokenIndex + 6]),
-                    float.Parse(tokens[tokenIndex + 8]), float.Parse(tokens[tokenIndex + 10]),
-                    float.Parse(tokens[tokenIndex + 12]), float.Parse(tokens[tokenIndex + 14]),
-                    float.Parse(tokens[tokenIndex + 16]), float.Parse(tokens[tokenIndex + 18]),
-                    float.Parse(tokens[tokenIndex + 20]), float.Parse(tokens[tokenIndex + 22]),
-                    float.Parse(tokens[tokenIndex + 24]), float.Parse(tokens[tokenIndex + 26]),
-                    float.Parse(tokens[tokenIndex + 28]), float.Parse(tokens[tokenIndex + 30]));
+                    float.Parse(tokens[tokenIndex],format), float.Parse(tokens[tokenIndex + 2],format),
+                    float.Parse(tokens[tokenIndex + 4],format), float.Parse(tokens[tokenIndex + 6],format),
+                    float.Parse(tokens[tokenIndex + 8],format), float.Parse(tokens[tokenIndex + 10],format),
+                    float.Parse(tokens[tokenIndex + 12],format), float.Parse(tokens[tokenIndex + 14],format),
+                    float.Parse(tokens[tokenIndex + 16],format), float.Parse(tokens[tokenIndex + 18],format),
+                    float.Parse(tokens[tokenIndex + 20],format), float.Parse(tokens[tokenIndex + 22],format),
+                    float.Parse(tokens[tokenIndex + 24],format), float.Parse(tokens[tokenIndex + 26],format),
+                    float.Parse(tokens[tokenIndex + 28],format), float.Parse(tokens[tokenIndex + 30],format));
                 return m;
             }
             catch

@@ -27,6 +27,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline;
 using System.IO;
+using System.Globalization;
 #endregion
 
 namespace Animation.Content
@@ -47,6 +48,7 @@ namespace Animation.Content
         private ContentImporterContext context;
         private StreamReader reader;
         private ContentIdentity contentId;
+        private IFormatProvider format = (IFormatProvider)CultureInfo.InvariantCulture.NumberFormat;
         private int currentLine = 0;
 
         private ContentIdentity cId
@@ -143,7 +145,7 @@ namespace Animation.Content
                 float rz=0;
                 for (int i = 0; i < dataLength; i++)
                 {
-                    float data = float.Parse(s[i + 1]);
+                    float data = float.Parse(s[i + 1],format);
                     if (dof[i] == "tx")
                         t.X = data;
                     else if (dof[i] == "ty")

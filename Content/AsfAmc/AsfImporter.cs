@@ -30,6 +30,7 @@ using Microsoft.Xna.Framework.Content.Pipeline;
 using Microsoft.Xna.Framework;
 using System.Xml.Serialization;
 using System.Xml;
+using System.Globalization;
 #endregion
 
 namespace Animation.Content
@@ -47,7 +48,7 @@ namespace Animation.Content
         private NamedValueDictionary<BoneContent> bones;
         private ContentIdentity contentId;
         private int currentLine=0;
-
+        private IFormatProvider format = (IFormatProvider)CultureInfo.InvariantCulture.NumberFormat;
         private ContentIdentity cId
         {
             get
@@ -175,7 +176,7 @@ namespace Animation.Content
             float[] f=new float[strings.Length];
             for (int i = 0; i < strings.Length; i++)
             {
-                f[i] = float.Parse(strings[i]);
+                f[i] = float.Parse(strings[i],format);
             }
             return f;
         }
