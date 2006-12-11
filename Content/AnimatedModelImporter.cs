@@ -67,16 +67,17 @@ namespace Animation.Content
         #region Non Animation Importation Methods
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
+            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
+            CultureInfo culture = new CultureInfo("en-US");
+            currentThread.CurrentCulture = culture;
+            currentThread.CurrentUICulture = culture;
             this.fileName = filename;
             this.context = context;
             // Create an instance of a class that splits a .X file into tokens and provides
             // functionality for iterating and parsing the tokens
             tokens = new XFileTokenizer(filename);
 
-            CultureInfo culture = new CultureInfo("en-US");
-            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
-            currentThread.CurrentCulture = culture;
-            currentThread.CurrentUICulture = culture;
+
             // skip header
             tokens.SkipTokens(3);
             // fill in the tree
