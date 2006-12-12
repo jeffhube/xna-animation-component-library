@@ -459,7 +459,7 @@ namespace Animation
                 return @"
 
 
-
+    normal = normalize(mul(normal,World));
 
     float3 totalDiffuse = DiffuseColor*
          ((DirLight0Enable ? dot(-DirLight0Direction,normal) * DirLight0DiffuseColor : 0) +
@@ -473,15 +473,15 @@ namespace Animation
     float3 spec0,spec1,spec2;
     if (DirLight0Enable)
     {
-        float val = 2.0 * dot(DirLight0Direction,normal);
-        if (val > 0)
+        float val = dot(-DirLight0Direction,normal);
+        if (val < 0)
         {
             spec0 = float3(0,0,0);
         }
         else
         {
             spec0 = DirLight0SpecularColor *
-                pow(dot(viewDirection, DirLight0Direction - (val * normal)),SpecularPower);
+                (pow(val*dot(reflect(DirLight0Direction,normal),viewDirection),SpecularPower));
         }
     }
     else
@@ -489,15 +489,15 @@ namespace Animation
 
     if (DirLight1Enable)
     {
-        float val = 2.0 * dot(DirLight1Direction,normal);
-        if (val > 0)
+        float val = dot(-DirLight1Direction,normal);
+        if (val < 0)
         {
-           spec1 = float3(0,0,0);
+            spec1 = float3(0,0,0);
         }
         else
         {
             spec1 = DirLight1SpecularColor *
-                pow(dot(viewDirection, DirLight1Direction - (val * normal)),SpecularPower);
+                (pow(val*dot(reflect(DirLight1Direction,normal),viewDirection),SpecularPower));
         }
     }
     else
@@ -505,15 +505,15 @@ namespace Animation
 
     if (DirLight2Enable)
     {
-        float val = 2.0 * dot(DirLight2Direction,normal);
-        if (val > 0)
+        float val = dot(-DirLight2Direction,normal);
+        if (val < 0)
         {
             spec2 = float3(0,0,0);
         }
         else
         {
             spec2 = DirLight2SpecularColor *
-                pow(dot(viewDirection, DirLight2Direction - (val * normal)),SpecularPower);
+                (pow(val*dot(reflect(DirLight2Direction,normal),viewDirection),SpecularPower));
         }
     }
     else
@@ -545,15 +545,13 @@ namespace Animation
 	
 	// Now we apply the same formula as above for each bone's influence, except this time we
 	// calculate the new normal
-	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
-	    input.weights[1] * mul(input.normal, MatrixPalette[input.indices[1]]) +
-	    input.weights[2] * mul(input.normal, MatrixPalette[input.indices[2]]) +
+	normal = input.weights[0] * mul(inputN, MatrixPalette[input.indices[0]]) +
+	    input.weights[1] * mul(inputN, MatrixPalette[input.indices[1]]) +
+	    input.weights[2] * mul(inputN, MatrixPalette[input.indices[2]]) +
 	    (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(input.normal,MatrixPalette[input.indices[3]]);
+		 * mul(inputN,MatrixPalette[input.indices[3]]);
 
-
-	// Same for the normal
-    normal = normalize(mul(normal,World));";
+";
             }
         }
 
@@ -570,14 +568,12 @@ namespace Animation
 	
 	// Now we apply the same formula as above for each bone's influence, except this time we
 	// calculate the new normal
-	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
-	    input.weights[1] * mul(input.normal, MatrixPalette[input.indices[1]]) +
+	normal = input.weights[0] * mul(inputN, MatrixPalette[input.indices[0]]) +
+	    input.weights[1] * mul(inputN, MatrixPalette[input.indices[1]]) +
 	    (1-(input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(input.normal,MatrixPalette[input.indices[2]]);
+		 * mul(inputN,MatrixPalette[input.indices[2]]);
 
-
-	// Same for the normal
-    normal = normalize(mul(normal,World));";
+";
             }
         }
 
@@ -592,13 +588,9 @@ namespace Animation
 	
 	// Now we apply the same formula as above for each bone's influence, except this time we
 	// calculate the new normal
-	normal = input.weights[0] * mul(input.normal, MatrixPalette[input.indices[0]]) +
-	    (1-input.weights[0]) * mul(input.normal,MatrixPalette[input.indices[1]]);
-
-
-
-	// Same for the normal
-    normal = normalize(mul(normal,World));";
+	normal = input.weights[0] * mul(inputN, MatrixPalette[input.indices[0]]) +
+	    (1-input.weights[0]) * mul(inputN,MatrixPalette[input.indices[1]]);
+";
             }
         }
 
@@ -612,11 +604,9 @@ namespace Animation
 	
 	// Now we apply the same formula as above for each bone's influence, except this time we
 	// calculate the new normal
-	normal = mul(input.normal, MatrixPalette[input.indices[0]]);
+	normal = mul(inputN, MatrixPalette[input.indices[0]]);
 
-
-	// Same for the normal
-    normal = normalize(mul(normal,World));";
+";
             }
         }
 
@@ -693,6 +683,7 @@ struct PS_OUTPUT
 void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
 {
     float3 normal;
+    float3 inputN = normalize(input.normal);
     if (input.weights[3]==0)
     {
     " + SkinThreeBonesCode + @"
