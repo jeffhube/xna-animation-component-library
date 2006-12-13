@@ -32,6 +32,7 @@ using System.IO;
 using System.Collections;
 using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 using Microsoft.Xna.Framework.Content;
+using System.Globalization;
 
 namespace Animation.Content
 {
@@ -44,7 +45,8 @@ namespace Animation.Content
     {
 
         // Stores the byte code for the BasicPaletteEffect
-        internal static byte[] paletteByteCode = null;
+        internal static byte[] paletteByteCode4Bones = null;
+        internal static byte[] paletteByteCode8Bones = null;
         private static bool paletteLoadAttempted = false;
         private ContentProcessorContext context;
         // stores all animations for the model
@@ -55,22 +57,28 @@ namespace Animation.Content
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
-
             if (!paletteLoadAttempted)
             {
                 EffectContent effect = new EffectContent();
-                effect.EffectCode = BasicPaletteEffect.SourceCode;
+                effect.EffectCode = BasicPaletteEffect.SourceCode4BonesPerVertex;
                 EffectProcessor processor = new EffectProcessor();
-                CompiledEffect compiledEffect = processor.Process(effect, context);
-                if (compiledEffect.Success != false)
+                CompiledEffect compiledEffect4 = processor.Process(effect, context);
+                effect = new EffectContent();
+                effect.EffectCode = BasicPaletteEffect.SourceCode8BonesPerVertex;
+                processor = new EffectProcessor();
+                CompiledEffect compiledEffect8 = processor.Process(effect, context);
+
+                if (compiledEffect4.Success != false && compiledEffect8.Success != false)
                 {
-                    paletteByteCode = compiledEffect.GetEffectCode();
+                    paletteByteCode4Bones = compiledEffect4.GetEffectCode();
+                    paletteByteCode8Bones = compiledEffect8.GetEffectCode();
                 }
                 else
-                    throw new Exception(
-                           "Compilation of BasicPaletteEffect failed.  If you are attempting to animate " +
-                           "skinned meshes using the Animation library, please make sure your "
-                        +  "graphics card has shader version 2.0.");
+                {
+                    context.Logger.LogWarning("",
+                        new ContentIdentity(),
+                        "Compilation of BasicPaletteEffect failed.");
+                }
                 paletteLoadAttempted = true;
             }
 
@@ -101,15 +109,24 @@ namespace Animation.Content
         {
             foreach (ModelMeshPartContent part in input.MeshParts)
             {
-                if (Util.IsSkinned(part.GetVertexDeclaration()))
+                SkinningType skinType = Util.CheckSkinned(part.GetVertexDeclaration());
+                if (skinType != SkinningType.None)
                 {
 
                     BasicMaterialContent basic = part.Material as BasicMaterialContent;
                     if (basic != null)
                     {
-                        PaletteMaterialContent paletteContent =
-                            new PaletteMaterialContent(basic, paletteByteCode,
-                            context);
+                        PaletteMaterialContent paletteContent;
+                        if (skinType == SkinningType.FourBonesPerVertex)
+                        {
+                            paletteContent = new PaletteMaterialContent(basic, paletteByteCode4Bones,
+                                context);
+                        }
+                        else
+                        {
+                            paletteContent = new PaletteMaterialContent(basic, paletteByteCode8Bones,
+                                context);
+                        }
                         part.Material = paletteContent;
                     }
                 }

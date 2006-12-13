@@ -38,8 +38,9 @@ namespace Animation
         IUpdateable
     {
         Model model;
-        private BoundingSphere sphere;
         AnimationController controller;
+        private BoundingSphere sphere;
+
         Matrix world, view, projection;
         Vector3 eyePos, up;
         float fov, near, far, width, height, cx, cy, aspect;
@@ -50,8 +51,6 @@ namespace Animation
             this.model = model;
 
             controller = new Animation.AnimationController(game, model, 0);
-            controller.SpeedFactor = 1;
-            controller.InterpolationMethod = Animation.InterpolationMethod.Linear;
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
             controller.Visible = true;
@@ -64,7 +63,7 @@ namespace Animation
                 (IGraphicsDeviceService)game.Services.GetService(
                 typeof(IGraphicsDeviceService));
             viewPort = graphics.GraphicsDevice.Viewport;
-            eyePos = new Vector3(0, 0,-sphere.Radius*5);
+            eyePos = new Vector3(0, 0,sphere.Radius*5);
             arcRadius = eyePos.Length() / 2.0f;
             width = (float)viewPort.Width;
             height = (float)viewPort.Height;
@@ -82,8 +81,6 @@ namespace Animation
                 eyePos, Vector3.Zero, up);
             world = Matrix.Identity;
             InitializeEffects();
-
-
         }
 
 
@@ -96,15 +93,23 @@ namespace Animation
             {
                 foreach (Effect ef in mesh.Effects)
                 {
-                    if (ef.GetType()==typeof(BasicPaletteEffect))
+                    ef.Parameters["View"].SetValue(view);
+                    ef.Parameters["EyePosition"].SetValue(eyePos);
+                    ef.Parameters["Projection"].SetValue(projection);
+                    ef.Parameters["World"].SetValue(Matrix.Identity);
+
+                    if (ef is BasicPaletteEffect)
                     {
                         BasicPaletteEffect effect = (BasicPaletteEffect)ef;
-                        effect.Parameters["View"].SetValue(view);
-                        effect.Parameters["EyePosition"].SetValue(eyePos);
-                        effect.Parameters["Projection"].SetValue(projection);
-                        ef.Parameters["World"].SetValue(Matrix.Identity);
+
                         effect.EnableDefaultLighting();
-                        effect.DirectionalLight0.Direction = new Vector3(0, 0, 1);
+                        effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
+                    }
+                    else if (ef is BasicEffect)
+                    {
+                        BasicEffect effect = (BasicEffect)ef;
+                        effect.EnableDefaultLighting();
+                        effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
                     }
                 }
             }
@@ -116,6 +121,16 @@ namespace Animation
         bool IUpdateable.Enabled
         {
             get { return true; }
+        }
+
+        public AnimationController Controller
+        {
+            get { return controller; }
+        }
+
+        public Model Model
+        {
+            get { return model; }
         }
 
         bool IntersectPoint(int x, int y, out Vector3 intPt)

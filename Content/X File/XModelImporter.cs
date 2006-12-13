@@ -1,5 +1,5 @@
 /*
- * AnimatedModelImporter.cs
+ * XModelImporter.cs
  * Imports a DirectX file using the content pipeline.
  * Part of XNA Animation Component library, which is a library for animation
  * in XNA
@@ -37,7 +37,7 @@ namespace Animation.Content
     /// </summary>
     [ContentImporter(".X", CacheImportedData = true, DefaultProcessor="AnimatedModelProcessor",
         DisplayName="X File - Animation Library")]
-    internal partial class AnimatedModelImporter : ContentImporter<NodeContent>
+    internal partial class XModelImporter : ContentImporter<NodeContent>
     {
 
         #region Member Variables
@@ -53,7 +53,7 @@ namespace Animation.Content
         // Stores information about the current build for the content pipeline
         private ContentImporterContext context;
         // A list of meshes that have been imported
-        private List<AnimatedMeshImporter> meshes = new List<AnimatedMeshImporter>();
+        private List<XMeshImporter> meshes = new List<XMeshImporter>();
         // Stores the current bone index while traversing the NodeContent tree
         int curIndex = 0;
 
@@ -91,7 +91,7 @@ namespace Animation.Content
             List<SkinTransform[]> skinTransforms = new List<SkinTransform[]>();
             // Now that we have mapped bone names to their indices, we can create the vertices
             // in each mesh so that they contain indices and weights
-            foreach (AnimatedMeshImporter mesh in meshes)
+            foreach (XMeshImporter mesh in meshes)
             {
                 mesh.AddWeights(boneIndices);
                 mesh.CreateGeometry();
@@ -181,7 +181,7 @@ namespace Animation.Content
                     c.Transform = ImportFrameTransformMatrix();
                 else if (next == "Mesh")
                 {
-                    AnimatedMeshImporter meshImporter = new AnimatedMeshImporter(this);
+                    XMeshImporter meshImporter = new XMeshImporter(this);
                     c.Children.Add(meshImporter.ImportMesh());
                 }
                 // Ignore templates, which define new structure that store data
@@ -321,7 +321,7 @@ namespace Animation.Content
                 {
                     Vector4 v = tokens.NextVector4();
                     Quaternion q = new Quaternion(
-                        new Vector3(v.W, v.Z, v.Y),
+                        new Vector3(-v.Y,-v.Z,-v.W),
                         v.X);
 
 
@@ -330,9 +330,7 @@ namespace Animation.Content
                 else if (numKeys == 3)
                 {
                     Vector3 v = tokens.NextVector3();
-                    float tmp = v.X;
-                    v.X = v.Z;
-                    v.Z = tmp;
+
                     if (keyType == 1)
                     {
 

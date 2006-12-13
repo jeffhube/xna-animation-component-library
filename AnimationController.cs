@@ -686,6 +686,7 @@ namespace Animation
                     {
                         foreach (Effect effect in mesh.Effects)
                         {
+                            
                             worldParams[index].SetValue(pose[0] * world);
                             index++;
                         }

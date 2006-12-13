@@ -1,5 +1,5 @@
 /*
- * AnimatedMeshImporter.cs
+ * XMeshImporter.cs
  * Helper nested class that imports a mesh that is associated with a model
  * in a .X file.
  * Part of XNA Animation Component library, which is a library for animation
@@ -35,12 +35,12 @@ using System.IO;
 namespace Animation.Content
 {
 
-    internal partial class AnimatedModelImporter
+    internal partial class XModelImporter
     {
         /// <summary>
-        /// A helper for AnimatedModelImporter that loads Mesh nodes in .X files
+        /// A helper for XModelImporter that loads Mesh nodes in .X files
         /// </summary>
-        private class AnimatedMeshImporter
+        private class XMeshImporter
         {
             /// <summary>
             /// Represents a face of the model.  Used internally to buffer mesh data so that
@@ -83,10 +83,12 @@ namespace Animation.Content
             // The materials of the mesh
             private MaterialContent[] materials = new MaterialContent[0];
             // The blend weights
-            Vector4[] weights = null;
+            Vector4[] weights = null, weights2 = null;
             // The blend weight indices
-            Short4[] weightIndices = null;
-            private AnimatedModelImporter model;
+            Short4[] weightIndices = null, weightIndices2=null;
+            // True if model is skinned & uses 8 bones per vertex max as opposed to 4
+            bool useEightBones = false;
+            private XModelImporter model;
             private XFileTokenizer tokens;
             // This will eventually turn into the Mesh
             private MeshContent mesh;
@@ -110,11 +112,11 @@ namespace Animation.Content
             #region Constructors
 
             /// <summary>
-            /// Creates a new instance of AnimatedMeshImporter
+            /// Creates a new instance of XMeshImporter
             /// </summary>
             /// <param name="model">The object that is importing the model from
             /// the current .X file</param>
-            public AnimatedMeshImporter(AnimatedModelImporter model)
+            public XMeshImporter(XModelImporter model)
             {
                 this.tokens = model.tokens;
                 this.model = model;
@@ -163,7 +165,15 @@ namespace Animation.Content
                 for (int i = 0; i < numInfluences; i++)
                     influences.Add(tokens.NextInt());
                 for (int i = 0; i < numInfluences; i++)
+                {
                     weights.Add(tokens.NextFloat());
+                    if (weights[i] == 0)
+                    {
+                        influences[i] = -1;
+                    }
+                }
+                influences.RemoveAll(delegate(int i) { return i == -1; });
+                weights.RemoveAll(delegate(float f) { return f == 0; });
 
                 // Add the matrix that transforms the vertices to the space of the bone.
                 // we will need this for skinned animation.
@@ -450,8 +460,12 @@ namespace Animation.Content
                     {
                         // Get the absolute path of the texture
                         string fileName = tokens.SkipName().NextString();
-                        texRef =
-                            new ExternalReference<TextureContent>(model.GetAbsolutePath(fileName));
+                        if (fileName.TrimStart(' ', '"').TrimEnd(' ','"') != "")
+                        {
+                            texRef =
+                                new ExternalReference<TextureContent>(model.GetAbsolutePath(fileName));
+
+                        }
                         tokens.SkipToken();
                     }
                     else if (token == "EffectInstance")
@@ -485,7 +499,7 @@ namespace Animation.Content
             /// </summary>
             private void AddAllChannels()
             {
-
+               // System.Diagnostics.Debugger.Launch();
                 if (normals != null)
                     AddChannel<Vector3>(VertexElementUsage.Normal.ToString(), normals);
                 else if (hasNormals)
@@ -493,9 +507,18 @@ namespace Animation.Content
                 if (texCoords != null)
                     AddChannel<Vector2>("TextureCoordinate0", texCoords);
                 if (weightIndices != null)
-                    AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString(), weightIndices);
+                {
+                    AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString()+"0", weightIndices);
+                    if (useEightBones)
+                        AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString()+"1", weightIndices2);
+                }
                 if (weights != null)
-                    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString(), weights);
+                {
+                    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString()+"0", weights);
+                    if (useEightBones)
+                        AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString()+"1", weights2);
+                }
+                
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
                 MeshHelper.MergeDuplicateVertices(mesh);
                 MeshHelper.OptimizeForCache(mesh);
@@ -547,21 +570,29 @@ namespace Animation.Content
 
                 // These two lists hold the data for the two new channels (the weights and indices)
                 weights = new Vector4[mesh.Positions.Count];
+                weights2 = new Vector4[mesh.Positions.Count];
                 weightIndices = new Short4[mesh.Positions.Count];
+                weightIndices2 = new Short4[mesh.Positions.Count];
 
+                //System.Diagnostics.Debugger.Launch();
                 // The index of the position that this vertex refers to
-                int index = 0; ;
+                int index = 0;
                 foreach (BoneWeightCollection c in skinInfo)
                 {
+                    
+
                     // The number of weights associated with the current vertex
                     int ct = c.Count;
+
                     Vector4 w = new Vector4();
-                    short i0=0,i1=0,i2=0,i3=0;
+                    Vector4 w2 = new Vector4();
+                    short i0 = 0, i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, i7 = 0;
                     // Fill in the weights
                     w.X = ct > 0 ? c[0].Weight : 0;
                     w.Y = ct > 1 ? c[1].Weight : 0;
                     w.Z = ct > 2 ? c[2].Weight : 0;
                     w.W = ct > 3 ? c[3].Weight : 0;
+
 
                     // If the vertex cotnains no skinning info, assign it to the mesh's root
                     // bone with a weight of 1
@@ -575,10 +606,27 @@ namespace Animation.Content
                     if (c.Count > 2 && c[2].BoneName != null) i2 = (short)meshBoneIndices[c[2].BoneName];
                     if (c.Count > 3 && c[3].BoneName != null) i3 = (short)meshBoneIndices[c[3].BoneName];
 
+                    // If the count is greater then 4 for any bone on a mesh, then use the 8 bone
+                    // shader
+                    if (ct > 4)
+                    {
+                        useEightBones = true;
+                        w2.X = ct > 4 ? c[4].Weight : 0;
+                        w2.Y = ct > 5 ? c[5].Weight : 0;
+                        w2.Z = ct > 6 ? c[6].Weight : 0;
+                        w2.W = ct > 7 ? c[7].Weight : 0;
+                        if (c.Count > 4 && c[4].BoneName != null) i4 = (short)meshBoneIndices[c[4].BoneName];
+                        if (c.Count > 5 && c[5].BoneName != null) i5 = (short)meshBoneIndices[c[5].BoneName];
+                        if (c.Count > 6 && c[6].BoneName != null) i6 = (short)meshBoneIndices[c[6].BoneName];
+                        if (c.Count > 7 && c[7].BoneName != null) i7 = (short)meshBoneIndices[c[7].BoneName];
+                    }
+
                     // We have a list of boneweight/bone index objects that are ordered such that
                     // BoneWeightCollection[i] is the weight and index for vertex i.
                     weights[index] = w;
+                    weights2[index] = w2;
                     weightIndices[index] = new Short4(i0, i1, i2, i3);
+                    weightIndices2[index] = new Short4(i4, 0, 0, 0);
                     index++;
                 }
 
@@ -597,7 +645,9 @@ namespace Animation.Content
                 // An array of the faces that each geometry will contain
                 List<Face>[] partitionedFaces = new List<Face>[numPartions];
 
-                // Partion the faces
+                // Partion the faces.  Each face has a material index, and
+                // each geometry has its own material, so the material index
+                // refers to the geometry index for the face.
                 for (int i = 0; i < partitionedFaces.Length; i++)
                     partitionedFaces[i] = new List<Face>();
                 for (int i = 0; i < faces.Length; i++)

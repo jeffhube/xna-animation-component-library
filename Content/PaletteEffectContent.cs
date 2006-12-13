@@ -87,8 +87,8 @@ namespace Animation.Content
         protected override void Write(ContentWriter output, PaletteMaterialContent value)
         {
 
-            output.Write(AnimatedModelProcessor.paletteByteCode.Length);
-            output.Write(AnimatedModelProcessor.paletteByteCode);
+            output.Write(AnimatedModelProcessor.paletteByteCode4Bones.Length);
+            output.Write(AnimatedModelProcessor.paletteByteCode4Bones);
             bool hasTexture = value.Textures.ContainsKey("Texture");
             output.Write(hasTexture);
             if (hasTexture)

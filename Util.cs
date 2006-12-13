@@ -30,6 +30,12 @@ using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using System.Collections.Generic;
 namespace Animation
 {
+    internal enum SkinningType
+    {
+        None,
+        FourBonesPerVertex,
+        EightBonesPerVertex
+    }
     /// <summary>
     /// Provides various animation utilities.
     /// </summary>
@@ -95,13 +101,22 @@ namespace Animation
                     InitializeBasicEffect(effect);
         }
 
-        internal static bool IsSkinned(VertexElement[] elements)
+        internal static SkinningType CheckSkinned(VertexElement[] elements)
         {
+            int numIndexChannels = 0;
+            int numWeightChannels = 0;
             foreach (VertexElement e in elements)
-                if (e.VertexElementUsage == VertexElementUsage.BlendIndices ||
-                    e.VertexElementUsage == VertexElementUsage.BlendWeight)
-                    return true;
-            return false;
+            {
+                if (e.VertexElementUsage == VertexElementUsage.BlendIndices)
+                    numIndexChannels++;
+                else if (e.VertexElementUsage == VertexElementUsage.BlendWeight)
+                    numWeightChannels++;
+            }
+            if (numIndexChannels == 2 || numWeightChannels == 2)
+                return SkinningType.EightBonesPerVertex;
+            else if (numIndexChannels == 1 || numWeightChannels == 1)
+                return SkinningType.FourBonesPerVertex;
+            return SkinningType.None;
 
         }
 
@@ -148,8 +163,9 @@ namespace Animation
 
 
                 Matrix m = newRot[i];
+                m = m*newTrans[i];
                 m = newScales[i] * m;
-                m = m * newTrans[i];
+
       
 
                 returnFrames.Add(new AnimationKeyframe(times[i], m));

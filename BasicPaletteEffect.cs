@@ -42,7 +42,7 @@ namespace Animation
 
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
-            specColorParam, specPowerParam,texEnabledParam, texParam, paletteParam;
+            specColorParam, specPowerParam, texEnabledParam, texParam, paletteParam;
         private BasicDirectionalLight light0, light1, light2;
         private Vector3 eye;
         private static Vector3 zero = Vector3.Zero;
@@ -66,7 +66,7 @@ namespace Animation
 
             this.light0.DiffuseColor = Color.White.ToVector3();
             this.light0.SpecularColor = Color.Black.ToVector3();
-            this.light0.Direction = Vector3.Normalize(new Vector3(-1,0,-1));
+            this.light0.Direction = Vector3.Normalize(new Vector3(-1, 0, -1));
             this.light0.SpecularColor = Color.White.ToVector3();
             this.light1.DiffuseColor = Color.Black.ToVector3();
             this.light1.SpecularColor = Color.Black.ToVector3();
@@ -159,9 +159,9 @@ namespace Animation
                 this.effect = effect;
                 string lightString = "DirLight" + lightNum;
                 this.lightDirParam = effect.Parameters[lightString + "Direction"];
-                this.difColorParam = effect.Parameters[lightString+ "DiffuseColor"];
-                this.specColorParam = effect.Parameters[lightString+ "SpecularColor"];
-                this.lightEnabledParam = effect.Parameters[lightString+"Enable"];
+                this.difColorParam = effect.Parameters[lightString + "DiffuseColor"];
+                this.specColorParam = effect.Parameters[lightString + "SpecularColor"];
+                this.lightEnabledParam = effect.Parameters[lightString + "Enable"];
             }
 
             /// <summary>
@@ -169,14 +169,14 @@ namespace Animation
             /// </summary>
             public bool Enabled
             {
-               get
+                get
                 {
                     return lightEnabledParam.GetValueBoolean();
                 }
                 set
                 {
-                   lightEnabledParam.SetValue(value);
-               }
+                    lightEnabledParam.SetValue(value);
+                }
             }
 
             /// <summary>
@@ -206,7 +206,7 @@ namespace Animation
                 }
                 set
                 {
- 
+
                     specColorParam.SetValue(value);
                 }
             }
@@ -276,7 +276,7 @@ namespace Animation
         /// <summary>
         /// The max number of bones in the effects matrix palette.
         /// </summary>
-        public const int PALETTE_SIZE = 50;
+        public const int PALETTE_SIZE = 56;
 
         /// <summary>
         /// Gets directional light zero.
@@ -531,94 +531,12 @@ namespace Animation
             }
         }
 
-        private static string SkinFourBonesCode
+
+        private static string ShaderVariables
         {
             get
             {
                 return @"
-	// Apply the vertex blending formula to the input vertex
-    output.position = input.weights[0] * mul(input.position,MatrixPalette[input.indices[0]]) +
-        input.weights[1] * mul(input.position,MatrixPalette[input.indices[1]]) +
-        input.weights[2] * mul(input.position,MatrixPalette[input.indices[2]]) +
-        (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(input.position,MatrixPalette[input.indices[3]]);
-	
-	// Now we apply the same formula as above for each bone's influence, except this time we
-	// calculate the new normal
-	normal = input.weights[0] * mul(inputN, MatrixPalette[input.indices[0]]) +
-	    input.weights[1] * mul(inputN, MatrixPalette[input.indices[1]]) +
-	    input.weights[2] * mul(inputN, MatrixPalette[input.indices[2]]) +
-	    (1-(input.weights[3]+input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(inputN,MatrixPalette[input.indices[3]]);
-
-";
-            }
-        }
-
-        private static string SkinThreeBonesCode
-        {
-            get
-            {
-                return @"
-	// Apply the vertex blending formula to the input vertex
-    output.position = input.weights[0] * mul(input.position,MatrixPalette[input.indices[0]]) +
-        input.weights[1] * mul(input.position,MatrixPalette[input.indices[1]]) +
-        (1-(input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(input.position,MatrixPalette[input.indices[2]]);
-	
-	// Now we apply the same formula as above for each bone's influence, except this time we
-	// calculate the new normal
-	normal = input.weights[0] * mul(inputN, MatrixPalette[input.indices[0]]) +
-	    input.weights[1] * mul(inputN, MatrixPalette[input.indices[1]]) +
-	    (1-(input.weights[2]+input.weights[1]+input.weights[0]))
-		 * mul(inputN,MatrixPalette[input.indices[2]]);
-
-";
-            }
-        }
-
-        private static string SkinTwoBonesCode
-        {
-            get
-            {
-                return @"
-	// Apply the vertex blending formula to the input vertex
-    output.position = input.weights[0] * mul(input.position,MatrixPalette[input.indices[0]]) +
-        (1-input.weights[0]) * mul(input.position,MatrixPalette[input.indices[1]]);
-	
-	// Now we apply the same formula as above for each bone's influence, except this time we
-	// calculate the new normal
-	normal = input.weights[0] * mul(inputN, MatrixPalette[input.indices[0]]) +
-	    (1-input.weights[0]) * mul(inputN,MatrixPalette[input.indices[1]]);
-";
-            }
-        }
-
-        private static string SkinOneBoneCode
-        {
-            get
-            {
-                return @"
-	// Apply the vertex blending formula to the input vertex
-    output.position = mul(input.position,MatrixPalette[input.indices[0]]);
-	
-	// Now we apply the same formula as above for each bone's influence, except this time we
-	// calculate the new normal
-	normal = mul(inputN, MatrixPalette[input.indices[0]]);
-
-";
-            }
-        }
-
-        /// <summary>
-        /// Returns the source code for BasicPaletteEffect
-        /// </summary>
-        public static string SourceCode
-        {
-            get
-            {
-                return @"
-
 
 float4x4 World;
 float4x4 View;
@@ -640,13 +558,11 @@ float3 DirLight2DiffuseColor;
 float3 DirLight0SpecularColor;
 float3 DirLight1SpecularColor;
 float3 DirLight2SpecularColor;
-uniform extern float4x4 MatrixPalette[" + PALETTE_SIZE.ToString()+ @"];
+uniform extern float4x4 MatrixPalette[" + PALETTE_SIZE.ToString() + @"];
 float SpecularPower;
 bool TextureEnabled;
 bool LightingEnable = false;
 texture BasicTexture;
-
-
 
 sampler TextureSampler = sampler_state
 {
@@ -657,53 +573,16 @@ sampler TextureSampler = sampler_state
    MINFILTER = LINEAR;
    MIPFILTER = LINEAR;
 };
+";
+            }
 
-struct VS_INPUT
-{
-	float4 position : POSITION;
-	float4 color : COLOR;
-	float2 texcoord : TEXCOORD0;
-	float3 normal : NORMAL;
-	half4 indices : BLENDINDICES;
-	float4 weights : BLENDWEIGHT;
-};
+        }
 
-struct VS_OUTPUT
-{
-	float4 position : POSITION;
-	float4 color : COLOR;
-	float2 texcoord : TEXCOORD0;
-};
-
-struct PS_OUTPUT
-{
-	float4 color : COLOR;
-};
-
-void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
-{
-    float3 normal;
-    float3 inputN = normalize(input.normal);
-    if (input.weights[3]==0)
-    {
-    " + SkinThreeBonesCode + @"
-    }
-    else if (input.weights[2]==0)
-    {
-    " + SkinTwoBonesCode + @"
-    }
-    else if (input.weights[1]==0)
-    {
-    " + SkinOneBoneCode + @"
-    }
-    else
-    {
-    " + SkinFourBonesCode + @"
-    }
-    " + LightingCode + @"
-}
-
-
+        private static string PixelShaderCode
+        {
+            get
+            {
+                return @"
 // This takes the transformed normal as influenced by the bones (all the matrix palette transformations
 // occur in TransformVertex), and applies 3 directional phong lights to them
 void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
@@ -722,19 +601,17 @@ void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
     }
 	else
 	{
-		// We need to normalize the normal and vector between the camera and object position
-		// It won't even work if we normalize it in the vertex shader.
-	//	float3 viewDirection = normalize(input.viewDirection);
-    //	float3 normal = normalize(input.normal);
 		
+        // These comments are old but I left them in because they give some idea of how the lighting
+        // works.  Lighting is now done in the vertex shader because older 2.0 cards didn't
+        // support pixel shader lighting (like radeon 9800)
+
 		// For phong shading, the final color of a pixel is equal to 
 		// (sum of influence of lights + ambient constant) * texture color at given tex coord
 		// First we find the diffuse light, which is simply the dot product of -1*light direction
 		// and the normal.  This gives us the component of the reverse light direction in the
 		// direction of the normal.  We then multiply the sum of each lights influence by a 
 		// diffuse constant.
-
-		
 		// Now we do a similar strategy for specular light; sum the lights then multiply by
 		// a specular constant.  In this formula, for each light, we find the dot product between
 		// our viewDirection vector and the vector of reflection for the light ray.  This simulates
@@ -742,15 +619,113 @@ void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
 		// and when light can bounce of the surface and hit our eyes.
 		// We need to be careful with what values we saturate and clamp, otherwise both sides
 		// of the object will be lit, or other strange phenomenon will occur.
-
-
 		// Now we apply the aforementioned phong formulate to get the final color
 		output.color.xyz = TextureEnabled ? tex2D(TextureSampler, input.texcoord).xyz  * input.color.xyz
             : input.color.xyz;
-        //    : saturate(AmbientLightColor+totalDiffuse);
 		output.color.w   = input.color.w;
 	}
 }
+";
+            }
+        }
+
+        public static string SourceCode8BonesPerVertex
+        {
+            get
+            {
+                return ShaderVariables + @"
+
+
+struct VS_INPUT
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texcoord : TEXCOORD0;
+	float3 normal : NORMAL;
+	half4 indices : BLENDINDICES0;
+    half4 indices1: BLENDINDICES1;
+	float4 weights : BLENDWEIGHT0;
+    float4 weights1: BLENDWEIGHT1;
+};
+
+struct VS_OUTPUT
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texcoord : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+	float4 color : COLOR;
+};
+
+struct SKIN_OUTPUT
+{
+    float4 position;
+    float4 normal;
+};
+
+SKIN_OUTPUT Skin8( const VS_INPUT input)
+{
+    SKIN_OUTPUT output = (SKIN_OUTPUT)0;
+
+    float lastWeight = 1.0;
+    float weight = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        weight = input.weights[i];
+        lastWeight -= weight;
+        output.position += mul( input.position, MatrixPalette[input.indices[i]]) * weight;
+        output.normal       += mul( input.normal  , MatrixPalette[input.indices[i]]) * weight;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
+        weight = input.weights1[i];
+        lastWeight -= weight;
+        output.position += mul( input.position, MatrixPalette[input.indices1[i]]) * weight;
+        output.normal       += mul( input.normal  , MatrixPalette[input.indices1[i]]) * weight;
+    }
+
+    output.position += mul( input.position, MatrixPalette[input.indices1[3]])*lastWeight;
+    output.normal       += mul( input.normal  , MatrixPalette[input.indices1[3]])*lastWeight;
+    return output;
+};
+
+SKIN_OUTPUT Skin4( const VS_INPUT input)
+{
+    SKIN_OUTPUT output = (SKIN_OUTPUT)0;
+
+    float lastWeight = 1.0;
+    float weight = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        weight = input.weights[i];
+        lastWeight -= weight;
+        output.position     += mul( input.position, MatrixPalette[input.indices[i]]) * weight;
+        output.normal       += mul( input.normal  , MatrixPalette[input.indices[i]]) * weight;
+    }
+    output.position     += mul( input.position, MatrixPalette[input.indices[3]])*lastWeight;
+    output.normal       += mul( input.normal  , MatrixPalette[input.indices[3]])*lastWeight;
+    return output;
+};
+
+void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
+{
+
+    float3 inputN = normalize(input.normal);
+    SKIN_OUTPUT skin = Skin8(input);
+    output.position=skin.position;
+    float3 normal = skin.normal;
+
+
+
+    " + LightingCode + @"
+}
+
+" + PixelShaderCode + @"
+
+
 
 technique TransformTechnique
 {
@@ -760,7 +735,94 @@ technique TransformTechnique
 		PixelShader  = compile ps_2_0 TransformPixel();
 	}
 }";
-            
+
+            }
+        }
+
+        /// <summary>
+        /// Returns the source code for BasicPaletteEffect
+        /// </summary>
+        public static string SourceCode4BonesPerVertex
+        {
+            get
+            {
+                return ShaderVariables + @"
+
+
+struct VS_INPUT
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texcoord : TEXCOORD0;
+	float3 normal : NORMAL;
+	half4 indices : BLENDINDICES0;
+    half4 indices1: BLENDINDICES1;
+	float4 weights : BLENDWEIGHT0;
+    float4 weights1: BLENDWEIGHT1;
+};
+
+struct VS_OUTPUT
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texcoord : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+	float4 color : COLOR;
+};
+
+struct SKIN_OUTPUT
+{
+    float4 position;
+    float4 normal;
+};
+
+
+SKIN_OUTPUT Skin4( const VS_INPUT input)
+{
+    SKIN_OUTPUT output = (SKIN_OUTPUT)0;
+
+    float lastWeight = 1.0;
+    float weight = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        weight = input.weights[i];
+        lastWeight -= weight;
+        output.position     += mul( input.position, MatrixPalette[input.indices[i]]) * weight;
+        output.normal       += mul( input.normal  , MatrixPalette[input.indices[i]]) * weight;
+    }
+    output.position     += mul( input.position, MatrixPalette[input.indices[3]])*lastWeight;
+    output.normal       += mul( input.normal  , MatrixPalette[input.indices[3]])*lastWeight;
+    return output;
+};
+
+void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
+{
+
+    float3 inputN = normalize(input.normal);
+    SKIN_OUTPUT skin = Skin4(input);
+    output.position=skin.position;
+    float3 normal = skin.normal;
+
+
+
+    " + LightingCode + @"
+}
+
+" + PixelShaderCode + @"
+
+
+
+technique TransformTechnique
+{
+	pass P0
+	{
+		VertexShader = compile vs_2_0 TransformVertex();
+		PixelShader  = compile ps_2_0 TransformPixel();
+	}
+}";
             }
         }
     }
