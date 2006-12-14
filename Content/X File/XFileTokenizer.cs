@@ -52,6 +52,7 @@ namespace Animation.Content
         // Stores the index of the current token when other classes are using this to read a
         // a file.
         private long tokenIndex = 0;
+        private Stack<long> parseIndices = new Stack<long>();
         private string[] tokens;
         #endregion
 
@@ -197,6 +198,16 @@ namespace Animation.Content
             }
             return x;
         }
+
+ 
+
+        public long CurrentIndex
+        {
+            get { return tokenIndex; }
+        }
+
+        
+
 
         /// <summary>
         /// Parses a string from a .X file

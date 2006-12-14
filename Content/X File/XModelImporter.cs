@@ -56,7 +56,7 @@ namespace Animation.Content
         private List<XMeshImporter> meshes = new List<XMeshImporter>();
         // Stores the current bone index while traversing the NodeContent tree
         int curIndex = 0;
-
+        private Dictionary<string, MaterialContent> materials = new Dictionary<string, MaterialContent>();
         // Contains a collection of bone name keys that map to the index of the given bone.
         // This allows us to replace BoneWeightCollection lists for each mesh.  These collections
         // originally store the bone name attached to the weight, and boneIndices allows us to
@@ -133,11 +133,145 @@ namespace Animation.Content
                     // See ImportAnimationSet for template info
                     else if (next == "AnimationSet")
                         ImportAnimationSet();
+                    else if (next == "Material")
+                        ImportMaterial();
                     else if (next == "template")
                         tokens.SkipName().SkipNode();
                 }
                 while (!tokens.AtEnd);
             }
+    
+        }
+
+        /// <summary>
+        /// Loads a custom material.  That is, loads a material with a custom effect.
+        /// </summary>
+        /// <returns>The custom material</returns>
+        private MaterialContent ImportCustomMaterial()
+        {
+            EffectMaterialContent content = new EffectMaterialContent();
+            tokens.SkipName();
+            string effectName = GetAbsolutePath(tokens.NextString());
+
+            content.Effect = new ExternalReference<EffectContent>(effectName);
+
+            // Find value initializers for the effect parameters and set the values
+            // as indicated
+            for (string token = tokens.NextToken(); token != "}"; token = tokens.NextToken())
+            {
+                if (token == "EffectParamFloats")
+                {
+                    tokens.SkipName();
+                    string floatsParamName = tokens.NextString();
+                    int numFloats = tokens.NextInt();
+                    float[] floats = new float[numFloats];
+                    for (int i = 0; i < numFloats; i++)
+                        floats[i] = tokens.NextFloat();
+                    tokens.SkipToken();
+                    content.OpaqueData.Add(floatsParamName, floats);
+                }
+                else if (token == "EffectParamDWord")
+                {
+                    tokens.SkipName();
+                    string dwordParamName = tokens.NextString();
+                    float dword = tokens.NextFloat();
+                    tokens.SkipToken();
+                    content.OpaqueData.Add(dwordParamName, dword);
+                }
+                else if (token == "EffectParamString")
+                {
+                    tokens.SkipName();
+                    string stringParamName = tokens.NextString();
+                    string paramValue = tokens.NextString();
+                    tokens.SkipToken();
+                    content.OpaqueData.Add(stringParamName, paramValue);
+                }
+                if (token == "{")
+                    tokens.SkipNode();
+            }
+            return content;
+
+        }
+
+        // template Material
+        // {
+        //      ColorRGBA faceColor;
+        //      FLOAT power;
+        //      ColorRGB specularColor;
+        //      ColorRGB emissiveColor;
+        //      [...]
+        // } 
+        /// <summary>
+        /// Imports a material, which defines the textures that a mesh uses and the way in which
+        /// light reflects off the mesh
+        /// </summary>
+        private MaterialContent ImportMaterial()
+        {
+            ExternalReference<TextureContent> texRef = null;
+            BasicMaterialContent basicMaterial = new BasicMaterialContent();
+            MaterialContent returnMaterial = basicMaterial;
+            // make sure name isn't null
+            string materialName = tokens.ReadName();
+            if (materialName == null)
+                materialName = "";
+            // Diffuse color describes how diffuse (directional) light
+            // reflects off the mesh
+            Vector3 diffuseColor = new Vector3(tokens.NextFloat(),
+                tokens.NextFloat(), tokens.NextFloat());
+            // We dont care about the alpha component of diffuse light.
+            // I don't even understand what this is useful for.
+            tokens.NextFloat();
+            // Specular power is inversely exponentially proportional to the
+            // strength of specular light
+            float specularPower = tokens.SkipToken().NextFloat();
+            // Specular color describes how specular (directional and shiny)
+            // light reflects off the mesh
+            Vector3 specularColor = tokens.NextVector3();
+            Vector3 emissiveColor = tokens.NextVector3();
+
+
+            // Import any textures associated with this material
+            for (string token = tokens.NextToken();
+                token != "}"; )
+            {
+                if (token == "TextureFilename")
+                {
+                    // Get the absolute path of the texture
+                    string fileName = tokens.SkipName().NextString();
+                    if (fileName.TrimStart(' ', '"').TrimEnd(' ', '"') != "")
+                    {
+                        texRef =
+                            new ExternalReference<TextureContent>(GetAbsolutePath(fileName));
+
+                    }
+                    tokens.SkipToken();
+                }
+                else if (token == "EffectInstance")
+                    returnMaterial = ImportCustomMaterial();
+                else if (token == "{")
+                    tokens.SkipNode();
+                token = tokens.NextToken();
+            }
+
+            if (returnMaterial is BasicMaterialContent)
+            {
+                basicMaterial.Texture = texRef;
+                basicMaterial.DiffuseColor = diffuseColor;
+                basicMaterial.EmissiveColor = emissiveColor;
+                basicMaterial.SpecularColor = specularColor;
+                basicMaterial.SpecularPower = specularPower;
+            }
+            returnMaterial.Name = materialName;
+
+            if (returnMaterial.Name != null)
+            {
+                if (materials.ContainsKey(returnMaterial.Name))
+                    materials.Remove(returnMaterial.Name);
+                materials.Add(returnMaterial.Name, returnMaterial);
+            }
+                
+            return returnMaterial;
+
         }
 
 
