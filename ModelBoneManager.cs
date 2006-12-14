@@ -41,6 +41,8 @@ namespace Animation
             {
                 Children = new BoneNode[bone.Children.Count];
                 Transform = bone.Transform;
+
+                Index = bone.Index;
                 Name = bone.Name == null ? null : bone.Name.ToString();
                 if (manager.boneDict.ContainsKey(Name))
                 {
@@ -49,17 +51,17 @@ namespace Animation
                         Name = "Bone" + manager.boneNum.ToString();
                         manager.boneNum++;
                     }
-                   
-                }
-                Index = bone.Index;
 
+                }
+                manager.boneDict.Add(this.Name, this);
                 this.Parent = parent;
                 for (int i = 0; i < bone.Children.Count; i++)
                 {
                     Children[i] = new BoneNode(manager, this, bone.Children[i]);
                 }
                 manager.bones[Index] = this;
-                manager.boneDict.Add(this.Name, this);
+
+
             }
             internal int Index;
             internal readonly BoneNode[] Children;

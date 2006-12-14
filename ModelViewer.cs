@@ -110,6 +110,10 @@ namespace Animation
                         BasicEffect effect = (BasicEffect)ef;
                         effect.EnableDefaultLighting();
                         effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
+                        effect.DirectionalLight1.Enabled = false;
+                        effect.DirectionalLight2.Enabled = false;
+                        effect.AmbientLightColor = Color.Black.ToVector3();
+                        effect.EmissiveColor = Color.Black.ToVector3();
                     }
                 }
             }
