@@ -1,5 +1,5 @@
 /*
- * AnimationOptions.cs
+ * MeshInfo.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,32 +22,37 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#region Using Statements
 using System;
 using System.Collections.Generic;
 using System.Text;
-#endregion
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Animation
 {
-    /// <summary>
-    /// Determines how an animation is interpolated
-    /// </summary>
-    public enum InterpolationMethod
+    public class MeshInfo
     {
-        /// <summary>
-        /// Linear interpolation between matrices
-        /// </summary>
-        Linear,
-        /// <summary>
-        /// Decompose matrices into scale, translation, and rotation components,
-        /// linearly interpolate scale and translation, and perform spherical
-        /// linear interpolation on rotation components
-        /// </summary>
-        SphericalLinear
+        public readonly int NumMeshes;
+        public readonly int[] MeshBoneIndices;
+        // Maps bone names to their blend transform, which, when applied to a bone,
+        // creates a matrix that transforms vertices in the bones local space
+        // empty if there is no skinning information
+        public List<SkinTransform[]> SkinTransforms;
+
+        public MeshInfo(Model model, List<SkinTransform[]> skinTransforms)
+        {
+            NumMeshes = model.Meshes.Count;
+            MeshBoneIndices = new int[NumMeshes];
+            for (int i = 0; i < NumMeshes; i++)
+            {
+                MeshBoneIndices[i] = model.Meshes[i].ParentBone.Index;
+            }
+            this.SkinTransforms = skinTransforms;
+        }
+        public MeshInfo(int[] meshRootBoneIndices, List<SkinTransform[]> skinTransforms)
+        {
+            this.MeshBoneIndices = (int[])meshRootBoneIndices.Clone();
+            this.SkinTransforms = skinTransforms;
+            NumMeshes = meshRootBoneIndices.Length;
+        }
     }
- 
-    
-
-
 }

@@ -1,5 +1,5 @@
 /*
- * AnimationOptions.cs
+ * ModelAnimationInfo.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,29 +25,28 @@
 #region Using Statements
 using System;
 using System.Collections.Generic;
-using System.Text;
+
+using Microsoft.Xna.Framework;
+using System.Runtime.Serialization;
+using Microsoft.Xna.Framework.Content;
 #endregion
 
 namespace Animation
 {
     /// <summary>
-    /// Determines how an animation is interpolated
+    /// Contains animation info for a model.
     /// </summary>
-    public enum InterpolationMethod
+    public struct ModelAnimationInfo
     {
         /// <summary>
-        /// Linear interpolation between matrices
+        /// The set of animations for a model.
         /// </summary>
-        Linear,
+        public ModelAnimationCollection Animations;
         /// <summary>
-        /// Decompose matrices into scale, translation, and rotation components,
-        /// linearly interpolate scale and translation, and perform spherical
-        /// linear interpolation on rotation components
+        /// The transforms that transform vertices into bone's local space
         /// </summary>
-        SphericalLinear
+        public MeshInfo MeshInfo;
     }
- 
-    
 
 
 }

@@ -1,24 +1,25 @@
 /*
  * ModelAnimationInfoWriter.cs
- * Writes animation and vertex blending information to XNB format
- * a ModelInfo object
- * Part of XNA Animation Component library, which is a library for animation
- * in XNA
+ * Copyright (c) 2006 David Astle
  * 
- * Copyright (C) 2006 David Astle
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #region Using Statements
@@ -39,51 +40,47 @@ namespace Animation.Content
     /// Writes ModelInfo data so it can be read into an object during runtime
     /// </summary>
     [ContentTypeWriter]
-    internal sealed class ModelAnimationInfoWriter : ContentTypeWriter<ModelAnimationInfo>
+    internal sealed class ModelAnimationInfoWriter : ContentTypeWriter<ModelAnimationInfoContent>
     {
+
+
 
         /// <summary>
         /// Writes a ModelInfo object into XNB data
         /// </summary>
         /// <param name="output">The stream that contains the written data</param>
         /// <param name="value">The instance to be serialized</param>
-        protected override void Write(ContentWriter output, ModelAnimationInfo value)
+        protected override void Write(ContentWriter output, ModelAnimationInfoContent value)
         {
 
-            // This contains all the animations
-            AnimationContentDictionary dict = value.Animations;
-            // First write hte number of animations (0 if the dictionary is null)
-            if (dict == null)
-                output.Write(0);
-            else
+
+
+            output.WriteRawObject<int[]>(value.MeshInfo.MeshBoneIndices);
+            output.WriteRawObject<List<SkinTransform[]>>(value.MeshInfo.SkinTransforms);
+
+            AnimationContentDictionary animations = value.animations;
+            output.Write(animations.Count);
+
+            foreach (KeyValuePair<string, AnimationContent> k in animations)
             {
-                output.Write(dict.Count);
-                // Write each animation set
-                foreach (KeyValuePair<string, AnimationContent> k in dict)
+                output.Write(k.Key);
+
+                output.Write(k.Value.Channels.Count);
+                foreach (KeyValuePair<string, AnimationChannel> chan in k.Value.Channels)
                 {
-                    output.Write(k.Key);
-                    output.Write(k.Value.Name);
-                    output.WriteRawObject<TimeSpan>(k.Value.Duration);
-                    // Write the number of channels
-                    output.Write(k.Value.Channels.Count);
-                    // Write each channel
-                    foreach (KeyValuePair<string, AnimationChannel> c in k.Value.Channels)
+                    output.Write(chan.Key);
+                    output.Write(chan.Value.Count);
+
+                    foreach (AnimationKeyframe keyframe in chan.Value)
                     {
-                        output.Write(c.Key);
-                        // Write the number of key frames for the current animation
-                        // channel
-                        output.Write(c.Value.Count);
-                        // Write each key frame
-                        foreach (AnimationKeyframe frame in c.Value)
-                        {
-                            output.WriteRawObject<TimeSpan>(frame.Time);
-                            output.Write(frame.Transform);
-                        }
+                        output.Write(keyframe.Transform);
+                        output.Write(keyframe.Time.Ticks);
                     }
                 }
             }
-            // Write the blend transforms
-            output.WriteRawObject<List<SkinTransform[]>>(value.SkinTransforms);
+
+            output.WriteRawObject<List<InterpolatedAnimation>>(value.InterpolatedAnimations);
+
 
         }
 

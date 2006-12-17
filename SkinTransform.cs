@@ -1,5 +1,5 @@
 /*
- * AnimationOptions.cs
+ * SkinTransform.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,32 +22,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#region Using Statements
 using System;
 using System.Collections.Generic;
 using System.Text;
-#endregion
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework;
 
 namespace Animation
 {
+
     /// <summary>
-    /// Determines how an animation is interpolated
+    /// A structure that contains information for a bindpose skin offset.
     /// </summary>
-    public enum InterpolationMethod
+    public struct SkinTransform
     {
         /// <summary>
-        /// Linear interpolation between matrices
+        /// The name of the bone attached to the transform
         /// </summary>
-        Linear,
+        public string BoneName;
         /// <summary>
-        /// Decompose matrices into scale, translation, and rotation components,
-        /// linearly interpolate scale and translation, and perform spherical
-        /// linear interpolation on rotation components
+        /// The transform for the bone
         /// </summary>
-        SphericalLinear
+        public Matrix Transform;
     }
- 
-    
+
+
+
 
 
 }

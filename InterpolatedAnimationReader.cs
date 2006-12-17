@@ -1,5 +1,5 @@
 /*
- * AnimationOptions.cs
+ * InterpolatedAnimationReader.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,32 +22,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#region Using Statements
 using System;
 using System.Collections.Generic;
 using System.Text;
-#endregion
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework;
 
-namespace Animation
+namespace Animation.Content
 {
-    /// <summary>
-    /// Determines how an animation is interpolated
-    /// </summary>
-    public enum InterpolationMethod
+    public class InterpolatedAnimationReader : ContentTypeReader<InterpolatedAnimation>
     {
-        /// <summary>
-        /// Linear interpolation between matrices
-        /// </summary>
-        Linear,
-        /// <summary>
-        /// Decompose matrices into scale, translation, and rotation components,
-        /// linearly interpolate scale and translation, and perform spherical
-        /// linear interpolation on rotation components
-        /// </summary>
-        SphericalLinear
+        protected override InterpolatedAnimation Read(ContentReader input, InterpolatedAnimation existingInstance)
+        {
+
+            long duration = input.ReadInt64();
+            Matrix[][][] frames = input.ReadRawObject<Matrix[][][]>();
+            int numFrames = input.ReadInt32();
+            long timeStep = input.ReadInt64();
+            InterpolatedAnimation anim = new InterpolatedAnimation(frames, timeStep,
+                duration, numFrames);
+            return anim;
+            
+        }
     }
- 
-    
-
-
 }

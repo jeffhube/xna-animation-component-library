@@ -1,23 +1,25 @@
 /*
  * ModelBoneManager.cs
- * Manages bone collections, much like a Model
- * Part of XNA Animation Component library, which is a library for animation
- * in XNA
+ * Copyright (c) 2006 David Astle
  * 
- * Copyright (C) 2006 David Astle
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 using System;
@@ -28,16 +30,53 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Animation
 {
-    internal sealed class ModelBoneManager
+    public interface IBone
+    {
+        IList<IBone> Children { get;}
+        IBone Parent { get;}
+        Matrix Transform { get;}
+        int Index { get;}
+        string Name { get;}
+
+    }
+    public sealed class ModelBoneManager
     {
         private SortedDictionary<string, BoneNode> boneDict;
         private BoneNode[] bones;
         private BoneNode[] parentlessBones = null;
         private int boneNum = 0;
-        internal class BoneNode
+        public class BoneNode
         {
             internal BoneNode(ModelBoneManager manager,
                 BoneNode parent, ModelBone bone) 
+            {
+                Children = new BoneNode[bone.Children.Count];
+                Transform = bone.Transform;
+
+                Index = bone.Index;
+                Name = bone.Name == null ? null : bone.Name.ToString();
+                if (manager.boneDict.ContainsKey(Name))
+                {
+                    while (manager.boneDict.ContainsKey(Name))
+                    {
+                        Name = "Bone" + manager.boneNum.ToString();
+                        manager.boneNum++;
+                    }
+
+                }
+                manager.boneDict.Add(this.Name, this);
+                this.Parent = parent;
+                for (int i = 0; i < bone.Children.Count; i++)
+                {
+                    Children[i] = new BoneNode(manager, this, bone.Children[i]);
+                }
+                manager.bones[Index] = this;
+
+
+            }
+
+            internal BoneNode(ModelBoneManager manager,
+                    BoneNode parent, IBone bone)
             {
                 Children = new BoneNode[bone.Children.Count];
                 Transform = bone.Transform;
@@ -125,6 +164,22 @@ namespace Animation
             this.bones = new BoneNode[boneCollection.Count];
             boneDict = new SortedDictionary<string, BoneNode>();
             foreach (ModelBone b in boneCollection)
+            {
+                if (b.Parent == null)
+                {
+                    BoneNode node = new BoneNode(this, null, b);
+                    parentlessBoneList.Add(node);
+                }
+            }
+            parentlessBones = parentlessBoneList.ToArray();
+        }
+
+        public ModelBoneManager(ICollection<IBone> boneCollection)
+        {
+            List<BoneNode> parentlessBoneList = new List<BoneNode>();
+            this.bones = new BoneNode[boneCollection.Count];
+            boneDict = new SortedDictionary<string, BoneNode>();
+            foreach (IBone b in boneCollection)
             {
                 if (b.Parent == null)
                 {

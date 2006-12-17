@@ -1,5 +1,5 @@
 /*
- * AnimationOptions.cs
+ * InterpolatedAnimationWriter.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,32 +22,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#region Using Statements
 using System;
 using System.Collections.Generic;
 using System.Text;
-#endregion
+using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
+using Microsoft.Xna.Framework;
 
-namespace Animation
+namespace Animation.Content
 {
-    /// <summary>
-    /// Determines how an animation is interpolated
-    /// </summary>
-    public enum InterpolationMethod
+    [ContentTypeWriter]
+    public class InterpolatedAnimationWriter : ContentTypeWriter<InterpolatedAnimation>
     {
-        /// <summary>
-        /// Linear interpolation between matrices
-        /// </summary>
-        Linear,
-        /// <summary>
-        /// Decompose matrices into scale, translation, and rotation components,
-        /// linearly interpolate scale and translation, and perform spherical
-        /// linear interpolation on rotation components
-        /// </summary>
-        SphericalLinear
+
+        protected override void Write(ContentWriter output, InterpolatedAnimation value)
+        {
+
+            output.Write(value.Duration);
+            output.WriteRawObject<Matrix[][][]>(value.Frames);
+            output.Write(value.NumFrames);
+            output.Write(value.TimeStep);
+
+        }
+
+        public override string GetRuntimeReader(Microsoft.Xna.Framework.TargetPlatform targetPlatform)
+        {
+            return typeof(InterpolatedAnimationReader).AssemblyQualifiedName;
+        }
     }
- 
-    
-
-
 }

@@ -1,23 +1,25 @@
 /*
  * PaletteEffectContent.cs
- * Attaches BasicPaletteEffect instances to models and writes it in XNB format
- * Part of XNA Animation Component library, which is a library for animation
- * in XNA
+ * Copyright (c) 2006 David Astle
  * 
- * Copyright (C) 2006 David Astle
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 using System;
@@ -33,53 +35,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Animation.Content
 {
 
-    /// <summary>
-    /// Reads a BasicPaletteEffect from the content pipeline
-    /// </summary>
-    public class PaletteEffectReader : ContentTypeReader<BasicPaletteEffect>
-    {
-        /// <summary>
-        /// Reads a BasicPaletteEffect
-        /// </summary>
-        /// <param name="input">The input stream</param>
-        /// <param name="existingInstance">N/A</param>
-        /// <returns>A new instance of BasicPaletteEffect</returns>
-        protected override BasicPaletteEffect Read(ContentReader input, BasicPaletteEffect existingInstance)
-        {
 
-            ContentManager manager = input.ContentManager;
-            IGraphicsDeviceService graphics =
-                (IGraphicsDeviceService)manager.ServiceProvider.GetService(typeof(IGraphicsDeviceService));
-            byte[] effectCode = input.ReadBytes(input.ReadInt32());
-            BasicPaletteEffect effect = new BasicPaletteEffect(graphics.GraphicsDevice,
-                effectCode);
-            if (input.ReadBoolean())
-            {
-                effect.Texture = input.ReadExternalReference<Texture2D>();
-                effect.TextureEnabled = true;
-            }
-            if (input.ReadBoolean())
-                effect.SpecularPower = input.ReadSingle();
-            else
-                effect.SpecularPower = 8.0f;
-            if (input.ReadBoolean())
-                effect.SpecularColor = input.ReadVector3();
-            else
-                effect.SpecularColor = Color.Black.ToVector3();
-            if (input.ReadBoolean())
-                effect.EmissiveColor = input.ReadVector3();
-            else
-                effect.EmissiveColor = Color.Black.ToVector3();
-            if (input.ReadBoolean())
-                effect.DiffuseColor = input.ReadVector3();
-            else
-                effect.DiffuseColor = Color.Black.ToVector3();
-
-
-            return effect;
-
-        }
-    }
 
     [ContentTypeWriter]
     internal class PaletteEffectWriter : ContentTypeWriter<PaletteMaterialContent>
@@ -138,4 +94,5 @@ namespace Animation.Content
         }
 
     }
+
 }

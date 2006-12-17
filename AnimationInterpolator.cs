@@ -1,33 +1,33 @@
 /*
- * BonePoseCreator.cs
- * Stores an elapsed time that is used to compute bone poses
- * Part of XNA Animation Component library, which is a library for animation
- * in XNA
+ * AnimationInterpolator.cs
+ * Copyright (c) 2006 David Astle
  * 
- * Copyright (C) 2006 David Astle
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #region Using Statements
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
-using Animation.Content;
 #endregion
 
 namespace Animation
@@ -36,42 +36,48 @@ namespace Animation
     /// Stores an elapsed time that is used to compute bone poses for
     /// an animation
     /// </summary>
-    internal class BonePoseCreator
+    public class AnimationInterpolator
     {
         #region Member Variables
-        private Model model;
+        // private Model model;
         // Current animation time for the creator
         private long curTime = 0;
         ModelBoneManager manager;
-        private AnimationContent animation;
+        private ModelAnimation animation;
         private long animationDuration;
         // Stores the current key frame while creating the table.
         // KeyFrameIndices[i] = the current frame for the bone with index i
         private int[] keyFrameIndices;
         private InterpolationMethod interpMethod = InterpolationMethod.SphericalLinear;
+        SortedList<string, BoneKeyframeCollection> boneAnims;
+        private MeshInfo meshInfo;
         #endregion
 
         #region Constructors
         /// <summary>
         /// Creates a new instance of BonePoseCreator
         /// </summary>
-        public BonePoseCreator(Model model)
+        public AnimationInterpolator(ModelBoneManager manager, MeshInfo meshInfo)
         {
-            this.model = model;
-            this.manager = new ModelBoneManager(model.Bones);
+           // this.model = model;
+            this.manager = manager;
+            this.meshInfo = meshInfo;
             keyFrameIndices = new int[manager.Count];
         }
-        public BonePoseCreator(Model model,InterpolationMethod interpMethod)
-            : this(model)
+        public AnimationInterpolator(ModelBoneManager manager, MeshInfo meshInfo, InterpolationMethod interpMethod)
+            : this(manager, meshInfo)
         {
             this.interpMethod = interpMethod;
         }
+    
 
 
         #endregion
-        public Model Model
-        { get { return model; } }
 
+        public MeshInfo MeshInfo
+        {
+            get { return meshInfo; }
+        }
         public long CurrentTime
         {
             get { return curTime; }
@@ -91,7 +97,7 @@ namespace Animation
         /// </summary>
         /// <param name="channel">The animation channel</param>
         /// <param name="boneIndex">The index of the bone attached to the channel</param>
-        private void CreatePose(AnimationChannel channel, int boneIndex)
+        private void CreatePose(BoneKeyframeCollection channel, int boneIndex)
         {
             if (channel.Count == 1)
             {
@@ -100,11 +106,11 @@ namespace Animation
             // Index in the channel of the current key frame
             int curFrameIndex = keyFrameIndices[boneIndex];
             // References to current and next frame
-            AnimationKeyframe curFrame = channel[curFrameIndex], nextFrame =
+            BoneKeyframe curFrame = channel[curFrameIndex], nextFrame =
                 channel[curFrameIndex + 1];
 
-            double interpAmount = (nextFrame.Time - curFrame.Time).Ticks;
-            interpAmount = (curTime - curFrame.Time.Ticks) / interpAmount;
+            double interpAmount = (nextFrame.Time - curFrame.Time);
+            interpAmount = (curTime - curFrame.Time) / interpAmount;
 
             if (interpMethod == InterpolationMethod.SphericalLinear)
             {
@@ -134,23 +140,12 @@ namespace Animation
         {
 
             // Create each pose
-            foreach (KeyValuePair<string, AnimationChannel> k in animation.Channels)
+            foreach (KeyValuePair<string,BoneKeyframeCollection> k in boneAnims)
             {
                 CreatePose(k.Value, manager[k.Key].Index);
             }
             manager.CopyAbsoluteBoneTransformsTo(modelPoseSet);
 
-
-          //  manager.CopyAbsoluteBoneTransformsTo(modelPoseSet);
-
-            // apply any skin transforms
-            /*
-            foreach (KeyValuePair<string, Matrix> skinTransform in controller.blendTransforms)
-            {
-                int index = controller.model.Bones[skinTransform.Key].Index;
-                poseSet[index] = skinTransform.Value * poseSet[index];
-            }
-             */
         }
 
         public void CreateMeshPoseSet(
@@ -184,7 +179,7 @@ namespace Animation
             System.Array.Clear(keyFrameIndices, 0, keyFrameIndices.Length);
         }
 
-        public AnimationContent Animation
+        public ModelAnimation Animation
         {
             get { return animation; }
             set
@@ -192,7 +187,8 @@ namespace Animation
                 if (value == animation)
                     return;
                 animation = value;
-                animationDuration = value.Duration.Ticks;
+                animationDuration = value.Duration;
+                boneAnims = animation.BoneAnimations;
                 Reset();
             }
         }
@@ -234,19 +230,19 @@ namespace Animation
             }
 
             // Update the key frame indices for each channel
-            foreach (KeyValuePair<string, AnimationChannel> k in animation.Channels)
+            foreach (KeyValuePair<string, BoneKeyframeCollection> k in animation.BoneAnimations)
             {
                 if (k.Value.Count == 1)
                     continue;
                 time = curTime;
-                AnimationChannel channel = k.Value;
+                BoneKeyframeCollection channel = k.Value;
 
-                if (time > channel[channel.Count - 1].Time.Ticks)
+                if (time > channel[channel.Count - 1].Time)
                     time = (time %
-                        channel[channel.Count - 1].Time.Ticks);
-                int boneIndex = model.Bones[k.Key].Index;
+                        channel[channel.Count - 1].Time);
+                int boneIndex = manager[k.Key].Index;
                 int curFrameIndex = keyFrameIndices[boneIndex];
-                while (time > channel[keyFrameIndices[boneIndex] + 1].Time.Ticks)
+                while (time > channel[keyFrameIndices[boneIndex] + 1].Time)
                     keyFrameIndices[boneIndex]++;
             }
         }
