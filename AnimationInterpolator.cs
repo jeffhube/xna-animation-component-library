@@ -48,7 +48,7 @@ namespace Animation
         // Stores the current key frame while creating the table.
         // KeyFrameIndices[i] = the current frame for the bone with index i
         private int[] keyFrameIndices;
-        private InterpolationMethod interpMethod = InterpolationMethod.SphericalLinear;
+        private InterpolationMethod interpMethod = InterpolationMethod.ScaleRotateTranslate;
         SortedList<string, BoneKeyframeCollection> boneAnims;
         private MeshInfo meshInfo;
         #endregion
@@ -112,7 +112,7 @@ namespace Animation
             double interpAmount = (nextFrame.Time - curFrame.Time);
             interpAmount = (curTime - curFrame.Time) / interpAmount;
 
-            if (interpMethod == InterpolationMethod.SphericalLinear)
+            if (interpMethod == InterpolationMethod.ScaleRotateTranslate)
             {
                 Matrix curMatrix = curFrame.Transform;
                 Matrix nextMatrix = nextFrame.Transform;
@@ -125,7 +125,7 @@ namespace Animation
                     interpAmount);
 
             }
-            else if (interpMethod == InterpolationMethod.Linear)
+            else if (interpMethod == InterpolationMethod.ScaleTranslate)
             {
                 // simple linear interpolation
 

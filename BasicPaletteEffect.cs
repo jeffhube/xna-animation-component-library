@@ -681,7 +681,7 @@ SKIN_OUTPUT Skin8( const VS_INPUT input)
         output.position += mul( input.position, MatrixPalette[input.indices[i]]) * weight;
         output.normal       += mul( input.normal  , MatrixPalette[input.indices[i]]) * weight;
     }
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         weight = input.weights1[i];
         lastWeight -= weight;
@@ -694,23 +694,7 @@ SKIN_OUTPUT Skin8( const VS_INPUT input)
     return output;
 };
 
-SKIN_OUTPUT Skin4( const VS_INPUT input)
-{
-    SKIN_OUTPUT output = (SKIN_OUTPUT)0;
 
-    float lastWeight = 1.0;
-    float weight = 0;
-    for (int i = 0; i < 4; ++i)
-    {
-        weight = input.weights[i];
-        lastWeight -= weight;
-        output.position     += mul( input.position, MatrixPalette[input.indices[i]]) * weight;
-        output.normal       += mul( input.normal  , MatrixPalette[input.indices[i]]) * weight;
-    }
-    output.position     += mul( input.position, MatrixPalette[input.indices[3]])*lastWeight;
-    output.normal       += mul( input.normal  , MatrixPalette[input.indices[3]])*lastWeight;
-    return output;
-};
 
 void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
 {
@@ -788,7 +772,7 @@ SKIN_OUTPUT Skin4( const VS_INPUT input)
 
     float lastWeight = 1.0;
     float weight = 0;
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         weight = input.weights[i];
         lastWeight -= weight;

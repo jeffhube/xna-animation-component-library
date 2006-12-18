@@ -43,8 +43,7 @@ namespace Animation.Content
         protected override void Write(ContentWriter output, PaletteMaterialContent value)
         {
 
-            output.Write(AnimatedModelProcessor.paletteByteCode4Bones.Length);
-            output.Write(AnimatedModelProcessor.paletteByteCode4Bones);
+            output.WriteRawObject<byte[]>(value.ByteCode);
             bool hasTexture = value.Textures.ContainsKey("Texture");
             output.Write(hasTexture);
             if (hasTexture)
@@ -78,9 +77,11 @@ namespace Animation.Content
 
     internal class PaletteMaterialContent : BasicMaterialContent
     {
+        private byte[] byteCode;
         public PaletteMaterialContent(BasicMaterialContent content, byte[] byteCode,
             ContentProcessorContext context)
         {
+            this.byteCode = byteCode;
             this.Alpha = content.Alpha;
             this.DiffuseColor = content.DiffuseColor;
             this.EmissiveColor = content.EmissiveColor;
@@ -92,6 +93,9 @@ namespace Animation.Content
 
             OpaqueData.Add("EffectCode", byteCode);
         }
+
+        public byte[] ByteCode
+        { get { return byteCode; } }
 
     }
 

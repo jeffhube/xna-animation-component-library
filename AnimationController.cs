@@ -131,7 +131,7 @@ namespace Animation
         private readonly AnimationInterpolator interpolator = null;
         // Multiplied by the elapsed time to give the user control over animation speed
         private double speedFactor = 1.0;
-        InterpolationMethod interpMethod = InterpolationMethod.SphericalLinear;
+        InterpolationMethod interpMethod = InterpolationMethod.ScaleRotateTranslate;
         // Required interface events
         /// <summary>
         /// Fired when the enabled property of the AnimationController changes.

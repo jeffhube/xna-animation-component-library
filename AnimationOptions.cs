@@ -38,13 +38,12 @@ namespace Animation
         /// <summary>
         /// Linear interpolation between matrices
         /// </summary>
-        Linear,
+        ScaleTranslate,
         /// <summary>
         /// Decompose matrices into scale, translation, and rotation components,
-        /// linearly interpolate scale and translation, and perform spherical
-        /// linear interpolation on rotation components
+        /// before interpolating
         /// </summary>
-        SphericalLinear
+        ScaleRotateTranslate
     }
  
     

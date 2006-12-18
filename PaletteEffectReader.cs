@@ -47,7 +47,7 @@ namespace Animation.Content
             ContentManager manager = input.ContentManager;
             IGraphicsDeviceService graphics =
                 (IGraphicsDeviceService)manager.ServiceProvider.GetService(typeof(IGraphicsDeviceService));
-            byte[] effectCode = input.ReadBytes(input.ReadInt32());
+            byte[] effectCode = input.ReadRawObject<byte[]>();
             BasicPaletteEffect effect = new BasicPaletteEffect(graphics.GraphicsDevice,
                 effectCode);
             if (input.ReadBoolean())

@@ -512,7 +512,7 @@ namespace Animation.Content
                     weights[index] = w;
                     weights2[index] = w2;
                     weightIndices[index] = new Short4(i0, i1, i2, i3);
-                    weightIndices2[index] = new Short4(i4, 0, 0, 0);
+                    weightIndices2[index] = new Short4(i4, i5, i6, i7);
                     index++;
                 }
 

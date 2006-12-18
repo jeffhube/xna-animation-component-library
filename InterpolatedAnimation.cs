@@ -65,6 +65,10 @@ namespace Animation
             this.TimeStep = timeStep;
             this.Duration = creator.Animation.Duration;
             this.NumFrames = timeStep == 0 ? 1 : (int)(Duration / timeStep);
+            if (NumFrames == 0)
+                throw new Exception("Error: Animation named \"" + creator.Animation.Name + "\" is too fast for 60 fps.  If " +
+                    "animation was loaded from a directx file, please add an AnimationTicksPerSecond node to the .X file " +
+                    "such as : AnimTicksPerSecond { 25; }\n"); 
             for (int i = 0; i < numMeshes; i++)
             {
                 Frames[i] = new Matrix[NumFrames][];
