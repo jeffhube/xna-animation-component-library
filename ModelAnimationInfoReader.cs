@@ -90,7 +90,7 @@ namespace Animation.Content
             List<InterpolatedAnimation> anims = input.ReadRawObject<List<InterpolatedAnimation>>();
             for (int i = 0; i < anims.Count; i++)
             {
-                dict.Values[i].SetInterpolatedAnimation(anims[i]);
+                dict[i].SetInterpolatedAnimation(anims[i]);
             }
             return info;
         }

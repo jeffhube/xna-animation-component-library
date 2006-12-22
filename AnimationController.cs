@@ -469,8 +469,7 @@ namespace Animation
             if (animationIndex >= animations.Count)
                 throw new Exception("Invalid animation index.");
 
-            ChangeAnimation(animations.Values[animationIndex].Name );
-            interpolatedAnimation = anim.InterpolatedAnimation;
+            ChangeAnimation(animations[animationIndex].Name );
         }
 
         /// <summary>
@@ -494,8 +493,7 @@ namespace Animation
             // Call the animation changed event if appropriate
             if (oldAnimName != null && AnimationChanged != null)
                 AnimationChanged(this, new AnimationChangedEventArgs(oldAnimName, animationName));
-            if (UsePrecomputedInterpolations)
-                RecomputeInterpolations();
+            interpolatedAnimation = anim.InterpolatedAnimation;
         }
 
         /// <summary>
@@ -527,6 +525,7 @@ namespace Animation
         public void RecomputeInterpolations()
         {
             anim.Interpolate((long)(RawTimeStep * speedFactor), interpolator);
+            interpolatedAnimation = anim.InterpolatedAnimation;
         }
 
         /// <summary>

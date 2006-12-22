@@ -153,7 +153,7 @@ namespace Animation
         }
     }
 
-    public class ModelAnimationCollection : SortedList<string, ModelAnimation>
+    public class ModelAnimationCollection : Dictionary<string, ModelAnimation>
     {
         private MeshInfo meshInfo;
         internal ModelAnimationCollection(MeshInfo meshInfo)
@@ -164,6 +164,23 @@ namespace Animation
         public MeshInfo MeshInfo
         {
             get { return meshInfo; }
+        }
+
+        public ModelAnimation this[int index]
+        {
+            get
+            {
+                int i = 0;
+                Dictionary<string,ModelAnimation>.ValueCollection.Enumerator enumer = base.Values.GetEnumerator();
+                enumer.MoveNext();
+                while (i < index)
+                {
+                    enumer.MoveNext();
+                    i++;
+                }
+                return enumer.Current;
+
+            }
         }
 
     }
