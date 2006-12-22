@@ -35,7 +35,8 @@ namespace Animation
     {
         None,
         FourBonesPerVertex,
-        EightBonesPerVertex
+        EightBonesPerVertex,
+        TwelveBonesPerVertex
     }
     /// <summary>
     /// Provides various animation utilities.
@@ -113,7 +114,9 @@ namespace Animation
                 else if (e.VertexElementUsage == VertexElementUsage.BlendWeight)
                     numWeightChannels++;
             }
-            if (numIndexChannels == 2 || numWeightChannels == 2)
+            if (numIndexChannels == 3 || numWeightChannels == 3)
+                return SkinningType.TwelveBonesPerVertex;
+            else if (numIndexChannels == 2 || numWeightChannels == 2)
                 return SkinningType.EightBonesPerVertex;
             else if (numIndexChannels == 1 || numWeightChannels == 1)
                 return SkinningType.FourBonesPerVertex;
@@ -200,7 +203,7 @@ namespace Animation
             // to get into polar decomposition and this seems smooth enough)
             Quaternion qStart = Quaternion.CreateFromRotationMatrix(start);
             Quaternion qEnd = Quaternion.CreateFromRotationMatrix(end);
-            Quaternion qResult = Quaternion.Slerp(qStart, qEnd, (float)slerpAmount);
+            Quaternion qResult = Quaternion.Lerp(qStart, qEnd, (float)slerpAmount);
 
             // Get translation components 
             Vector3 curTrans = start.Translation;

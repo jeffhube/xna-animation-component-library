@@ -49,6 +49,7 @@ namespace Animation.Content
         // Stores the byte code for the BasicPaletteEffect
         internal static byte[] paletteByteCode4Bones = null;
         internal static byte[] paletteByteCode8Bones = null;
+        internal static byte[] paletteByteCode12Bones = null;
         private static bool paletteLoadAttempted = false;
         private ContentProcessorContext context;
         // stores all animations for the model
@@ -65,15 +66,22 @@ namespace Animation.Content
                 effect.EffectCode = BasicPaletteEffect.SourceCode4BonesPerVertex;
                 EffectProcessor processor = new EffectProcessor();
                 CompiledEffect compiledEffect4 = processor.Process(effect, context);
+
                 effect = new EffectContent();
                 effect.EffectCode = BasicPaletteEffect.SourceCode8BonesPerVertex;
                 processor = new EffectProcessor();
                 CompiledEffect compiledEffect8 = processor.Process(effect, context);
 
+                effect = new EffectContent();
+                effect.EffectCode = BasicPaletteEffect.SourceCode12BonesPerVertex;
+                processor = new EffectProcessor();
+                CompiledEffect compiledEffect12 = processor.Process(effect, context);
+
                 if (compiledEffect4.Success != false && compiledEffect8.Success != false)
                 {
                     paletteByteCode4Bones = compiledEffect4.GetEffectCode();
                     paletteByteCode8Bones = compiledEffect8.GetEffectCode();
+                    paletteByteCode12Bones = compiledEffect12.GetEffectCode();
                 }
                 else
                 {
@@ -130,15 +138,20 @@ namespace Animation.Content
                     BasicMaterialContent basic = part.Material as BasicMaterialContent;
                     if (basic != null)
                     {
-                        PaletteMaterialContent paletteContent;
+                        PaletteMaterialContent paletteContent = null;
                         if (skinType == SkinningType.FourBonesPerVertex)
                         {
                             paletteContent = new PaletteMaterialContent(basic, paletteByteCode4Bones,
                                 context);
                         }
-                        else
+                        else if (skinType == SkinningType.EightBonesPerVertex)
                         {
                             paletteContent = new PaletteMaterialContent(basic, paletteByteCode8Bones,
+                                context);
+                        }
+                        else
+                        {
+                            paletteContent = new PaletteMaterialContent(basic, paletteByteCode12Bones,
                                 context);
                         }
                         part.Material = paletteContent;

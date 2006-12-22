@@ -84,11 +84,11 @@ namespace Animation.Content
             // The materials of the mesh
             private MaterialContent[] materials = new MaterialContent[0];
             // The blend weights
-            Vector4[] weights = null, weights2 = null;
+            List<Vector4[]> weights = new List<Vector4[]>();
             // The blend weight indices
-            Short4[] weightIndices = null, weightIndices2=null;
-            // True if model is skinned & uses 8 bones per vertex max as opposed to 4
-            bool useEightBones = false;
+            List<Short4[]> weightIndices = new List<Short4[]>();
+
+            private bool isSkinned = false;
             private XModelImporter model;
             private XFileTokenizer tokens;
             // This will eventually turn into the Mesh
@@ -101,10 +101,7 @@ namespace Animation.Content
             private SortedDictionary<string, Matrix> skinTransformDictionary =
                 new SortedDictionary<string, Matrix>();
             private List<SkinTransform> skinTransforms = new List<SkinTransform>();
-            // Is set to true if skinning information has been found for this mesh;
-            // this determines whether or not skin weight and skin weight index channels
-            // are added
-            private bool isSkinned = false;
+
             // We will give each mesh a unique name because the default model processor
             // doesn't apply the correct transform to meshes that have a null name
             private static int meshID = 0;
@@ -156,7 +153,6 @@ namespace Animation.Content
             //  weight.
             public void ImportSkinWeights()
             {
-                // We have found a skin weight node so this is a skinned model
                 isSkinned = true;
                 string boneName = tokens.SkipName().NextString();
                 // an influence is an index to a vertex that is affected by the current bone
@@ -393,18 +389,18 @@ namespace Animation.Content
                     MeshHelper.CalculateNormals(mesh, true);
                 if (texCoords != null)
                     AddChannel<Vector2>("TextureCoordinate0", texCoords);
-                if (weightIndices != null)
+
+                for (int i = 0; i < weightIndices.Count; i++)
                 {
-                    AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString()+"0", weightIndices);
-                    if (useEightBones)
-                        AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString()+"1", weightIndices2);
+                    AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString() + i.ToString(),
+                        weightIndices[i]);
                 }
-                if (weights != null)
+                for (int i = 0; i < weights.Count; i++)
                 {
-                    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString()+"0", weights);
-                    if (useEightBones)
-                        AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString()+"1", weights2);
+                    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString() + i.ToString(),
+                        weights[i]);
                 }
+
                 
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
                 MeshHelper.MergeDuplicateVertices(mesh);
@@ -436,6 +432,7 @@ namespace Animation.Content
             /// <param name="boneIndices">A dictionary that maps bone names to their indices</param>
             public void AddWeights(Dictionary<string, int> boneIndices)
             {
+
                 if (!isSkinned)
                     return;
 
@@ -455,12 +452,7 @@ namespace Animation.Content
                 }
 
 
-                // These two lists hold the data for the two new channels (the weights and indices)
-                weights = new Vector4[mesh.Positions.Count];
-                weights2 = new Vector4[mesh.Positions.Count];
-                weightIndices = new Short4[mesh.Positions.Count];
-                weightIndices2 = new Short4[mesh.Positions.Count];
-
+                int numWeightChannels = 0;
                 // The index of the position that this vertex refers to
                 int index = 0;
                 foreach (BoneWeightCollection c in skinInfo)
@@ -469,50 +461,53 @@ namespace Animation.Content
 
                     // The number of weights associated with the current vertex
                     int ct = c.Count;
-
-                    Vector4 w = new Vector4();
-                    Vector4 w2 = new Vector4();
-                    short i0 = 0, i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, i7 = 0;
-                    // Fill in the weights
-                    w.X = ct > 0 ? c[0].Weight : 0;
-                    w.Y = ct > 1 ? c[1].Weight : 0;
-                    w.Z = ct > 2 ? c[2].Weight : 0;
-                    w.W = ct > 3 ? c[3].Weight : 0;
-
-
-                    // If the vertex cotnains no skinning info, assign it to the mesh's root
-                    // bone with a weight of 1
-                    if (ct > 0 && c[0].BoneName != null)
-                        i0 = (short)meshBoneIndices[c[0].BoneName];
-                    if (ct == 0)
-                        w.X = 1.0f;
-
-                    // Fill in the indices
-                    if (c.Count > 1 && c[1].BoneName != null) i1 = (short)meshBoneIndices[c[1].BoneName];
-                    if (c.Count > 2 && c[2].BoneName != null) i2 = (short)meshBoneIndices[c[2].BoneName];
-                    if (c.Count > 3 && c[3].BoneName != null) i3 = (short)meshBoneIndices[c[3].BoneName];
-
-                    // If the count is greater then 4 for any bone on a mesh, then use the 8 bone
-                    // shader
-                    if (ct > 4)
+                    int chansToAdd = (((ct-1) / 4) - numWeightChannels+1);
+                    while (chansToAdd > 0)
                     {
-                        useEightBones = true;
-                        w2.X = ct > 4 ? c[4].Weight : 0;
-                        w2.Y = ct > 5 ? c[5].Weight : 0;
-                        w2.Z = ct > 6 ? c[6].Weight : 0;
-                        w2.W = ct > 7 ? c[7].Weight : 0;
-                        if (c.Count > 4 && c[4].BoneName != null) i4 = (short)meshBoneIndices[c[4].BoneName];
-                        if (c.Count > 5 && c[5].BoneName != null) i5 = (short)meshBoneIndices[c[5].BoneName];
-                        if (c.Count > 6 && c[6].BoneName != null) i6 = (short)meshBoneIndices[c[6].BoneName];
-                        if (c.Count > 7 && c[7].BoneName != null) i7 = (short)meshBoneIndices[c[7].BoneName];
+                        weights.Add(new Vector4[mesh.Positions.Count]);
+                        weightIndices.Add(new Short4[mesh.Positions.Count]);
+                        chansToAdd--;
+                        numWeightChannels++;
                     }
 
-                    // We have a list of boneweight/bone index objects that are ordered such that
-                    // BoneWeightCollection[i] is the weight and index for vertex i.
-                    weights[index] = w;
-                    weights2[index] = w2;
-                    weightIndices[index] = new Short4(i0, i1, i2, i3);
-                    weightIndices2[index] = new Short4(i4, i5, i6, i7);
+                    Vector4[] weightsToAdd = new Vector4[numWeightChannels];
+                    short[,] indicesToAdd = new short[numWeightChannels, 4];
+                    int count = ct;
+                    for (int i = 0; i < numWeightChannels; i++)
+                    {
+
+                        weightsToAdd[i].X = c[i * 4].Weight;
+                        indicesToAdd[i, 0] = (short)meshBoneIndices[c[i * 4].BoneName];
+                        count--;
+                        if (count <= 0)
+                            break;
+                        weightsToAdd[i].Y = c[i * 4 + 1].Weight;
+                        indicesToAdd[i, 1] = (short)meshBoneIndices[c[i * 4 + 1].BoneName];
+                        count--;
+                        if (count <= 0)
+                            break;
+                        
+                        weightsToAdd[i].Z = c[i * 4 + 2].Weight;
+                        indicesToAdd[i, 2] = (short)meshBoneIndices[c[i * 4 + 2].BoneName];
+                        count--;
+                        if (count <= 0)
+                            break;
+                        
+                        weightsToAdd[i].W = c[i * 4 + 3].Weight;
+                        indicesToAdd[i, 3] = (short)meshBoneIndices[c[i * 4 + 3].BoneName];
+                        count--;
+                        if (count <= 0)
+                            break;
+                        
+                        
+                    }
+
+                    for (int i = 0; i < numWeightChannels; i++)
+                    {
+                        weights[i][index] = weightsToAdd[i];
+                        weightIndices[i][index] = new Short4(indicesToAdd[i, 0], indicesToAdd[i, 1],
+                            indicesToAdd[i, 2], indicesToAdd[i, 3]);
+                    }
                     index++;
                 }
 

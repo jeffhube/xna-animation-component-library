@@ -631,6 +631,109 @@ void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
             }
         }
 
+        public static string SourceCode12BonesPerVertex
+        {
+            get
+            {
+                return ShaderVariables + @"
+
+
+struct VS_INPUT
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texcoord : TEXCOORD0;
+	float3 normal : NORMAL;
+	half4 indices : BLENDINDICES0;
+    half4 indices1: BLENDINDICES1;
+    half4 indices2: BLENDINDICES2;
+	float4 weights : BLENDWEIGHT0;
+    float4 weights1: BLENDWEIGHT1;
+    float4 weights2: BLENDWEIGHT2;
+};
+
+struct VS_OUTPUT
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texcoord : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+	float4 color : COLOR;
+};
+
+struct SKIN_OUTPUT
+{
+    float4 position;
+    float4 normal;
+};
+
+SKIN_OUTPUT Skin12( const VS_INPUT input)
+{
+    SKIN_OUTPUT output = (SKIN_OUTPUT)0;
+
+    float lastWeight = 1.0;
+    float weight = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        weight = input.weights[i];
+        lastWeight -= weight;
+        output.position += mul( input.position, MatrixPalette[input.indices[i]]) * weight;
+        output.normal       += mul( input.normal  , MatrixPalette[input.indices[i]]) * weight;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
+        weight = input.weights1[i];
+        lastWeight -= weight;
+        output.position += mul( input.position, MatrixPalette[input.indices1[i]]) * weight;
+        output.normal       += mul( input.normal  , MatrixPalette[input.indices1[i]]) * weight;
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        weight = input.weights2[i];
+        lastWeight -= weight;
+        output.position += mul(input.position,MatrixPalette[input.indices2[i]]) * weight;
+        output.normal += mul(input.normal, MatrixPalette[input.indices2[i]]) * weight;
+    }
+
+    output.position += mul( input.position, MatrixPalette[input.indices2[3]])*lastWeight;
+    output.normal       += mul( input.normal  , MatrixPalette[input.indices2[3]])*lastWeight;
+    return output;
+};
+
+
+
+void TransformVertex (in VS_INPUT input, out VS_OUTPUT output)
+{
+
+    float3 inputN = normalize(input.normal);
+    SKIN_OUTPUT skin = Skin12(input);
+    output.position=skin.position;
+    float3 normal = skin.normal;
+
+
+
+    " + LightingCode + @"
+}
+
+" + PixelShaderCode + @"
+
+
+
+technique TransformTechnique
+{
+	pass P0
+	{
+		VertexShader = compile vs_2_0 TransformVertex();
+		PixelShader  = compile ps_2_0 TransformPixel();
+	}
+}";
+
+            }
+        }
+
         public static string SourceCode8BonesPerVertex
         {
             get

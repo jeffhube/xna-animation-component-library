@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.ObjectModel;
 
 namespace Animation
 {
@@ -47,30 +48,32 @@ namespace Animation
         private int boneNum = 0;
         public class BoneNode
         {
+            private int index;
+            private ReadOnlyCollection<BoneNode> children;
+            private readonly BoneNode parent;
+            private Matrix transform;
+            private readonly string name;
+
             internal BoneNode(ModelBoneManager manager,
                 BoneNode parent, ModelBone bone) 
             {
-                Children = new BoneNode[bone.Children.Count];
-                Transform = bone.Transform;
+                BoneNode[] childrenArray = new BoneNode[bone.Children.Count];
+                transform = bone.Transform;
 
-                Index = bone.Index;
-                Name = bone.Name == null ? null : bone.Name.ToString();
-                if (manager.boneDict.ContainsKey(Name))
+                index = bone.Index;
+                name = bone.Name == null ? null : bone.Name.ToString();
+
+                if (!manager.boneDict.ContainsKey(this.name))
                 {
-                    while (manager.boneDict.ContainsKey(Name))
-                    {
-                        Name = "Bone" + manager.boneNum.ToString();
-                        manager.boneNum++;
-                    }
-
+                    manager.boneDict.Add(this.name, this);
                 }
-                manager.boneDict.Add(this.Name, this);
-                this.Parent = parent;
+                this.parent = parent;
                 for (int i = 0; i < bone.Children.Count; i++)
                 {
-                    Children[i] = new BoneNode(manager, this, bone.Children[i]);
+                    childrenArray[i] = new BoneNode(manager, this, bone.Children[i]);
                 }
-                manager.bones[Index] = this;
+                manager.bones[index] = this;
+                children = new List<BoneNode>(childrenArray).AsReadOnly();
 
 
             }
@@ -78,35 +81,46 @@ namespace Animation
             internal BoneNode(ModelBoneManager manager,
                     BoneNode parent, IBone bone)
             {
-                Children = new BoneNode[bone.Children.Count];
-                Transform = bone.Transform;
+                BoneNode[] childrenArray = new BoneNode[bone.Children.Count];
+                transform = bone.Transform;
 
-                Index = bone.Index;
-                Name = bone.Name == null ? null : bone.Name.ToString();
-                if (manager.boneDict.ContainsKey(Name))
+                index = bone.Index;
+                name = bone.Name == null ? null : bone.Name.ToString();
+                if (!manager.boneDict.ContainsKey(this.name))
                 {
-                    while (manager.boneDict.ContainsKey(Name))
-                    {
-                        Name = "Bone" + manager.boneNum.ToString();
-                        manager.boneNum++;
-                    }
-
+                    manager.boneDict.Add(this.name, this);
                 }
-                manager.boneDict.Add(this.Name, this);
-                this.Parent = parent;
+                this.parent = parent;
                 for (int i = 0; i < bone.Children.Count; i++)
                 {
-                    Children[i] = new BoneNode(manager, this, bone.Children[i]);
+                    childrenArray[i] = new BoneNode(manager, this, bone.Children[i]);
                 }
                 manager.bones[Index] = this;
+                children = new List<BoneNode>(childrenArray).AsReadOnly();
 
 
             }
-            internal int Index;
-            internal readonly BoneNode[] Children;
-            internal readonly BoneNode Parent;
-            internal Matrix Transform;
-            internal readonly string Name;
+            public ReadOnlyCollection<BoneNode> Children
+            {
+                get { return children; }
+            }
+            public int Index
+            {
+                get { return index; }
+            }
+            public Matrix Transform
+            {
+                get { return transform; }
+                set { transform = value; }
+            }
+            public BoneNode Parent
+            {
+                get { return parent; }
+            }
+            public string Name
+            {
+                get { return name; }
+            }
         }
 
         public BoneNode this[int index]
@@ -140,6 +154,14 @@ namespace Animation
             }
   
 
+        }
+
+        public void CopyBoneTransformsTo(Matrix[] bones)
+        {
+            for (int i = 0; i < bones.Length; i++)
+            {
+                bones[i] = this.bones[i].Transform;
+            }
         }
 
         public void CopyBoneTransformsFrom(ModelBoneCollection collection)
