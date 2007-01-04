@@ -1,5 +1,5 @@
 /*
- * PaletteEffectContent.cs
+ * ModelViewer.cs
  * Copyright (c) 2006 Michael Nikonov, David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -34,13 +34,14 @@ namespace Animation
 {
     /// <summary>
     /// A viewer for animated models. To view your model, just do 
-    ///     ModelViewer viewer = new ModelViewer(this, model);
+    ///     new ModelViewer(game, model);
     /// </summary>
     public partial class ModelViewer : Microsoft.Xna.Framework.IGameComponent,
         IUpdateable
     {
         Model model;
         AnimationController controller;
+        int animationIndex = 0;
         private BoundingSphere sphere;
 
         Matrix world, view, projection;
@@ -48,11 +49,16 @@ namespace Animation
         float fov, near, far, width, height, cx, cy, aspect;
         float arcRadius;
         Viewport viewPort;
+        Vector3 modelPos = Vector3.One;
+
+        MouseState lastState;
+        KeyboardState lastKeyboardState;
+
         public ModelViewer(Game game, Model model)
         {
             this.model = model;
 
-            controller = new Animation.AnimationController(game, model, 0);
+            controller = new Animation.AnimationController(game, model, animationIndex);
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
             controller.Visible = true;
@@ -85,8 +91,6 @@ namespace Animation
             InitializeEffects();
         }
 
-
-        MouseState lastState;
 
         private void InitializeEffects()
         {
@@ -188,34 +192,40 @@ namespace Animation
                 if (IntersectPoint(lastState.X, lastState.Y, out lastPt)
                     && IntersectPoint(state.X, state.Y, out curPt))
                 {
-                    Vector3 cross = Vector3.Cross(lastPt, curPt);
-                    cross.Normalize();
-                    lastPt.Normalize();
-                    curPt.Normalize();
-                    float ang = (float)Math.Acos(Vector3.Dot(lastPt,
-                        curPt));
-                    Matrix axisRot = Matrix.CreateFromAxisAngle(
-                        cross, ang * 2.0f);
                     if (state.LeftButton == ButtonState.Pressed)
-                        world *= axisRot;
-                    if (state.RightButton == ButtonState.Pressed)
                     {
-                        Matrix invertRot = Matrix.Invert(axisRot);
-
-                        eyePos = Vector3.Transform(eyePos,
-                            invertRot);
-                        up = Vector3.Normalize(Vector3.Transform(up,
-                            invertRot));
-                        view = Matrix.CreateLookAt(
-                            eyePos, Vector3.Zero,
-                            up);
+                        Vector3 cross = Vector3.Cross(lastPt, curPt);
+                        cross.Normalize();
+                        lastPt.Normalize();
+                        curPt.Normalize();
+                        float ang = (float)Math.Acos(Vector3.Dot(lastPt,
+                            curPt));
+                        Matrix axisRot = Matrix.CreateFromAxisAngle(
+                            cross, ang * 2.0f);
+                        world *= axisRot;
+                    }
+                    else if (state.RightButton == ButtonState.Pressed)
+                    {
+                        modelPos.X = state.X - lastState.X;
+                        modelPos.Y = -state.Y + lastState.Y;
+                        world *= Matrix.CreateTranslation(modelPos);
                     }
                 }
 
             }
-         
+
+            KeyboardState keyboardState = Keyboard.GetState();
+            if (keyboardState.IsKeyDown(Keys.Space) && !lastKeyboardState.IsKeyDown(Keys.Space))
+            {
+                ++animationIndex;
+                if (animationIndex >= controller.Animations.Count)
+                    animationIndex = 0;
+                controller.ChangeAnimation(animationIndex);
+            }
+
             controller.World = world;
             lastState = state;
+            lastKeyboardState = keyboardState;
             
             foreach (ModelMesh mesh in model.Meshes)
             {

@@ -1,6 +1,6 @@
 /*
  * AsfImporter.cs
- * Copyright (c) 2006 Michael Nikonov
+ * Copyright (c) 2006, 2007 Michael Nikonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -69,10 +69,6 @@ namespace Animation.Content
         /// </summary>
         public override BoneContent Import(string filename, ContentImporterContext context)
         {
-            CultureInfo culture = new CultureInfo("en-US");
-            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
-            currentThread.CurrentCulture = culture;
-            currentThread.CurrentUICulture = culture;
             this.context = context;
             contentId = new ContentIdentity(filename);
             BoneContent root = new BoneContent();
@@ -81,6 +77,8 @@ namespace Animation.Content
             root.Transform = Matrix.Identity;
             bones = new NamedValueDictionary<BoneContent>();
             bones.Add("root", root);
+            if (!File.Exists(filename)) 
+                throw new InvalidContentException("file " + filename + " not found");
             reader = new StreamReader(filename);
             String line;
             while ((line = readLine()) != ":bonedata")
@@ -158,7 +156,6 @@ namespace Animation.Content
             }
             Vector3 v = new Vector3(direction[0], direction[1], direction[2]);
             Matrix m = Matrix.Identity;
-            m.Forward = v;
             m.Translation = v * length;
             bone.Transform = m;
             return bone;
@@ -181,7 +178,7 @@ namespace Animation.Content
             float[] f=new float[strings.Length];
             for (int i = 0; i < strings.Length; i++)
             {
-                f[i] = float.Parse(strings[i]);
+                f[i] = float.Parse(strings[i], NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat);
             }
             return f;
         }

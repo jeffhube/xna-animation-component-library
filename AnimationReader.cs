@@ -35,27 +35,17 @@ namespace Animation.Content
     /// <summary>
     /// A class that reads in an XNB stream and converts it to a ModelInfo object
     /// </summary>
-    public sealed class ModelAnimationInfoReader : ContentTypeReader<ModelAnimationInfo>
+    public sealed class AnimationReader : ContentTypeReader<ModelAnimationCollection>
     {
         /// <summary>
         /// Reads in an XNB stream and converts it to a ModelInfo object
         /// </summary>
         /// <param name="input">The stream from which the data will be read</param>
         /// <param name="existingInstance">Not used</param>
-        /// <returns>The unserialized ModelInfo object</returns>
-        protected override ModelAnimationInfo Read(ContentReader input, ModelAnimationInfo existingInstance)
+        /// <returns>The unserialized ModelAnimationCollection object</returns>
+        protected override ModelAnimationCollection Read(ContentReader input, ModelAnimationCollection existingInstance)
         {
-            // Create the new object
-            ModelAnimationInfo info = new ModelAnimationInfo();
-
-            // Read the blend transform data
-            int[] indices = input.ReadRawObject<int[]>();
-
-            List<SkinTransform[]> skinTransforms = input.ReadRawObject<List<SkinTransform[]>>();
-
-            info.MeshInfo = new MeshInfo(indices, skinTransforms);
-
-            ModelAnimationCollection dict = new ModelAnimationCollection(info.MeshInfo);
+            ModelAnimationCollection dict = new ModelAnimationCollection();
 
             int numAnimations = input.ReadInt32();
 
@@ -85,14 +75,7 @@ namespace Animation.Content
                 }
                 dict.Add(animationName, anim);
             }
-            info.Animations = dict;
-
-            List<InterpolatedAnimation> anims = input.ReadRawObject<List<InterpolatedAnimation>>();
-            for (int i = 0; i < anims.Count; i++)
-            {
-                dict[i].SetInterpolatedAnimation(anims[i]);
-            }
-            return info;
+            return dict;
         }
     }
 }

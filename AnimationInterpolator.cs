@@ -99,7 +99,7 @@ namespace Animation
         /// <param name="boneIndex">The index of the bone attached to the channel</param>
         private void CreatePose(BoneKeyframeCollection channel, int boneIndex)
         {
-            if (channel.Count == 1)
+            if (channel==null || channel.Count == 1)
             {
                 return;
             }
@@ -142,7 +142,8 @@ namespace Animation
             // Create each pose
             foreach (KeyValuePair<string,BoneKeyframeCollection> k in boneAnims)
             {
-                CreatePose(k.Value, manager[k.Key].Index);
+                if (k.Key!="foobar")
+                    CreatePose(k.Value, manager[k.Key].Index);
             }
             manager.CopyAbsoluteBoneTransformsTo(modelPoseSet);
 
@@ -188,7 +189,22 @@ namespace Animation
                     return;
                 animation = value;
                 animationDuration = value.Duration;
-                boneAnims = animation.BoneAnimations;
+                //boneAnims = animation.BoneAnimations;
+                boneAnims = new SortedList<string, BoneKeyframeCollection>();
+                for (int i = 0; i < manager.Count; i++)
+                {
+                    string bName=manager[i].Name;
+                    BoneKeyframeCollection channel = null;
+                    if (animation.BoneAnimations.ContainsKey(bName))
+                    {
+                        channel = animation.BoneAnimations[bName];
+                    }
+                    if (boneAnims.ContainsKey(bName))
+                    {
+                        bName = "foobar";
+                    }
+                    boneAnims.Add(bName, channel);
+                }
                 Reset();
             }
         }

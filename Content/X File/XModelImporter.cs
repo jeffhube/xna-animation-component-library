@@ -1,6 +1,6 @@
 /*
  * XModelImporter.cs
- * Copyright (c) 2006 David Astle
+ * Copyright (c) 2006, 2007 David Astle, Michael Nikonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -48,6 +48,9 @@ namespace Animation.Content
         private XFileTokenizer tokens;
         // Stores the root frame
         private NodeContent root;
+
+        // Root of skeleton - different from model root
+        private BoneContent skeletonRoot;
         // Stores the number of units that represent one second in animation data
         // Is null if the file contains no information, and a default value will be used
         private int? animTicksPerSecond;
@@ -90,6 +93,7 @@ namespace Animation.Content
             // in a preorder tree traversal.
             GetBoneIndices(root);
 
+            Matrix absoluteMeshTransform=Matrix.Identity;
             List<SkinTransform[]> skinTransforms = new List<SkinTransform[]>();
             // Now that we have mapped bone names to their indices, we can create the vertices
             // in each mesh so that they contain indices and weights
@@ -98,13 +102,44 @@ namespace Animation.Content
                 mesh.AddWeights(boneIndices);
                 mesh.CreateGeometry();
                 skinTransforms.Add(mesh.SkinTransforms);
+                if (mesh.SkinTransforms!=null && mesh.SkinTransforms.Length > 0)
+                {
+                    absoluteMeshTransform = mesh.Mesh.AbsoluteTransform;
+                }
             }
-
-
-
             // Allow processor to access any skinning data we might have
             root.OpaqueData.Add("SkinTransforms", skinTransforms);
+
+            // Hack to calculate bind pose as required for compatibility with XNA Content DOM
+            Dictionary<string, Matrix> absTransformsDict = new Dictionary<string, Matrix>(skinTransforms.Count);
+            foreach (SkinTransform[] sst in skinTransforms)
+            {
+                if (sst != null)
+                {
+                    foreach (SkinTransform st in sst)
+                    {
+                        Matrix abs = Matrix.Invert(Matrix.Invert(absoluteMeshTransform) * st.Transform);
+                        absTransformsDict.Add(st.BoneName, abs);
+                    }
+                }
+            }
+            fixBindPose(root, absTransformsDict);
             return root;
+        }
+
+        // Hack to calculate bind pose as required for compatibility with XNA Content DOM
+        private void fixBindPose(NodeContent bone, Dictionary<string, Matrix> absTransformsDict)
+        {
+            Matrix abs = bone.AbsoluteTransform;
+            if (bone.Parent!=null && absTransformsDict.ContainsKey(bone.Name))
+            {
+                abs = absTransformsDict[bone.Name];
+                bone.Transform = abs * Matrix.Invert(bone.Parent.AbsoluteTransform);
+            }
+            foreach (NodeContent child in bone.Children)
+            {
+                fixBindPose(child, absTransformsDict);
+            }
         }
 
         /// <summary>
@@ -123,9 +158,16 @@ namespace Animation.Content
                     // frame
                     if (next == "Frame")
                         if (root == null)
+                        {
                             root = ImportNode();
+                            root.Identity = new ContentIdentity();
+                            root.Identity.SourceFilename = fileName;
+                            root.Identity.SourceTool = this.GetType().ToString();
+                        }
                         else
+                        {
                             root.Children.Add(ImportNode());
+                        }
                     //template AnimTicksPerSecond
                     // {
                     //     DWORD AnimTicksPerSecond;
@@ -303,10 +345,18 @@ namespace Animation.Content
         /// <returns>The imported node</returns>
         private NodeContent ImportNode()
         {
-            NodeContent c = new NodeContent();
+            NodeContent c;
+            if (meshes.Count==0)
+            {
+                c = new NodeContent();
+            }
+            else
+            {
+                c = new BoneContent();
+            }
             c.Name = tokens.ReadName();
             if (c.Name == null)
-                c.Name = " ";
+                c.Name = "Node" + c.GetHashCode();
             // process all of this frame's children
             for (string next = tokens.NextToken(); next != "}"; next = tokens.NextToken())
             {
@@ -332,7 +382,6 @@ namespace Animation.Content
                 else if (next == "{")
                     tokens.SkipNode();
             }
-
             return c;
         }
 
@@ -395,7 +444,8 @@ namespace Animation.Content
                 else if (next == "{")
                     tokens.SkipNode();
             }
-            root.Animations.Add(animSet.Name, animSet);
+            skeletonRoot = MeshHelper.FindSkeleton(root);
+            skeletonRoot.Animations.Add(animSet.Name, animSet);
         }
 
 
@@ -592,10 +642,27 @@ namespace Animation.Content
         /// <param name="root">The root of the tree that is traversed</param>
         private void GetBoneIndices(NodeContent root)
         {
-            if (root.Name != null && !(root is MeshContent) 
-                && !boneIndices.ContainsKey(root.Name))
-                boneIndices.Add(root.Name, curIndex);
-            curIndex++;
+            //System.Diagnostics.Debugger.Launch();
+            //BoneContent skel = MeshHelper.FindSkeleton(root);
+            //IList<BoneContent> flatSkel = MeshHelper.FlattenSkeleton(skel);
+            //for (int i = 0; i < flatSkel.Count; i++)
+            //{
+            //    BoneContent bc = flatSkel[i];
+            //    boneIndices.Add(bc.Name, i);
+            //}
+            if (root.Name != null && root.Parent!=null)
+            {
+                if (root is MeshContent)
+                {
+                    boneIndices.Clear();
+                    curIndex = 0;
+                }
+                else
+                {
+                    boneIndices.Add(root.Name, curIndex);
+                    curIndex++;
+                }
+            }
             foreach (NodeContent c in root.Children)
                 GetBoneIndices(c);
         }

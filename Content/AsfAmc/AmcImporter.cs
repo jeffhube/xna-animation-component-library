@@ -1,6 +1,6 @@
 /*
  * AmcImporter.cs
- * Copyright (c) 2006 Michael Nikonov
+ * Copyright (c) 2006, 2007 Michael Nikonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -70,13 +70,8 @@ namespace Animation.Content
         /// </summary>
         public override BoneContent Import(string filename, ContentImporterContext context)
         {
-            CultureInfo culture = new CultureInfo("en-US");
-            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
-            currentThread.CurrentCulture = culture;
-            currentThread.CurrentUICulture = culture;
-
             this.context = context;
-            contentId = new ContentIdentity(filename);
+            contentId = new ContentIdentity(filename, GetType().ToString());
             reader = new StreamReader(filename);
 
             AnimationContent animation = new AnimationContent();
@@ -84,10 +79,15 @@ namespace Animation.Content
             animation.Identity = contentId;
 
             string dir=Path.GetDirectoryName(filename);
-            string asfFilename=animation.Name.Split('_')[0]+".asf";
-            AsfImporter asfImporter = new AsfImporter();
-            BoneContent root = asfImporter.Import(dir+@"\"+asfFilename, context);
+            string asfFilename=animation.Name+".asf";
+            if (animation.Name.Contains("_"))
+            {
+                //asfFilename = animation.Name.Split('_')[0] + ".asf";
+            }
+            asfFilename = dir+@"\"+asfFilename;
             context.Logger.LogWarning("", contentId, "using skeleton from {0}", asfFilename);
+            AsfImporter asfImporter = new AsfImporter();
+            BoneContent root = asfImporter.Import(asfFilename, context);
             bones = asfImporter.Bones;
 
             int frameNumber = 1;
@@ -99,9 +99,9 @@ namespace Animation.Content
                 if (line[0]!='#' && line[0]!=':')
                 {
                     int fn = 0;
-                    if (int.TryParse(line, out fn))
+                    if (int.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat, out fn))
                     {
-                        ++frameNumber;// = int.Parse(line);
+                        ++frameNumber;// = int.Parse(line, NumberStyles.Int, CultureInfo.InvariantCulture.NumberFormat);
                         maxFrameNumber = Math.Max(frameNumber, maxFrameNumber);
                         TimeSpan time = TimeSpan.FromTicks(frameNumber * ticksPerFrame);
                         animation.Channels["root"].Add(new AnimationKeyframe(time, Matrix.Identity));
@@ -146,12 +146,12 @@ namespace Animation.Content
                         +" values but AMC has "+dataLength, cId);
                 Matrix transform = Matrix.Identity;
                 Vector3 t=new Vector3();
-                float rx=0;
-                float ry=0;
-                float rz=0;
+                Quaternion r=Quaternion.Identity;
                 for (int i = 0; i < dataLength; i++)
                 {
-                    float data = float.Parse(s[i + 1]);
+                    float data = float.Parse(s[i + 1], 
+                        NumberStyles.Float, 
+                        CultureInfo.InvariantCulture.NumberFormat);
                     if (dof[i] == "tx")
                         t.X = data;
                     else if (dof[i] == "ty")
@@ -159,16 +159,17 @@ namespace Animation.Content
                     else if (dof[i] == "tz")
                         t.Z = data;
                     else if (dof[i] == "rx")
-                        rx = data;
+                        r = r * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.ToRadians(data));
                     else if (dof[i] == "ry")
-                        ry = data;
+                        r = r * Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathHelper.ToRadians(data));
                     else if (dof[i] == "rz")
-                        rz = data;
+                        r = r * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathHelper.ToRadians(data));
                 }
-                transform = Matrix.CreateTranslation(t)
-                    * Matrix.CreateRotationX(MathHelper.ToRadians(rx))
-                    * Matrix.CreateRotationY(MathHelper.ToRadians(ry))
-                    * Matrix.CreateRotationZ(MathHelper.ToRadians(rz));
+                if (t.Length() == 0)
+                {
+                    t = bone.Transform.Translation;
+                }
+                transform = Matrix.CreateFromQuaternion(r) * Matrix.CreateTranslation(t);
                 TimeSpan time = TimeSpan.FromTicks(frameNumber * ticksPerFrame);
                 keyframe = new AnimationKeyframe(time, transform);
             }

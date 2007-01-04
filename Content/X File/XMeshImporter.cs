@@ -1,6 +1,6 @@
 /*
  * XMeshImporter.cs
- * Copyright (c) 2006 David Astle
+ * Copyright (c) 2006, 2007 David Astle, Michael Nikonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -86,7 +86,7 @@ namespace Animation.Content
             // The blend weights
             List<Vector4[]> weights = new List<Vector4[]>();
             // The blend weight indices
-            List<Short4[]> weightIndices = new List<Short4[]>();
+            List<Byte4[]> weightIndices = new List<Byte4[]>();
 
             private bool isSkinned = false;
             private XModelImporter model;
@@ -384,24 +384,36 @@ namespace Animation.Content
             {
 
                 if (normals != null)
-                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString(), normals);
+                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString()+"0", normals);
                 else if (hasNormals)
                     MeshHelper.CalculateNormals(mesh, true);
                 if (texCoords != null)
                     AddChannel<Vector2>("TextureCoordinate0", texCoords);
 
-                for (int i = 0; i < weightIndices.Count; i++)
+                //for (int i = 0; i < weightIndices.Count; i++)
+                //{
+                //    AddChannel<Byte4>(VertexElementUsage.BlendIndices.ToString() + i.ToString(),
+                //        weightIndices[i]);
+                //}
+                //for (int i = 0; i < weights.Count; i++)
+                //{
+                //    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString() + i.ToString(),
+                //        weights[i]);
+                //}
+                bool isSkinned = false;
+                foreach (BoneWeightCollection bwc in skinInfo)
                 {
-                    AddChannel<Short4>(VertexElementUsage.BlendIndices.ToString() + i.ToString(),
-                        weightIndices[i]);
+                    if (bwc.Count > 0)
+                    {
+                        isSkinned = true;
+                        break;
+                    }
                 }
-                for (int i = 0; i < weights.Count; i++)
+                if (isSkinned)
                 {
-                    AddChannel<Vector4>(VertexElementUsage.BlendWeight.ToString() + i.ToString(),
-                        weights[i]);
+                    AddChannel<BoneWeightCollection>(VertexChannelNames.Weights(), skinInfo.ToArray());
                 }
 
-                
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
                 MeshHelper.MergeDuplicateVertices(mesh);
                 MeshHelper.OptimizeForCache(mesh);
@@ -451,7 +463,7 @@ namespace Animation.Content
                     }
                 }
 
-
+                /*
                 int numWeightChannels = 0;
                 // The index of the position that this vertex refers to
                 int index = 0;
@@ -465,36 +477,36 @@ namespace Animation.Content
                     while (chansToAdd > 0)
                     {
                         weights.Add(new Vector4[mesh.Positions.Count]);
-                        weightIndices.Add(new Short4[mesh.Positions.Count]);
+                        weightIndices.Add(new Byte4[mesh.Positions.Count]);
                         chansToAdd--;
                         numWeightChannels++;
                     }
 
                     Vector4[] weightsToAdd = new Vector4[numWeightChannels];
-                    short[,] indicesToAdd = new short[numWeightChannels, 4];
+                    byte[,] indicesToAdd = new byte[numWeightChannels, 4];
                     int count = ct;
                     for (int i = 0; i < numWeightChannels; i++)
                     {
 
                         weightsToAdd[i].X = c[i * 4].Weight;
-                        indicesToAdd[i, 0] = (short)meshBoneIndices[c[i * 4].BoneName];
+                        indicesToAdd[i, 0] = (byte)meshBoneIndices[c[i * 4].BoneName];
                         count--;
                         if (count <= 0)
                             break;
                         weightsToAdd[i].Y = c[i * 4 + 1].Weight;
-                        indicesToAdd[i, 1] = (short)meshBoneIndices[c[i * 4 + 1].BoneName];
+                        indicesToAdd[i, 1] = (byte)meshBoneIndices[c[i * 4 + 1].BoneName];
                         count--;
                         if (count <= 0)
                             break;
                         
                         weightsToAdd[i].Z = c[i * 4 + 2].Weight;
-                        indicesToAdd[i, 2] = (short)meshBoneIndices[c[i * 4 + 2].BoneName];
+                        indicesToAdd[i, 2] = (byte)meshBoneIndices[c[i * 4 + 2].BoneName];
                         count--;
                         if (count <= 0)
                             break;
                         
                         weightsToAdd[i].W = c[i * 4 + 3].Weight;
-                        indicesToAdd[i, 3] = (short)meshBoneIndices[c[i * 4 + 3].BoneName];
+                        indicesToAdd[i, 3] = (byte)meshBoneIndices[c[i * 4 + 3].BoneName];
                         count--;
                         if (count <= 0)
                             break;
@@ -505,11 +517,11 @@ namespace Animation.Content
                     for (int i = 0; i < numWeightChannels; i++)
                     {
                         weights[i][index] = weightsToAdd[i];
-                        weightIndices[i][index] = new Short4(indicesToAdd[i, 0], indicesToAdd[i, 1],
+                        weightIndices[i][index] = new Byte4(indicesToAdd[i, 0], indicesToAdd[i, 1],
                             indicesToAdd[i, 2], indicesToAdd[i, 3]);
                     }
                     index++;
-                }
+                }*/
 
             }
             #endregion
@@ -563,6 +575,11 @@ namespace Animation.Content
             public SkinTransform[] SkinTransforms
             {
                 get { return skinTransforms.Count > 0 ? skinTransforms.ToArray() : null; }
+            }
+
+            public MeshContent Mesh
+            {
+                get { return mesh; }
             }
         }
 

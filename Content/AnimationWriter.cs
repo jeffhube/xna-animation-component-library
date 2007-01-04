@@ -1,6 +1,6 @@
 /*
- * ModelAnimationInfoWriter.cs
- * Copyright (c) 2006 David Astle
+ * AnimationWriter.cs
+ * Copyright (c) 2006, 2007 David Astle, Michael Nikonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -40,7 +40,7 @@ namespace Animation.Content
     /// Writes ModelInfo data so it can be read into an object during runtime
     /// </summary>
     [ContentTypeWriter]
-    internal sealed class ModelAnimationInfoWriter : ContentTypeWriter<ModelAnimationInfoContent>
+    internal sealed class AnimationWriter : ContentTypeWriter<AnimationContentDictionary>
     {
 
 
@@ -50,15 +50,9 @@ namespace Animation.Content
         /// </summary>
         /// <param name="output">The stream that contains the written data</param>
         /// <param name="value">The instance to be serialized</param>
-        protected override void Write(ContentWriter output, ModelAnimationInfoContent value)
+        protected override void Write(ContentWriter output, AnimationContentDictionary value)
         {
-
-
-
-            output.WriteRawObject<int[]>(value.MeshInfo.MeshBoneIndices);
-            output.WriteRawObject<List<SkinTransform[]>>(value.MeshInfo.SkinTransforms);
-
-            AnimationContentDictionary animations = value.animations;
+            AnimationContentDictionary animations = value;
             output.Write(animations.Count);
 
             foreach (KeyValuePair<string, AnimationContent> k in animations)
@@ -78,10 +72,6 @@ namespace Animation.Content
                     }
                 }
             }
-
-            output.WriteRawObject<List<InterpolatedAnimation>>(value.InterpolatedAnimations);
-
-
         }
 
         /// <summary>
@@ -92,7 +82,7 @@ namespace Animation.Content
         /// <returns>The string that describes the reader used for a ModelInfo object</returns>
         public override string GetRuntimeReader(TargetPlatform targetPlatform)
         {
-            return typeof(ModelAnimationInfoReader).AssemblyQualifiedName;
+            return typeof(AnimationReader).AssemblyQualifiedName;
         }
         
         /// <summary>
@@ -104,7 +94,7 @@ namespace Animation.Content
         /// the stream</returns>
         public override string GetRuntimeType(TargetPlatform targetPlatform)
         {
-            return typeof(ModelAnimationInfo).AssemblyQualifiedName;
+            return typeof(AnimationContentDictionary).AssemblyQualifiedName;
         }
     }
  

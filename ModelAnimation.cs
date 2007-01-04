@@ -59,7 +59,7 @@ namespace Animation
 
     }
 
-    public class BoneKeyframe
+    public struct BoneKeyframe
     {
         public readonly Matrix Transform;
         public readonly long Time;
@@ -107,7 +107,6 @@ namespace Animation
     {
         private long duration;
         private string animationName;
-        private InterpolatedAnimation interpAnim = null;
         
         private SortedList<string, BoneKeyframeCollection> boneAnimations =
             new SortedList<string, BoneKeyframeCollection>();
@@ -126,23 +125,6 @@ namespace Animation
         public SortedList<string, BoneKeyframeCollection> BoneAnimations
         { get { return boneAnimations; } }
 
-        public void Interpolate(long timeStep, AnimationInterpolator interpolator)
-        {
-            interpolator.Animation = this;
-            interpolator.Reset();
-            interpAnim = new InterpolatedAnimation(timeStep, interpolator);
-        }
-
-        internal void SetInterpolatedAnimation(InterpolatedAnimation anim)
-        {
-            this.interpAnim = anim;
-        }
-
-        public InterpolatedAnimation InterpolatedAnimation
-        {
-            get { return interpAnim; }
-        }
-
         public long Duration
         {
             get { return duration; }
@@ -155,15 +137,8 @@ namespace Animation
 
     public class ModelAnimationCollection : Dictionary<string, ModelAnimation>
     {
-        private MeshInfo meshInfo;
-        internal ModelAnimationCollection(MeshInfo meshInfo)
+        internal ModelAnimationCollection()
         {
-            this.meshInfo = meshInfo;
-        }
-
-        public MeshInfo MeshInfo
-        {
-            get { return meshInfo; }
         }
 
         public ModelAnimation this[int index]

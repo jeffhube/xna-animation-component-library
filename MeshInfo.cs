@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 
 namespace Animation
 {
@@ -38,21 +39,32 @@ namespace Animation
         // empty if there is no skinning information
         public List<SkinTransform[]> SkinTransforms;
 
-        public MeshInfo(Model model, List<SkinTransform[]> skinTransforms)
+        public MeshInfo(int[] meshBoneIndices, List<SkinTransform[]> skinTransforms)
         {
+            MeshBoneIndices = meshBoneIndices;
+            SkinTransforms = skinTransforms;
+            NumMeshes = meshBoneIndices.Length;
+        }
+
+        public MeshInfo(Model model)
+        {
+            Matrix[] abs=new Matrix[model.Bones.Count];
+            model.CopyAbsoluteBoneTransformsTo(abs);
             NumMeshes = model.Meshes.Count;
             MeshBoneIndices = new int[NumMeshes];
+            SkinTransforms = new List<SkinTransform[]>();
             for (int i = 0; i < NumMeshes; i++)
             {
                 MeshBoneIndices[i] = model.Meshes[i].ParentBone.Index;
+                SkinTransform[] st = new SkinTransform[model.Bones.Count];
+                for (int j = 0; j < st.Length; j++)
+                {
+                    st[j] = new SkinTransform();
+                    st[j].BoneName = model.Bones[j].Name;
+                    st[j].Transform = abs[MeshBoneIndices[0]] * Matrix.Invert(abs[j]);
+                }
+                SkinTransforms.Add(st);
             }
-            this.SkinTransforms = skinTransforms;
-        }
-        public MeshInfo(int[] meshRootBoneIndices, List<SkinTransform[]> skinTransforms)
-        {
-            this.MeshBoneIndices = (int[])meshRootBoneIndices.Clone();
-            this.SkinTransforms = skinTransforms;
-            NumMeshes = meshRootBoneIndices.Length;
         }
     }
 }

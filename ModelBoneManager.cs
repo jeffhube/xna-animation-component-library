@@ -45,7 +45,6 @@ namespace Animation
         private SortedDictionary<string, BoneNode> boneDict;
         private BoneNode[] bones;
         private BoneNode[] parentlessBones = null;
-        private int boneNum = 0;
         public class BoneNode
         {
             private int index;

@@ -188,7 +188,7 @@ namespace Animation.Content
             float x = 0;
             try
             {
-                x = float.Parse(tokens[tokenIndex++]);
+                x = float.Parse(tokens[tokenIndex++], System.Globalization.NumberStyles.Float);
             }
             catch
             {

@@ -92,7 +92,6 @@ namespace Animation.Content
                 paletteLoadAttempted = true;
             }
 
-
             this.context = context;
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
@@ -100,20 +99,16 @@ namespace Animation.Content
 
             FindAnimations(input);
 
-            List<SkinTransform[]> skinTransforms;
+            //IList<BoneContent> flatSkeleton = MeshHelper.FlattenSkeleton(MeshHelper.FindSkeleton(input));
+            //string[] flatBones=new string[flatSkeleton.Count];
+            //for (int i = 0; i < flatBones.Length; i++)
+            //{
+            //    flatBones[i] = flatSkeleton[i].Name;
+            //}
 
-            // If we used default importer we-can't do any skinning
-            if (input.OpaqueData.ContainsKey("SkinTransforms"))
-                skinTransforms = (List<SkinTransform[]>)input.OpaqueData["SkinTransforms"];
-            else
-                skinTransforms = new List<SkinTransform[]>(new SkinTransform[c.Meshes.Count][]);
-
-            ModelAnimationInfoContent info = new ModelAnimationInfoContent(
-                c,
-                animations,
-                skinTransforms);
+            //System.Diagnostics.Debugger.Launch();
             Dictionary<string, object> dict = new Dictionary<string, object>();
-            dict.Add("ModelAnimationInfo", info);
+            dict.Add("Animation", animations);
             
 
             foreach (ModelMeshContent meshContent in c.Meshes)
@@ -169,14 +164,17 @@ namespace Animation.Content
         /// <param name="root">The root of the tree</param>
         private void FindAnimations(NodeContent root)
         {
-            foreach (KeyValuePair<string, AnimationContent> k in root.Animations)
-                if (!animations.ContainsKey(k.Key))
-                    animations.Add(k.Key, k.Value);
-                else if (!animations.Values.Contains(k.Value))
-                    animations.Add("Animation" + animations.Count.ToString(), k.Value);
+            if ((root is BoneContent)) // || (root.Parent==null))
+            {
+                foreach (KeyValuePair<string, AnimationContent> k in root.Animations)
+                    if (!animations.ContainsKey(k.Key))
+                        animations.Add(k.Key, k.Value);
+                    else if (!animations.Values.Contains(k.Value))
+                        animations.Add("Animation" + animations.Count.ToString(), k.Value);
+                //return;
+            }
             foreach (NodeContent child in root.Children)
                 FindAnimations(child);
-
         }
     }
 

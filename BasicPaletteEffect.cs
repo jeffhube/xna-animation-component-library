@@ -643,7 +643,7 @@ struct VS_INPUT
 	float4 position : POSITION;
 	float4 color : COLOR;
 	float2 texcoord : TEXCOORD0;
-	float3 normal : NORMAL;
+	float3 normal : NORMAL0;
 	half4 indices : BLENDINDICES0;
     half4 indices1: BLENDINDICES1;
     half4 indices2: BLENDINDICES2;
@@ -746,7 +746,7 @@ struct VS_INPUT
 	float4 position : POSITION;
 	float4 color : COLOR;
 	float2 texcoord : TEXCOORD0;
-	float3 normal : NORMAL;
+	float3 normal : NORMAL0;
 	half4 indices : BLENDINDICES0;
     half4 indices1: BLENDINDICES1;
 	float4 weights : BLENDWEIGHT0;
@@ -843,7 +843,7 @@ struct VS_INPUT
 	float4 position : POSITION;
 	float4 color : COLOR;
 	float2 texcoord : TEXCOORD0;
-	float3 normal : NORMAL;
+	float3 normal : NORMAL0;
 	half4 indices : BLENDINDICES0;
     half4 indices1: BLENDINDICES1;
 	float4 weights : BLENDWEIGHT0;

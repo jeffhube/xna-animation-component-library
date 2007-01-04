@@ -1,6 +1,6 @@
 /*
  * BvhImporter.cs
- * Copyright (c) 2006 Michael Nikonov
+ * Copyright (c) 2006, 2007 Michael Nikonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -46,11 +46,10 @@ namespace Animation.Content
     {
         private ContentImporterContext context;
         private StreamReader reader;
-        private NamedValueDictionary<BoneContent> bones;
+        private List<BoneInfo> bones;
         private ContentIdentity contentId;
         private int currentLine = 0;
         private BoneContent root;
-        private BoneContent bone;
         int frames = 0;
         double frameTime = 0.0;
         private ContentIdentity cId
@@ -61,9 +60,10 @@ namespace Animation.Content
                 return contentId;
             }
         }
-        public NamedValueDictionary<BoneContent> Bones
+
+        public static float ParseFloat(string data)
         {
-            get { return bones; }
+            return float.Parse(data, NumberStyles.Float, CultureInfo.InvariantCulture.NumberFormat);
         }
 
         /// <summary>
@@ -72,26 +72,21 @@ namespace Animation.Content
         /// </summary>
         public override BoneContent Import(string filename, ContentImporterContext context)
         {
-
-            CultureInfo culture = new CultureInfo("en-US");
-            System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
-            currentThread.CurrentCulture = culture;
-            currentThread.CurrentUICulture = culture;
             this.context = context;
-            contentId = new ContentIdentity(filename);
+            contentId = new ContentIdentity(filename, GetType().ToString());
 
             AnimationContent animation = new AnimationContent();
             animation.Name = Path.GetFileNameWithoutExtension(filename);
             animation.Identity = contentId;
 
-            bones = new NamedValueDictionary<BoneContent>();
+            bones = new List<BoneInfo>();
             reader = new StreamReader(filename);
             String line;
             if ((line = readLine()) != "HIERARCHY")
             {
                 throw new InvalidContentException("no HIERARCHY found", cId);
             }
-            bone = root;
+            BoneContent bone = root;
             while ((line = readLine()) != "MOTION")
             {
                 if (line == null)
@@ -99,6 +94,7 @@ namespace Animation.Content
                 string keyword = line.Split(' ')[0];
                 if (keyword == "ROOT" || keyword == "JOINT" || line == "End Site")
                 {
+                    BoneInfo boneInfo = new BoneInfo();
                     BoneContent newBone = new BoneContent();
                     if (keyword == "JOINT" || line == "End Site")
                     {
@@ -111,46 +107,64 @@ namespace Animation.Content
                     if (keyword == "ROOT" || keyword == "JOINT")
                     {
                         newBone.Name = line.Split(' ')[1];
-                        bones.Add(newBone.Name, newBone);
+                        boneInfo.bone = newBone;
+                        bones.Add(boneInfo);
                     }
                     else
                     {
                         newBone.Name = bone.Name + "End";
                     }
-                    bone = newBone;
                     if ((line = readLine()) != "{")
                     {
                         throw new InvalidContentException("expected '{' but found " + line, cId);
                     }
+                    line = readLine();
+                    if (line!=null && line.StartsWith("OFFSET"))
+                    {
+                        string[] data = line.Split(' ');
+                        //couldn't get the .NET 2.0 version of Split() working, 
+                        //therefore this ugly hack
+                        List<string> coords = new List<string>();
+                        foreach (string s in data)
+                        {
+                            if (s != "OFFSET" && s != "" && s != null)
+                            {
+                                coords.Add(s);
+                            }
+                        }
+                        Vector3 v = new Vector3();
+                        v.X = ParseFloat(coords[0]);
+                        v.Y = ParseFloat(coords[1]);
+                        v.Z = ParseFloat(coords[2]);
+                        Matrix offset = Matrix.CreateTranslation(v);
+                        newBone.Transform = offset;
+                    }
+                    else
+                    {
+                        throw new InvalidContentException("expected 'OFFSET' but found " + line, cId);
+                    }
+                    if (keyword == "ROOT" || keyword == "JOINT")
+                    {
+                        line = readLine();
+                        if (line != null && line.StartsWith("CHANNELS"))
+                        {
+                            string[] channels = line.Split(' ');
+                            for (int i = 2; i < channels.Length; i++)
+                            {
+                                if (channels[i]!=null && channels[i]!="")
+                                    boneInfo.Add(channels[i]);
+                            }
+                        }
+                        else
+                        {
+                            throw new InvalidContentException("expected 'CHANNELS' but found " + line, cId);
+                        }
+                    }
+                    bone = newBone;
                 }
                 if (line == "}")
                 {
                     bone = (BoneContent)bone.Parent;
-                }
-                if (keyword == "OFFSET")
-                {
-                    string[] data = line.Split(' ');
-                    //couldn't get the .NET 2.0 version of Split() working, 
-                    //therefore this ugly hack
-                    List<string> coords = new List<string>();
-                    foreach (string s in data) {
-                        if (s!="OFFSET" && s!="" && s!=null) {
-                            coords.Add(s);
-                        }
-                    }
-                    Vector3 v = new Vector3();
-                    v.X = float.Parse(coords[0]);
-                    v.Y = float.Parse(coords[1]);
-                    v.Z = float.Parse(coords[2]);
-                    Matrix offset = Matrix.CreateTranslation(v);
-                    bone.Transform = offset;
-                }
-                if (keyword == "CHANNELS")
-                {
-                    //for now, we assume that channels are rx,ry,rz for each bone except for root
-                }
-                if (bone != null && line != "End Site")
-                {
                 }
             }
             if ((line = readLine()) != null)
@@ -170,11 +184,11 @@ namespace Animation.Content
                 }
             }
             root.Animations.Add(animation.Name, animation);
-            foreach (BoneContent b in bones.Values)
+            foreach (BoneInfo b in bones)
             {
-                animation.Channels.Add(b.Name, new AnimationChannel());
+                animation.Channels.Add(b.bone.Name, new AnimationChannel());
             }
-            int frameNumber = 1;
+            int frameNumber = 0;
             while ((line = readLine()) != null)
             {
                 string[] ss = line.Split(' ');
@@ -188,27 +202,51 @@ namespace Animation.Content
                         data.Add(s);
                     }
                 }
-                Vector3 rootTranslation = new Vector3();
-                rootTranslation.X = float.Parse(data[0]);
-                rootTranslation.Y = float.Parse(data[1]);
-                rootTranslation.Z = float.Parse(data[2]);
-                int i=1;
-                foreach (BoneContent b in bones.Values)
+                int i = 0;
+                foreach (BoneInfo b in bones)
                 {
-                    Matrix m = Matrix.CreateRotationX(float.Parse(data[i*3]))
-                        * Matrix.CreateRotationY(float.Parse(data[i*3 + 1]))
-                        * Matrix.CreateRotationZ(float.Parse(data[i*3 + 2]));
-                    if (b == root)
+                    foreach (string channel in b.channels)
                     {
-                        m = Matrix.CreateTranslation(rootTranslation) * m;
+                        b.channelValues[channel] = ParseFloat(data[i]);
+                        ++i;
                     }
-                    TimeSpan time=TimeSpan.FromSeconds(frameTime * frameNumber);
+                }
+                foreach (BoneInfo b in bones)
+                {
+                    // Many applications export BVH in such a way that bone translation 
+                    // needs to be aplied in every frame.
+                    Matrix translation = b.bone.Transform;
+                    Vector3 t = new Vector3();
+                    t.X = b["Xposition"];
+                    t.Y = b["Yposition"];
+                    t.Z = b["Zposition"];
+                    if (t.Length() != 0.0f)
+                    {
+                        // Some applications export BVH with translation channels for every bone. 
+                        // In this case, bone translation should not be applied.
+                        translation = Matrix.CreateTranslation(t);
+                    }
+                    Quaternion r = Quaternion.Identity;
+                    // get rotations in correct order
+                    foreach (string channel in b.channels)
+                    {
+                        float angle = MathHelper.ToRadians(b[channel]);
+                        if (channel.Equals("Xrotation", StringComparison.InvariantCultureIgnoreCase))
+                            r = r * Quaternion.CreateFromAxisAngle(Vector3.UnitX, angle);
+                        if (channel.Equals("Yrotation", StringComparison.InvariantCultureIgnoreCase))
+                            r = r * Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle);
+                        if (channel.Equals("Zrotation", StringComparison.InvariantCultureIgnoreCase))
+                            r = r * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, angle);
+                    }
+                    Matrix m = Matrix.CreateFromQuaternion(r) * translation;
+                    TimeSpan time = TimeSpan.FromSeconds(frameTime * frameNumber);
                     AnimationKeyframe keyframe = new AnimationKeyframe(time, m);
-                    animation.Channels[b.Name].Add(keyframe);
+                    animation.Channels[b.bone.Name].Add(keyframe);
                     ++i;
                 }
                 ++frameNumber;
             }
+            root.Identity = contentId;
             return root;
         }
 
@@ -219,6 +257,30 @@ namespace Animation.Content
             if (line != null)
                 line = line.Trim();
             return line;
+        }
+    }
+
+    internal class BoneInfo
+    {
+        public BoneContent bone;
+        public Dictionary<string, float> channelValues=new Dictionary<string, float>();
+        public List<string> channels = new List<string>();
+
+        public void Add(string channel)
+        {
+            channels.Add(channel.ToLower());
+            channelValues.Add(channel.ToLower(), 0.0f);
+        }
+
+        public float this[string channel]
+        {
+            get
+            {
+                if (channelValues.ContainsKey(channel.ToLower()))
+                    return channelValues[channel.ToLower()];
+                else
+                    return 0.0f;
+            }
         }
     }
 }
