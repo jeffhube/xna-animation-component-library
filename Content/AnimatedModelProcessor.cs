@@ -177,7 +177,7 @@ namespace Animation.Content
         /// <param name="root">The root of the tree</param>
         private void FindAnimations(NodeContent node)
         {
-            if (node is BoneContent)
+            //if (node is BoneContent)
             {
                 foreach (KeyValuePair<string, AnimationContent> k in node.Animations)
                 {
