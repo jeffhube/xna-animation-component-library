@@ -326,9 +326,10 @@ namespace Animation.Content
         /// <returns>The absolute filename of the item</returns>
         public string GetAbsolutePath(string contentItem)
         {
-            string absoluteModelPath = Path.GetDirectoryName(Path.GetFullPath(fileName));
-            string absolutePath = Path.Combine(absoluteModelPath, contentItem);
-            return absolutePath;
+            //string absoluteModelPath = Path.GetDirectoryName(Path.GetFullPath(fileName));
+            //string absolutePath = Path.Combine(absoluteModelPath, contentItem);
+            //return absolutePath;
+            return Path.GetFullPath(contentItem);
         }
 
 
