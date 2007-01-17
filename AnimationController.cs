@@ -49,6 +49,8 @@ namespace Animation
         private ModelAnimation animation;
         // store this for quick access
         private long animationDuration;
+        private long ticksPerFrame;
+        private int maxNumFrames;
         // Name of the currently running animation
         private string animationName;
         private readonly ModelAnimationCollection animations;
@@ -64,11 +66,11 @@ namespace Animation
 
         private Matrix absoluteMeshTransform;
         private Matrix[] pose;
-        private Matrix[] skinTransforms;
+        private List<Matrix[]> skinTransforms=new List<Matrix[]>();
         private BoneKeyframeCollection[] animationChannels;
         private Matrix[] palette;
-        private List<string> flatSkeleton = new List<string>();
-        private List<int> paletteToBoneMapping = new List<int>();
+        private string[] skinnedBones;
+        private int[] paletteToBoneMapping;
 
         // Multiplied by the elapsed time to give the user control over animation speed
         private double speedFactor = 1.0;
@@ -146,16 +148,17 @@ namespace Animation
             if (modelTagData == null)
                 throw new Exception("Model contains no animation info; the tag is not an instance of " +
                     "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
-            if (!modelTagData.ContainsKey("Animation"))
+            if (!modelTagData.ContainsKey("Animations"))
                 throw new Exception("Model contains no animation info; please use the \"Model - Animation Library\"" +
                     " processor or a subclass.");
             // Now grab the animation info and store local references
-            animations = (ModelAnimationCollection)modelTagData["Animation"];
+            animations = (ModelAnimationCollection)modelTagData["Animations"];
+            skinnedBones = (string[])modelTagData["SkinnedBones"];
 
             if (isSkinned(model))
             {
-                if (model.Bones.Count > BasicPaletteEffect.PALETTE_SIZE)
-                    throw new Exception("Model uses to many bones for animation.\nMax number of bones: " +
+                if (skinnedBones.Length > BasicPaletteEffect.PALETTE_SIZE)
+                    throw new Exception("Model uses too many bones for animation.\nMax number of bones: " +
                         BasicPaletteEffect.PALETTE_SIZE.ToString() + "\nNumber of bones used: " +
                             model.Bones.Count.ToString());
             }
@@ -175,34 +178,42 @@ namespace Animation
                 foreach (Effect effect in mesh.Effects)
                 {
                     worldParams[index] = effect.Parameters["World"];
-                    matrixPaletteParams[index] = effect.Parameters["MatrixPalette"];
+                    if (skinned)
+                    {
+                        matrixPaletteParams[index] = effect.Parameters["MatrixPalette"];
+                    }
                     index++;
                 }
             }
 
             pose = new Matrix[model.Bones.Count];
-            skinTransforms = new Matrix[model.Bones.Count];
             animationChannels = new BoneKeyframeCollection[model.Bones.Count];
             model.CopyAbsoluteBoneTransformsTo(pose);
             absoluteMeshTransform = Matrix.Identity;
             for (int i = 0; i < model.Meshes.Count; i++)
             {
+                skinTransforms.Add(null);
                 if (isSkinned(model.Meshes[i]))
                 {
                     absoluteMeshTransform = pose[model.Meshes[i].ParentBone.Index];
-                    for (int j = 0; j < skinTransforms.Length; j++)
+                    skinTransforms[i]=new Matrix[model.Bones.Count];
+                    for (int j = 0; j < skinTransforms[i].Length; j++)
                     {
-                        skinTransforms[j] = absoluteMeshTransform * Matrix.Invert(pose[j]);
+                        skinTransforms[i][j] = absoluteMeshTransform * Matrix.Invert(pose[j]);
                     }
                 }
             }
-            FlattenSkeleton(model.Root);
-            palette = new Matrix[paletteToBoneMapping.Count];
+            paletteToBoneMapping = new int[skinnedBones.Length];
+            for (int i = 0; i < skinnedBones.Length; i++)
+            {
+                paletteToBoneMapping[i] = model.Bones[skinnedBones[i]].Index;
+            }
+            palette = new Matrix[paletteToBoneMapping.Length];
 
             game.Components.Add(this);
         }
 
-        private void FlattenSkeleton(ModelBone bone)
+        /*private void FlattenSkeleton(ModelBone bone)
         {
             if (bone.Parent != null)
             {
@@ -212,18 +223,18 @@ namespace Animation
                     {
                         if (isSkinned(mesh))
                         {
-                            flatSkeleton.Clear();
+                            skinnedBones.Clear();
                             paletteToBoneMapping.Clear();
                         }
                         return;
                     }
                 }
-                flatSkeleton.Add(bone.Name);
+                skinnedBones.Add(bone.Name);
                 paletteToBoneMapping.Add(bone.Index);
             }
             foreach (ModelBone child in bone.Children)
                 FlattenSkeleton(child);
-        }
+        }*/
 
         /// <summary>
         /// Creates a new instance of AnimationController and calls BasicPaletteEffect.ReplaceBasicEffects
@@ -322,18 +333,22 @@ namespace Animation
             animation = animations[animationName];
             animationDuration = animation.Duration;
             elapsedTime = 0;
+            maxNumFrames = 1;
             for (int i = 0; i < animationChannels.Length; i++)
             {
                 string boneName = model.Bones[i].Name;
                 if (animation.BoneAnimations.ContainsKey(boneName))
                 {
                     animationChannels[i] = animation.BoneAnimations[boneName];
+                    if (animationChannels[i].Count > maxNumFrames)
+                        maxNumFrames = animationChannels[i].Count;
                 }
                 else
                 {
                     animationChannels[i] = null;
                 }
             }
+            ticksPerFrame = animationDuration / maxNumFrames;
         }
 
         /// <summary>
@@ -374,39 +389,48 @@ namespace Animation
                     if (elapsedTime < 0)
                         elapsedTime = AnimationDuration;
                 }
+                int defaultFrameNum = (int)(elapsedTime / ticksPerFrame);
                 for (int i = 0; i < pose.Length; i++)
                 {
                     BoneKeyframeCollection channel = animationChannels[i];
                     if (channel != null)
                     {
-                        long ticksPerFrame = channel.Duration / channel.Count;
-                        int frameNum = (int)(elapsedTime / ticksPerFrame);
-                        if (frameNum >= channel.Count)
-                            frameNum = channel.Count-1;
-                        while (frameNum < (channel.Count - 2)
-                            && channel[frameNum+1].Time < elapsedTime)
+                        int frameNum = defaultFrameNum;
+                        if (channel.Count < maxNumFrames)
                         {
-                            ++frameNum;
+                            frameNum = channel.Count * (int)(elapsedTime / channel.Duration);
+                            if (frameNum >= channel.Count)
+                                frameNum = channel.Count - 1;
+                            while (frameNum < (channel.Count - 2)
+                                && channel[frameNum + 1].Time < elapsedTime)
+                            {
+                                ++frameNum;
+                            }
+                            while (frameNum > 0 && channel[frameNum].Time > elapsedTime)
+                            {
+                                --frameNum;
+                            }
                         }
-                        while (frameNum > 0 && channel[frameNum].Time > elapsedTime)
+                        if (i > 0) // not root
                         {
-                            --frameNum;
+                            pose[i] = channel[frameNum].Transform * pose[model.Bones[i].Parent.Index];
                         }
-                        pose[i] = channel[frameNum].Transform;
+                        else
+                        {
+                            pose[i] = channel[frameNum].Transform;
+                        }
                     }
                     else
                     {
-                        pose[i] = model.Bones[i].Transform;
+                        if (i > 0) // not root
+                        {
+                            pose[i] = model.Bones[i].Transform * pose[model.Bones[i].Parent.Index];
+                        }
+                        else
+                        {
+                            pose[i] = model.Bones[i].Transform;
+                        }
                     }
-                    if (i > 0) // not root
-                    {
-                        Matrix.Multiply(ref pose[i], ref pose[model.Bones[i].Parent.Index], out pose[i]);
-                    }
-                }
-                for (int i = 0; i < palette.Length; i++)
-                {
-                    int p = paletteToBoneMapping[i];
-                    Matrix.Multiply(ref skinTransforms[p], ref pose[p], out palette[i]);
                 }
                 int index = 0;
                 for (int i = 0; i < numMeshes; i++)
@@ -414,6 +438,11 @@ namespace Animation
                     ModelMesh mesh = model.Meshes[i];
                     if (matrixPaletteParams[index] != null)
                     {
+                        for (int j = 0; j < palette.Length; j++)
+                        {
+                            int p = paletteToBoneMapping[j];
+                            Matrix.Multiply(ref skinTransforms[i][p], ref pose[p], out palette[j]);
+                        }
                         foreach (Effect effect in mesh.Effects)
                         {
                             worldParams[index].SetValue(world);

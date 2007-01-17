@@ -30,6 +30,7 @@ using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics.PackedVector;
 using System.IO;
 using System.Collections;
 using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
@@ -54,6 +55,9 @@ namespace Animation.Content
         private ContentProcessorContext context;
         // stores all animations for the model
         private AnimationContentDictionary animations = new AnimationContentDictionary();
+        private NodeContent input;
+        protected List<string> bones=new List<string>();
+        protected Dictionary<string, int> boneIndices=new Dictionary<string,int>();
         /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
         /// <param name="input">The root of the X file tree</param>
         /// <param name="context">The context for this processor</param>
@@ -92,33 +96,42 @@ namespace Animation.Content
                 paletteLoadAttempted = true;
             }
 
+            this.input = input;
             this.context = context;
+
+            //if (input.Identity.SourceFilename.Contains("tiny"))
+            //    System.Diagnostics.Debugger.Launch();
+            //FlattenSkeleton(input);
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
             // Attach the animation and skinning data to the models tag
-
             FindAnimations(input);
-
-            //IList<BoneContent> flatSkeleton = MeshHelper.FlattenSkeleton(MeshHelper.FindSkeleton(input));
-            //string[] flatBones=new string[flatSkeleton.Count];
-            //for (int i = 0; i < flatBones.Length; i++)
-            //{
-            //    flatBones[i] = flatSkeleton[i].Name;
-            //}
-
-            //System.Diagnostics.Debugger.Launch();
             Dictionary<string, object> dict = new Dictionary<string, object>();
-            dict.Add("Animation", animations);
-            
-
+            dict.Add("Animations", animations);
+            dict.Add("SkinnedBones", bones.ToArray());            
             foreach (ModelMeshContent meshContent in c.Meshes)
                 ReplaceBasicEffects(meshContent);
             c.Tag = dict;
-
-
-
-            
             return c;
+        }
+
+        private void FlattenSkeleton(NodeContent node)
+        {
+            /*IList<BoneContent> flatSkeleton = MeshHelper.FlattenSkeleton(MeshHelper.FindSkeleton(input));
+            for (int i = 0; i < flatSkeleton.Count; i++)
+            {
+                bones.Add(flatSkeleton[i].Name);
+                boneIndices.Add(flatSkeleton[i].Name, i);
+            }*/
+            string name = node.Name;
+            if (name == "" || name == null)
+                name = "noname" + bones.Count;
+            boneIndices.Add(name, bones.Count);
+            bones.Add(name);
+            foreach (NodeContent child in node.Children)
+            {
+                FlattenSkeleton(child);
+            }
         }
 
 
@@ -162,24 +175,87 @@ namespace Animation.Content
         /// one AnimationContentDictionary
         /// </summary>
         /// <param name="root">The root of the tree</param>
-        private void FindAnimations(NodeContent root)
+        private void FindAnimations(NodeContent node)
         {
-            if ((root is BoneContent)) // || (root.Parent==null))
+            if (node is BoneContent)
             {
-                foreach (KeyValuePair<string, AnimationContent> k in root.Animations)
-                    if (!animations.ContainsKey(k.Key))
+                foreach (KeyValuePair<string, AnimationContent> k in node.Animations)
+                {
+                    if (animations.ContainsKey(k.Key))
+                    {
+                        foreach (KeyValuePair<string, AnimationChannel> c in k.Value.Channels)
+                        {
+                            animations[k.Key].Channels.Add(c.Key, c.Value);
+                        }
+                    }
+                    else
+                    {
                         animations.Add(k.Key, k.Value);
-                    else if (!animations.Values.Contains(k.Value))
-                        animations.Add("Animation" + animations.Count.ToString(), k.Value);
-                //return;
+                    }
+                }
             }
-            foreach (NodeContent child in root.Children)
+            foreach (NodeContent child in node.Children)
                 FindAnimations(child);
         }
+        
+        protected override void ProcessVertexChannel(GeometryContent geometry, int vertexChannelIndex, ContentProcessorContext context)
+        {
+            if (geometry.Vertices.Channels[vertexChannelIndex].Name == VertexChannelNames.Weights())
+            {
+                VertexChannel<BoneWeightCollection> vc = (VertexChannel<BoneWeightCollection>)geometry.Vertices.Channels[vertexChannelIndex];
+                int maxBonesPerVertex = 0;
+                for (int i = 0; i < vc.Count; i++)
+                {
+                    int count = vc[i].Count;
+                    if (count > maxBonesPerVertex)
+                        maxBonesPerVertex = count;
+                }
+                Color[] weightsToAdd = new Color[vc.Count];
+                Byte4[] indicesToAdd = new Byte4[vc.Count];
+                for (int i = 0; i < vc.Count; i++)
+                {
+                    BoneWeightCollection bwc = vc[i];
+                    bwc.NormalizeWeights(4);
+                    int count = bwc.Count;
+                    if (count>maxBonesPerVertex)
+                        maxBonesPerVertex = count;
+                    Vector4 bi = new Vector4();
+                    bi.X = count > 0 ? BoneIndex(bwc[0].BoneName) : (byte)0;
+                    bi.Y = count > 1 ? BoneIndex(bwc[1].BoneName) : (byte)0;
+                    bi.Z = count > 2 ? BoneIndex(bwc[2].BoneName) : (byte)0;
+                    bi.W = count > 3 ? BoneIndex(bwc[3].BoneName) : (byte)0;
+                    indicesToAdd[i] = new Byte4(bi);
+                    Vector4 bw = new Vector4();
+                    bw.X = count > 0 ? bwc[0].Weight : 0;
+                    bw.Y = count > 1 ? bwc[1].Weight : 0;
+                    bw.Z = count > 2 ? bwc[2].Weight : 0;
+                    bw.W = count > 3 ? bwc[3].Weight : 0;
+                    weightsToAdd[i] = new Color(bw);
+                }
+                geometry.Vertices.Channels.Remove(vc);
+                geometry.Vertices.Channels.Add<Byte4>(VertexElementUsage.BlendIndices.ToString(), indicesToAdd);
+                geometry.Vertices.Channels.Add<Color>(VertexElementUsage.BlendWeight.ToString(), weightsToAdd);
+            }
+            else
+            {
+                base.ProcessVertexChannel(geometry, vertexChannelIndex, context);
+            }
+        }
+
+        protected byte BoneIndex(string boneName)
+        {
+            if (boneIndices.ContainsKey(boneName))
+            {
+                return (byte)boneIndices[boneName];
+            }
+            else
+            {
+                boneIndices.Add(boneName, bones.Count);
+                bones.Add(boneName);
+                return (byte)boneIndices[boneName];
+            }
+        }
     }
-
-
-
 }
 
 
