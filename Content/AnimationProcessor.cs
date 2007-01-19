@@ -77,7 +77,7 @@ namespace Animation.Content
                     "animation filename should follow the <modelName>_<animationName>.<ext> pattern to get animation skeleton checked against model");
             }
 
-            AnimationContentDictionary animations = input.Animations;
+            AnimationContentDictionary animations = Interpolate(input.Animations);
             return animations;
         }
 
@@ -140,7 +140,75 @@ namespace Animation.Content
                 }
             }
         }
+        public virtual AnimationContentDictionary Interpolate(AnimationContentDictionary input)
+        {
+            AnimationContentDictionary output = new AnimationContentDictionary();
+            foreach (string name in input.Keys)
+            {
+                output.Add(name, Interpolate(input[name]));
+            }
+            return output;
+        }
 
+        public virtual AnimationContent Interpolate(AnimationContent input)
+        {
+            string[] channels = new string[input.Channels.Count];
+            int ci = 0;
+            foreach (string c in input.Channels.Keys)
+            {
+                channels[ci++] = c;
+            }
+            long ticksPerFrame = TimeSpan.MaxValue.Ticks;
+            foreach (AnimationChannel c in input.Channels.Values)
+            {
+                for (int i = 0; i < c.Count - 1; i++)
+                {
+                    long ticks = c[i + 1].Time.Ticks - c[i].Time.Ticks;
+                    if (ticks < ticksPerFrame)
+                        ticksPerFrame = ticks;
+                }
+            }
+            long ticksPerFrameMin = TimeSpan.FromSeconds(1).Ticks / 60;
+            if (ticksPerFrame > ticksPerFrameMin)
+                ticksPerFrame = ticksPerFrameMin;
+            return Interpolate(input, ticksPerFrame);
+        }
+
+        public virtual AnimationContent Interpolate(AnimationContent input, long ticksPerFrame)
+        {
+            int numFrames = (int)(input.Duration.Ticks / ticksPerFrame);
+            AnimationContent output = new AnimationContent();
+            foreach (string channelName in input.Channels.Keys)
+            {
+                AnimationChannel channel = input.Channels[channelName];
+                output.Channels.Add(channelName, new AnimationChannel());
+                for (int i = 0; i < numFrames; i++)
+                {
+                    long time = i * ticksPerFrame;
+                    int oldFrameNum = channel.Count - 1;
+                    while (channel[oldFrameNum].Time.Ticks > time && oldFrameNum > 0)
+                    {
+                        --oldFrameNum;
+                    }
+                    AnimationKeyframe prevFrame = channel[oldFrameNum];
+                    AnimationKeyframe nextFrame = prevFrame;
+                    if (oldFrameNum < channel.Count - 1)
+                        nextFrame = channel[oldFrameNum + 1];
+                    Matrix transform = Interpolate(prevFrame, nextFrame, time);
+                    output.Channels[channelName].Add(new AnimationKeyframe(new TimeSpan(time), transform));
+                }
+            }
+            output.Duration = input.Duration;
+            return output;
+        }
+
+        public virtual Matrix Interpolate(AnimationKeyframe prevFrame, AnimationKeyframe nextFrame, long time)
+        {
+            double location = time - prevFrame.Time.Ticks;
+            double distance = nextFrame.Time.Ticks - prevFrame.Time.Ticks;
+            double slerpAmount = location / distance;
+            return Util.SlerpMatrix(prevFrame.Transform, nextFrame.Transform, slerpAmount);
+        }
     }
 }
 

@@ -396,7 +396,7 @@ namespace Animation
                     if (channel != null)
                     {
                         int frameNum = defaultFrameNum;
-                        if (channel.Count < maxNumFrames)
+                        if (channel.Count <= maxNumFrames)
                         {
                             frameNum = channel.Count * (int)(elapsedTime / channel.Duration);
                             if (frameNum >= channel.Count)

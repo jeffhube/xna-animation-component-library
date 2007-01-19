@@ -107,7 +107,9 @@ namespace Animation.Content
             // Attach the animation and skinning data to the models tag
             FindAnimations(input);
             Dictionary<string, object> dict = new Dictionary<string, object>();
-            dict.Add("Animations", animations);
+            AnimationProcessor ap = new AnimationProcessor();
+            dict.Add("Animations", ap.Interpolate(animations));
+            //dict.Add("Animations", animations);
             dict.Add("SkinnedBones", bones.ToArray());            
             foreach (ModelMeshContent meshContent in c.Meshes)
                 ReplaceBasicEffects(meshContent);
