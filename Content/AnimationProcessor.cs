@@ -204,9 +204,12 @@ namespace Animation.Content
 
         public virtual Matrix Interpolate(AnimationKeyframe prevFrame, AnimationKeyframe nextFrame, long time)
         {
+            
             float location = time - prevFrame.Time.Ticks;
             float distance = nextFrame.Time.Ticks - prevFrame.Time.Ticks;
             float amount = location / distance;
+            if (prevFrame.Transform == nextFrame.Transform)
+                return prevFrame.Transform;
             return Matrix.Lerp(prevFrame.Transform, nextFrame.Transform, amount);
         }
     }

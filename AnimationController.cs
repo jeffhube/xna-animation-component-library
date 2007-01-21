@@ -337,7 +337,7 @@ namespace Animation
             for (int i = 0; i < animationChannels.Length; i++)
             {
                 string boneName = model.Bones[i].Name;
-                if (animation.BoneAnimations.ContainsKey(boneName))
+                if (boneName != null && animation.BoneAnimations.ContainsKey(boneName))
                 {
                     animationChannels[i] = animation.BoneAnimations[boneName];
                     if (animationChannels[i].Count > maxNumFrames)
