@@ -210,7 +210,7 @@ namespace Animation.Content
             float amount = location / distance;
             if (prevFrame.Transform == nextFrame.Transform)
                 return prevFrame.Transform;
-            return Matrix.Lerp(prevFrame.Transform, nextFrame.Transform, amount);
+            return Util.SlerpMatrix(prevFrame.Transform, nextFrame.Transform, amount);
         }
     }
 }
