@@ -36,11 +36,11 @@ namespace Animation
     /// A viewer for animated models. To view your model, just do 
     ///     new ModelViewer(game, model);
     /// </summary>
-    public partial class ModelViewer : Microsoft.Xna.Framework.IGameComponent,
-        IUpdateable
+    public partial class ModelViewer : DrawableGameComponent
     {
-        Model model;
-        AnimationController controller;
+        List<Model> models=new List<Model>();
+        public List<AnimationController> controllers=new List<AnimationController>();
+        List<Effect> effects=new List<Effect>();
         int animationIndex = 0;
         private BoundingSphere sphere;
 
@@ -54,25 +54,16 @@ namespace Animation
         MouseState lastState;
         KeyboardState lastKeyboardState;
 
-        public ModelViewer(Game game, Model model)
+        public ModelViewer(Game game): base(game)
         {
-            this.model = model;
-
-            controller = new Animation.AnimationController(game, model, animationIndex);
-            controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
-            controller.Enabled = true;
-            controller.Visible = true;
+            sphere=new BoundingSphere(Vector3.Zero, 1.0f);
             game.Components.Add(this);
             game.IsMouseVisible = true;
-            sphere = model.Meshes[0].BoundingSphere;
-            foreach (ModelMesh mesh in model.Meshes)
-                sphere = BoundingSphere.CreateMerged(sphere, mesh.BoundingSphere);
+            UpdateOrder = 0;
             IGraphicsDeviceService graphics = 
                 (IGraphicsDeviceService)game.Services.GetService(
                 typeof(IGraphicsDeviceService));
             viewPort = graphics.GraphicsDevice.Viewport;
-            eyePos = new Vector3(0, 0,sphere.Radius*5);
-            arcRadius = eyePos.Length() / 2.0f;
             width = (float)viewPort.Width;
             height = (float)viewPort.Height;
             fov = MathHelper.PiOver4;
@@ -84,21 +75,54 @@ namespace Animation
             up = Vector3.Up;
             projection = Matrix.CreatePerspectiveFieldOfView(
                 fov, aspect, near, far);
-
-            view = Matrix.CreateLookAt(
-                eyePos, Vector3.Zero, up);
             world = Matrix.Identity;
-            InitializeEffects();
         }
 
-
-        private void InitializeEffects()
+        public ModelViewer(Game game, Model model)
+            : this(game)
         {
+            Add(model);
+        }
 
+        public void Add(Model model)
+        {
+            foreach (ModelMesh mesh in model.Meshes)
+                sphere = BoundingSphere.CreateMerged(sphere, mesh.BoundingSphere);
+            models.Add(model);
+            AnimationController controller=new AnimationController(Game, model, 0);
+            controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
+            controller.Enabled = true;
+            controller.Visible = true;
+            controllers.Add(controller);
+            InitializeEffects(model);
+            Arrange();
+        }
+
+        private void Arrange()
+        {
+            int columns = controllers.Count;
+            if (columns > 5)
+                columns = 5;
+            for (int i = 0; i < controllers.Count; i++)
+            {
+                int column = i % columns;
+                int row = i / columns;
+                Matrix t=Matrix.CreateTranslation(sphere.Radius * (column-columns/2), 0, - sphere.Radius * row);
+                controllers[i].World = t * world;
+            }
+        }
+
+        private void InitializeEffects(Model model)
+        {
+            eyePos = new Vector3(0, 0, sphere.Radius * 5);
+            arcRadius = eyePos.Length() / 2.0f;
+            view = Matrix.CreateLookAt(
+                eyePos, Vector3.Zero, up);
             foreach (ModelMesh mesh in model.Meshes)
             {
                 foreach (Effect ef in mesh.Effects)
                 {
+                    effects.Add(ef);
                     ef.Parameters["View"].SetValue(view);
                     ef.Parameters["EyePosition"].SetValue(eyePos);
                     ef.Parameters["Projection"].SetValue(projection);
@@ -116,32 +140,16 @@ namespace Animation
                         BasicEffect effect = (BasicEffect)ef;
                         effect.EnableDefaultLighting();
                         effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
-                        effect.DirectionalLight1.Enabled = false;
-                        effect.DirectionalLight2.Enabled = false;
-                        effect.AmbientLightColor = Color.Black.ToVector3();
-                        effect.EmissiveColor = Color.Black.ToVector3();
+                        effect.TextureEnabled = true;
+                        //effect.DirectionalLight1.Enabled = false;
+                        //effect.DirectionalLight2.Enabled = false;
+                        //effect.AmbientLightColor = Color.Black.ToVector3();
+                        //effect.EmissiveColor = Color.Black.ToVector3();
                     }
                 }
             }
         }
 
-
-        #region IUpdateable Members
-
-        bool IUpdateable.Enabled
-        {
-            get { return true; }
-        }
-
-        public AnimationController Controller
-        {
-            get { return controller; }
-        }
-
-        public Model Model
-        {
-            get { return model; }
-        }
 
         bool IntersectPoint(int x, int y, out Vector3 intPt)
         {
@@ -166,7 +174,7 @@ namespace Animation
             }
         }
 
-        void IUpdateable.Update(GameTime gameTime)
+        public override void Update(GameTime gameTime)
         {
             MouseState state = Mouse.GetState();
             if (state.ScrollWheelValue != lastState.ScrollWheelValue)
@@ -214,66 +222,26 @@ namespace Animation
 
             }
 
+            Arrange();
+
             KeyboardState keyboardState = Keyboard.GetState();
             if (keyboardState.IsKeyDown(Keys.Space) && !lastKeyboardState.IsKeyDown(Keys.Space))
             {
                 ++animationIndex;
-                if (animationIndex >= controller.Animations.Count)
+                if (animationIndex >= controllers[0].Animations.Count)
                     animationIndex = 0;
-                controller.ChangeAnimation(animationIndex);
+                controllers[0].ChangeAnimation(animationIndex);
             }
 
-            controller.World = world;
             lastState = state;
             lastKeyboardState = keyboardState;
-            
-            foreach (ModelMesh mesh in model.Meshes)
+
+            foreach (Effect effect in effects)
             {
-                foreach (Effect effect in mesh.Effects)
-                {
-                    effect.Parameters["View"].SetValue(view);
-                    effect.Parameters["EyePosition"].SetValue(eyePos);
-                }
+                effect.Parameters["View"].SetValue(view);
+                effect.Parameters["EyePosition"].SetValue(eyePos);
             }
-             
         }
-
-        int IUpdateable.UpdateOrder
-        {
-            get { return 0; }
-        }
-
-
-        #endregion
-
-        #region IUpdateable Members
-
-        private event EventHandler enabledChanged;
-        event EventHandler IUpdateable.EnabledChanged
-        {
-            add { enabledChanged += value; }
-            remove { enabledChanged -= value; }
-        }
-
-        private event EventHandler updateOrderChanged;
-        event EventHandler IUpdateable.UpdateOrderChanged
-        {
-            add { updateOrderChanged += value; }
-            remove { updateOrderChanged -= value; }
-        }
-
-
-
-        #endregion
-
-        #region IGameComponent Members
-
-        public void Initialize()
-        {
-
-        }
-
-        #endregion
     }
 }
 
