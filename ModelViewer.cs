@@ -39,7 +39,7 @@ namespace Animation
     public partial class ModelViewer : DrawableGameComponent
     {
         List<Model> models=new List<Model>();
-        public List<AnimationController> controllers=new List<AnimationController>();
+        private List<AnimationController> controllers=new List<AnimationController>();
         List<Effect> effects=new List<Effect>();
         int animationIndex = 0;
         private BoundingSphere sphere;
@@ -53,6 +53,11 @@ namespace Animation
 
         MouseState lastState;
         KeyboardState lastKeyboardState;
+
+        public List<AnimationController> Controllers
+        {
+            get { return controllers; }
+        }
 
         public ModelViewer(Game game): base(game)
         {

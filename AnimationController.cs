@@ -65,9 +65,9 @@ namespace Animation
         private readonly int numMeshes;
 
         private Matrix absoluteMeshTransform;
-        private Matrix[] pose;
+        private Matrix[] pose, blendPose;
         private List<Matrix[]> skinTransforms=new List<Matrix[]>();
-        private BoneKeyframeCollection[] animationChannels;
+        private BoneKeyframeCollection[] animationChannels, blendAnimationChannels;
         private Matrix[] palette;
         private string[] skinnedBones;
         private int[] paletteToBoneMapping;
@@ -187,8 +187,11 @@ namespace Animation
             }
 
             pose = new Matrix[model.Bones.Count];
+            blendPose = new Matrix[model.Bones.Count];
             animationChannels = new BoneKeyframeCollection[model.Bones.Count];
+            blendAnimationChannels = new BoneKeyframeCollection[model.Bones.Count];
             model.CopyAbsoluteBoneTransformsTo(pose);
+            model.CopyAbsoluteBoneTransformsTo(blendPose);
             absoluteMeshTransform = Matrix.Identity;
             for (int i = 0; i < model.Meshes.Count; i++)
             {
@@ -317,6 +320,25 @@ namespace Animation
             ChangeAnimation(animations[animationIndex].Name );
         }
 
+        private void FillAnimationChannels(BoneKeyframeCollection[] channels, ModelAnimation modelAnim,
+            out int maxFrames)
+        {
+            maxFrames = 1;
+            for (int i = 0; i < channels.Length; i++)
+            {
+                string boneName = model.Bones[i].Name;
+                if (boneName != null && modelAnim.BoneAnimations.ContainsKey(boneName))
+                {
+                    channels[i] = modelAnim.BoneAnimations[boneName];
+                    if (channels[i].Count > maxFrames)
+                        maxFrames = channels[i].Count;
+                }
+                else
+                {
+                    channels[i] = null;
+                }
+            }
+        }
         /// <summary>
         /// Changes the current animation.
         /// </summary>
@@ -333,21 +355,7 @@ namespace Animation
             animation = animations[animationName];
             animationDuration = animation.Duration;
             elapsedTime = 0;
-            maxNumFrames = 1;
-            for (int i = 0; i < animationChannels.Length; i++)
-            {
-                string boneName = model.Bones[i].Name;
-                if (boneName != null && animation.BoneAnimations.ContainsKey(boneName))
-                {
-                    animationChannels[i] = animation.BoneAnimations[boneName];
-                    if (animationChannels[i].Count > maxNumFrames)
-                        maxNumFrames = animationChannels[i].Count;
-                }
-                else
-                {
-                    animationChannels[i] = null;
-                }
-            }
+            FillAnimationChannels(animationChannels, animation, out maxNumFrames);
             ticksPerFrame = animationDuration / maxNumFrames;
         }
 
@@ -374,6 +382,157 @@ namespace Animation
         {
         }
 
+        private void UpdateTime(GameTime gameTime)
+        {
+            elapsed = (long)(speedFactor * gameTime.ElapsedRealTime.Ticks);
+            if (elapsed != 0)
+            {
+                elapsedTime = (elapsedTime + elapsed) % animationDuration;
+                if (elapsedTime < 0)
+                    elapsedTime = AnimationDuration;
+            }
+        }
+
+        private bool isBlending = false;
+        private ModelAnimation blendAnimation = null;
+        private float blendAmount = 0;
+        private long blendAnimationTime = 0;
+        private int maxNumBlendAnimationFrames;
+
+        public long BlendAnimationTime
+        {
+            get { return blendAnimationTime; }
+            set { blendAnimationTime = value; }
+        }
+
+        public bool IsBlending
+        {
+            get { return isBlending; }
+            set { isBlending = true; }
+        }
+
+        public float BlendAmount
+        {
+            get { return blendAmount; }
+            set { blendAmount = value; }
+        }
+
+        public void SetBlendAnimation(string animName)
+        {
+            blendAnimation = animations[animName];
+            FillAnimationChannels(blendAnimationChannels, blendAnimation, out maxNumBlendAnimationFrames);
+        }
+
+        public void SetBlendAnimation(int animIndex)
+        {
+            blendAnimation = animations[animIndex];
+            int maxFrames;
+            FillAnimationChannels(blendAnimationChannels, blendAnimation, out maxNumBlendAnimationFrames);
+        }
+
+        private void UpdateBlendPose()
+        {
+            int defaultFrameNum = (int)(blendAnimationTime / ticksPerFrame);
+            for (int i = 0; i < blendPose.Length; i++)
+            {
+                BoneKeyframeCollection channel = blendAnimationChannels[i];
+                if (channel != null)
+                {
+                    int frameNum = defaultFrameNum;
+                    if (channel.Count <= maxNumBlendAnimationFrames)
+                    {
+                        frameNum = channel.Count * (int)(blendAnimationTime / channel.Duration);
+                        if (frameNum >= channel.Count)
+                            frameNum = channel.Count - 1;
+                        while (frameNum < (channel.Count - 2)
+                            && channel[frameNum + 1].Time < maxNumBlendAnimationFrames)
+                        {
+                            ++frameNum;
+                        }
+                        while (frameNum > 0 && channel[frameNum].Time > maxNumBlendAnimationFrames)
+                        {
+                            --frameNum;
+                        }
+                    }
+                    if (i > 0)
+                    {
+                        blendPose[i] = channel[0].Transform * blendPose[model.Bones[i].Parent.Index];
+
+                    }
+                    else
+                    {
+                        blendPose[i] = channel[0].Transform;
+                    }
+                }
+                else
+                {
+                    if (i > 0) // not root
+                    {
+                        blendPose[i] = model.Bones[i].Transform * blendPose[model.Bones[i].Parent.Index];
+                    }
+                    else
+                    {
+                        blendPose[i] = model.Bones[i].Transform;
+                    }
+                }
+            }
+        }
+
+        private void UpdatePoses()
+        {
+            int defaultFrameNum = (int)(elapsedTime / ticksPerFrame);
+            for (int i = 0; i < pose.Length; i++)
+            {
+                BoneKeyframeCollection channel = animationChannels[i];
+                if (channel != null)
+                {
+                    int frameNum = defaultFrameNum;
+                    if (channel.Count <= maxNumFrames)
+                    {
+                        frameNum = channel.Count * (int)(elapsedTime / channel.Duration);
+                        if (frameNum >= channel.Count)
+                            frameNum = channel.Count - 1;
+                        while (frameNum < (channel.Count - 2)
+                            && channel[frameNum + 1].Time < elapsedTime)
+                        {
+                            ++frameNum;
+                        }
+                        while (frameNum > 0 && channel[frameNum].Time > elapsedTime)
+                        {
+                            --frameNum;
+                        }
+                    }
+                    if (i > 0) // not root
+                    {
+                        pose[i] = channel[frameNum].Transform * pose[model.Bones[i].Parent.Index];
+                    }
+                    else
+                    {
+                        pose[i] = channel[frameNum].Transform;
+                    }
+                }
+                else
+                {
+                    if (i > 0) // not root
+                    {
+                        pose[i] = model.Bones[i].Transform * pose[model.Bones[i].Parent.Index];
+                    }
+                    else
+                    {
+                        pose[i] = model.Bones[i].Transform;
+                    }
+                }
+            }
+            if (isBlending)
+            {
+                UpdateBlendPose();
+                for (int i = 0; i < pose.Length; i++)
+                {
+                    pose[i] = Util.SlerpMatrix(pose[i], blendPose[i], blendAmount);
+                }
+            }
+        }
+
         /// <summary>
         /// Draws the current frame
         /// </summary>
@@ -382,56 +541,8 @@ namespace Animation
         {
             if (Enabled)
             {
-                elapsed = (long)(speedFactor * gameTime.ElapsedRealTime.Ticks);
-                if (elapsed != 0)
-                {
-                    elapsedTime = (elapsedTime + elapsed) % animationDuration;
-                    if (elapsedTime < 0)
-                        elapsedTime = AnimationDuration;
-                }
-                int defaultFrameNum = (int)(elapsedTime / ticksPerFrame);
-                for (int i = 0; i < pose.Length; i++)
-                {
-                    BoneKeyframeCollection channel = animationChannels[i];
-                    if (channel != null)
-                    {
-                        int frameNum = defaultFrameNum;
-                        if (channel.Count <= maxNumFrames)
-                        {
-                            frameNum = channel.Count * (int)(elapsedTime / channel.Duration);
-                            if (frameNum >= channel.Count)
-                                frameNum = channel.Count - 1;
-                            while (frameNum < (channel.Count - 2)
-                                && channel[frameNum + 1].Time < elapsedTime)
-                            {
-                                ++frameNum;
-                            }
-                            while (frameNum > 0 && channel[frameNum].Time > elapsedTime)
-                            {
-                                --frameNum;
-                            }
-                        }
-                        if (i > 0) // not root
-                        {
-                            pose[i] = channel[frameNum].Transform * pose[model.Bones[i].Parent.Index];
-                        }
-                        else
-                        {
-                            pose[i] = channel[frameNum].Transform;
-                        }
-                    }
-                    else
-                    {
-                        if (i > 0) // not root
-                        {
-                            pose[i] = model.Bones[i].Transform * pose[model.Bones[i].Parent.Index];
-                        }
-                        else
-                        {
-                            pose[i] = model.Bones[i].Transform;
-                        }
-                    }
-                }
+                UpdateTime(gameTime);
+                UpdatePoses();
                 int index = 0;
                 for (int i = 0; i < numMeshes; i++)
                 {
