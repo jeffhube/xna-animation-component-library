@@ -434,7 +434,7 @@ namespace Animation
         public bool IsBlending
         {
             get { return isBlending; }
-            set { isBlending = true; }
+            set { isBlending = value ; }
         }
 
         public float BlendAmount
