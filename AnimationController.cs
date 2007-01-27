@@ -127,6 +127,15 @@ namespace Animation
             }
         }
 
+        public long BlendAnimationDuration
+        {
+            get
+            {
+                return blendAnimation.Duration;
+            }
+        }
+
+
         public long ElapsedTime
         {
             get
@@ -455,29 +464,30 @@ namespace Animation
                 if (channel != null)
                 {
                     int frameNum = defaultFrameNum;
+                    
                     if (channel.Count <= maxNumBlendAnimationFrames)
                     {
                         frameNum = channel.Count * (int)(blendAnimationTime / channel.Duration);
                         if (frameNum >= channel.Count)
                             frameNum = channel.Count - 1;
-                        while (frameNum < (channel.Count - 2)
-                            && channel[frameNum + 1].Time < maxNumBlendAnimationFrames)
+                        while ( frameNum< (channel.Count-2) &&
+                            channel[frameNum+1].Time < blendAnimationTime)
                         {
-                            ++frameNum;
+                                ++frameNum;
                         }
-                        while (frameNum > 0 && channel[frameNum].Time > maxNumBlendAnimationFrames)
+                        while (frameNum > 0 && channel[frameNum].Time > blendAnimationTime)
                         {
                             --frameNum;
                         }
                     }
                     if (i > 0)
                     {
-                        blendPose[i] = channel[0].Transform * blendPose[model.Bones[i].Parent.Index];
+                        blendPose[i] = channel[frameNum].Transform * blendPose[model.Bones[i].Parent.Index];
 
                     }
                     else
                     {
-                        blendPose[i] = channel[0].Transform;
+                        blendPose[i] = channel[frameNum].Transform;
                     }
                 }
                 else
