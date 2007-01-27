@@ -127,6 +127,23 @@ namespace Animation
             }
         }
 
+        public long ElapsedTime
+        {
+            get
+            {
+                return elapsedTime;
+            }
+            set
+            {
+                elapsedTime = value;
+            }
+        }
+
+        public long TicksPerFrame
+        {
+            get { return Util.TICKS_PER_60FPS; }
+        }
+
         /// <summary>
         /// Gets the model associated with this controller.
         /// </summary>
@@ -356,7 +373,7 @@ namespace Animation
             animationDuration = animation.Duration;
             elapsedTime = 0;
             FillAnimationChannels(animationChannels, animation, out maxNumFrames);
-            ticksPerFrame = animationDuration / maxNumFrames;
+            ticksPerFrame = Util.TICKS_PER_60FPS;
         }
 
         /// <summary>
@@ -426,7 +443,6 @@ namespace Animation
         public void SetBlendAnimation(int animIndex)
         {
             blendAnimation = animations[animIndex];
-            int maxFrames;
             FillAnimationChannels(blendAnimationChannels, blendAnimation, out maxNumBlendAnimationFrames);
         }
 
@@ -478,6 +494,8 @@ namespace Animation
             }
         }
 
+
+
         private void UpdatePoses()
         {
             int defaultFrameNum = (int)(elapsedTime / ticksPerFrame);
@@ -487,6 +505,8 @@ namespace Animation
                 if (channel != null)
                 {
                     int frameNum = defaultFrameNum;
+                    
+                    
                     if (channel.Count <= maxNumFrames)
                     {
                         frameNum = channel.Count * (int)(elapsedTime / channel.Duration);
@@ -502,6 +522,7 @@ namespace Animation
                             --frameNum;
                         }
                     }
+                     
                     if (i > 0) // not root
                     {
                         pose[i] = channel[frameNum].Transform * pose[model.Bones[i].Parent.Index];
