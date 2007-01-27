@@ -154,6 +154,7 @@ namespace Animation.Content
         // Interpolates an AnimationContent object to 60 fps
         public virtual AnimationContent Interpolate(AnimationContent input)
         {
+            System.Diagnostics.Debugger.Launch();
             AnimationContent output = new AnimationContent();
             long time = 0;
             long animationDuration = input.Duration.Ticks;
@@ -166,15 +167,23 @@ namespace Animation.Content
                 int currentFrame = 0;
                 while (time < animationDuration)
                 {
+                    if (time > animationDuration)
+                        time = animationDuration;
                     AnimationKeyframe keyframe;
                     if (channel.Count == 1 || time < channel[0].Time.Ticks)
                     {
                         keyframe = new AnimationKeyframe(new TimeSpan(time), channel[0].Transform);
                     }
+                    else if (channel[channel.Count - 1].Time.Ticks < time)
+                    {
+                        keyframe = new AnimationKeyframe(new TimeSpan(time), channel[channel.Count - 1].Transform);
+                    }
                     else
                     {
                         while (channel[currentFrame + 1].Time.Ticks < time)
+                        {
                             currentFrame++;
+                        }
                         double interpNumerator = (double)(time - channel[currentFrame].Time.Ticks);
                         double interpDenom = (double)(channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks);
                         double interpAmount = interpNumerator / interpDenom;
