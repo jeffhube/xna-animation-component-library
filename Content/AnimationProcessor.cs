@@ -154,7 +154,6 @@ namespace Animation.Content
         // Interpolates an AnimationContent object to 60 fps
         public virtual AnimationContent Interpolate(AnimationContent input)
         {
-            System.Diagnostics.Debugger.Launch();
             AnimationContent output = new AnimationContent();
             long time = 0;
             long animationDuration = input.Duration.Ticks;
