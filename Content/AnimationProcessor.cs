@@ -186,11 +186,19 @@ namespace Animation.Content
                         double interpNumerator = (double)(time - channel[currentFrame].Time.Ticks);
                         double interpDenom = (double)(channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks);
                         double interpAmount = interpNumerator / interpDenom;
-                        keyframe = new AnimationKeyframe(new TimeSpan(time),
-                            Util.SlerpMatrix(
-                            channel[currentFrame].Transform,
-                            channel[currentFrame + 1].Transform,
-                            interpAmount));
+                        if (channel[currentFrame].Transform != channel[currentFrame + 1].Transform)
+                        {
+                            keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                Util.SlerpMatrix(
+                                channel[currentFrame].Transform,
+                                channel[currentFrame + 1].Transform,
+                                interpAmount));
+                        }
+                        else
+                        {
+                            keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                channel[currentFrame].Transform);
+                        }
                     }
                     outChannel.Add(keyframe);
                     time += Util.TICKS_PER_60FPS;

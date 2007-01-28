@@ -43,6 +43,8 @@ namespace Animation
     /// </summary>
     public sealed class Util
     {
+        public const long TICKS_PER_60FPS = TimeSpan.TicksPerSecond / 60;
+
         /// <summary>
         /// Initializes a basic effect to some reasonable values because I hate doing this
         /// every time I start a new game projection
