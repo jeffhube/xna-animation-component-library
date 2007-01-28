@@ -39,7 +39,7 @@ namespace Animation.Content
     /// Produces AnimationContentDictionary;
     /// warns of incompatibilities of model and skeleton.
     /// </summary>
-    [ContentProcessor(DisplayName = "Animation - Animation Library")]
+    [ContentProcessor(DisplayName = "ModelAnimationCollection - Animation Library")]
     public class AnimationProcessor : ContentProcessor<BoneContent,AnimationContentDictionary>
     {
         protected ContentProcessorContext context;

@@ -44,6 +44,7 @@ namespace Animation.Content
         DisplayName = "BVH - Animation Library")]
     public sealed class BvhImporter : ContentImporter<BoneContent>
     {
+        private char[] whiteSpace = { ' ', '\t', '\r', '\n' };
         private ContentImporterContext context;
         private StreamReader reader;
         private List<BoneInfo> bones;
@@ -91,7 +92,7 @@ namespace Animation.Content
             {
                 if (line == null)
                     throw new InvalidContentException("premature end of file", cId);
-                string keyword = line.Split(' ')[0];
+                string keyword = line.Split(whiteSpace)[0];
                 if (keyword == "ROOT" || keyword == "JOINT" || line == "End Site")
                 {
                     BoneInfo boneInfo = new BoneInfo();
@@ -106,7 +107,7 @@ namespace Animation.Content
                     }
                     if (keyword == "ROOT" || keyword == "JOINT")
                     {
-                        newBone.Name = line.Split(' ')[1];
+                        newBone.Name = line.Split(whiteSpace)[1];
                         boneInfo.bone = newBone;
                         bones.Add(boneInfo);
                     }
@@ -121,7 +122,7 @@ namespace Animation.Content
                     line = readLine();
                     if (line!=null && line.StartsWith("OFFSET"))
                     {
-                        string[] data = line.Split(' ');
+                        string[] data = line.Split(whiteSpace);
                         //couldn't get the .NET 2.0 version of Split() working, 
                         //therefore this ugly hack
                         List<string> coords = new List<string>();
@@ -148,7 +149,7 @@ namespace Animation.Content
                         line = readLine();
                         if (line != null && line.StartsWith("CHANNELS"))
                         {
-                            string[] channels = line.Split(' ');
+                            string[] channels = line.Split(whiteSpace);
                             for (int i = 2; i < channels.Length; i++)
                             {
                                 if (channels[i]!=null && channels[i]!="")
@@ -172,7 +173,7 @@ namespace Animation.Content
                 string[] data = line.Split(':');
                 if (data[0] == "Frames")
                 {
-                    frames = int.Parse(data[1]);
+                    frames = int.Parse(data[1].Trim());
                 }
             }
             if ((line = readLine()) != null)
@@ -180,7 +181,7 @@ namespace Animation.Content
                 string[] data = line.Split(':');
                 if (data[0] == "Frame Time")
                 {
-                    frameTime = double.Parse(data[1]);
+                    frameTime = double.Parse(data[1].Trim());
                 }
             }
             root.Animations.Add(animation.Name, animation);
@@ -191,7 +192,7 @@ namespace Animation.Content
             int frameNumber = 0;
             while ((line = readLine()) != null)
             {
-                string[] ss = line.Split(' ');
+                string[] ss = line.Split(whiteSpace);
                 //couldn't get the .NET 2.0 version of Split() working, 
                 //therefore this ugly hack
                 List<string> data = new List<string>();
