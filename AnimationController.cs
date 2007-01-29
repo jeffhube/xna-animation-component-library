@@ -470,12 +470,12 @@ namespace Animation
                         frameNum = channel.Count * (int)(blendAnimationTime / channel.Duration);
                         if (frameNum >= channel.Count)
                             frameNum = channel.Count - 1;
-                        while ( frameNum< (channel.Count-2) &&
-                            channel[frameNum+1].Time < blendAnimationTime)
+                        while (frameNum < channel.Count - 1
+                            && channel[frameNum].Time < blendAnimationTime)
                         {
-                                ++frameNum;
+                            ++frameNum;
                         }
-                        while (frameNum > 0 && channel[frameNum].Time > blendAnimationTime)
+                        while (frameNum > 0 && channel[frameNum - 1].Time > blendAnimationTime)
                         {
                             --frameNum;
                         }
@@ -508,6 +508,7 @@ namespace Animation
 
         private void UpdatePoses()
         {
+
             int defaultFrameNum = (int)(elapsedTime / ticksPerFrame);
             for (int i = 0; i < pose.Length; i++)
             {
@@ -516,18 +517,18 @@ namespace Animation
                 {
                     int frameNum = defaultFrameNum;
                     
-                    
+
                     if (channel.Count <= maxNumFrames)
                     {
                         frameNum = channel.Count * (int)(elapsedTime / channel.Duration);
                         if (frameNum >= channel.Count)
                             frameNum = channel.Count - 1;
-                        while (frameNum < (channel.Count - 2)
-                            && channel[frameNum + 1].Time < elapsedTime)
+                        while (frameNum < channel.Count-1
+                            && channel[frameNum].Time < elapsedTime)
                         {
                             ++frameNum;
                         }
-                        while (frameNum > 0 && channel[frameNum].Time > elapsedTime)
+                        while (frameNum > 0 && channel[frameNum-1].Time > elapsedTime)
                         {
                             --frameNum;
                         }
