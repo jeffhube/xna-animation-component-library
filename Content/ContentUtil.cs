@@ -77,8 +77,10 @@ namespace Animation.Content
     AnimationKeyframe[] translation, AnimationKeyframe[] rotation)
         {
             if (scale == null)
-                throw new Exception("Animation data is not stored as matrices and " +
-                    "has no scale component.");
+            {
+                scale = new AnimationKeyframe[] {new AnimationKeyframe(new TimeSpan(0),
+                    Matrix.Identity)};
+            }
             if (translation == null)
                 throw new Exception("Animation data is not stored as matrices and " +
                     "has no translation component.");
@@ -136,14 +138,15 @@ namespace Animation.Content
             int sourceIndex = 0;
             for (int i = 0; i < times.Count; i++)
             {
-                if (source.Length == 1)
+
+                while (sourceIndex != source.Length-1 && source[sourceIndex + 1].Time < times[i])
+                {
+                    sourceIndex++;
+                }
+                if (sourceIndex==source.Length-1)
                 {
                     dest[i] = source[sourceIndex].Transform;
                     continue;
-                }
-                while (source[sourceIndex + 1].Time < times[i])
-                {
-                    sourceIndex++;
                 }
                 if (source[sourceIndex].Time == times[i])
                 {

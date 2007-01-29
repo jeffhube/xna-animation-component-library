@@ -49,8 +49,6 @@ namespace Animation.Content
         // Stores the root frame
         private NodeContent root;
 
-        // Root of skeleton - different from model root
-        private BoneContent skeletonRoot;
         // Stores the number of units that represent one second in animation data
         // Is null if the file contains no information, and a default value will be used
         private int? animTicksPerSecond;
@@ -59,19 +57,19 @@ namespace Animation.Content
         private ContentImporterContext context;
         // A list of meshes that have been imported
         private List<XMeshImporter> meshes = new List<XMeshImporter>();
-        // Stores the current bone index while traversing the NodeContent tree
-        int curIndex = 0;
         private Dictionary<string, MaterialContent> materials = new Dictionary<string, MaterialContent>();
-        // Contains a collection of bone name keys that map to the index of the given bone.
-        // This allows us to replace BoneWeightCollection lists for each mesh.  These collections
-        // originally store the bone name attached to the weight, and boneIndices allows us to
-        // replace the name with the index, which is required for skinned animation
-        private Dictionary<string, int> boneIndices = new Dictionary<string, int>();
+        private List<string> animationOptions = new List<string>();
+
+        public List<string> AnimationOptions
+        {
+            get { return animationOptions; }
+        }
         #endregion
 
         #region Non Animation Importation Methods
         public override NodeContent Import(string filename, ContentImporterContext context)
         {
+
             System.Threading.Thread currentThread = System.Threading.Thread.CurrentThread;
             CultureInfo culture = new CultureInfo("en-US");
             currentThread.CurrentCulture = culture;
@@ -82,16 +80,11 @@ namespace Animation.Content
             // functionality for iterating and parsing the tokens
             tokens = new XFileTokenizer(filename);
 
-
             // skip header
             tokens.SkipTokens(3);
+            root = new NodeContent();
             // fill in the tree
             ImportRoot();
-
-            // This fills in the Dictionary that maps bone names to their indices.  Now that
-            // all the bones are loaded, we can find this info out.  Their indices are determined
-            // in a preorder tree traversal.
-            GetBoneIndices(root);
 
             Matrix absoluteMeshTransform=Matrix.Identity;
             List<SkinTransform[]> skinTransforms = new List<SkinTransform[]>();
@@ -99,18 +92,19 @@ namespace Animation.Content
             // in each mesh so that they contain indices and weights
             foreach (XMeshImporter mesh in meshes)
             {
-                mesh.AddWeights(boneIndices);
                 mesh.CreateGeometry();
+                SkinTransform[] meshSkinTransforms = mesh.SkinTransforms;
                 skinTransforms.Add(mesh.SkinTransforms);
                 if (mesh.SkinTransforms!=null && mesh.SkinTransforms.Length > 0)
                 {
                     absoluteMeshTransform = mesh.Mesh.AbsoluteTransform;
                 }
             }
+
             // Allow processor to access any skinning data we might have
             root.OpaqueData.Add("SkinTransforms", skinTransforms);
 
-            // Hack to calculate bind pose as required for compatibility with XNA Content DOM
+            // Calculates bind pose as required for compatibility with XNA Content DOM
             Dictionary<string, Matrix> absTransformsDict = new Dictionary<string, Matrix>(skinTransforms.Count);
             foreach (SkinTransform[] sst in skinTransforms)
             {
@@ -127,6 +121,8 @@ namespace Animation.Content
             return root;
         }
 
+
+
         // Hack to calculate bind pose as required for compatibility with XNA Content DOM
         private void fixBindPose(NodeContent bone, Dictionary<string, Matrix> absTransformsDict)
         {
@@ -136,6 +132,7 @@ namespace Animation.Content
                 abs = absTransformsDict[bone.Name];
                 bone.Transform = abs * Matrix.Invert(bone.Parent.AbsoluteTransform);
             }
+             
             foreach (NodeContent child in bone.Children)
             {
                 fixBindPose(child, absTransformsDict);
@@ -173,7 +170,10 @@ namespace Animation.Content
                     //     DWORD AnimTicksPerSecond;
                     // } 
                     else if (next == "AnimTicksPerSecond")
+                    {
                         animTicksPerSecond = tokens.SkipName().NextInt();
+                        tokens.SkipToken();
+                    }
                     // See ImportAnimationSet for template info
                     else if (next == "AnimationSet")
                         ImportAnimationSet();
@@ -181,6 +181,17 @@ namespace Animation.Content
                         ImportMaterial();
                     else if (next == "template")
                         tokens.SkipName().SkipNode();
+                    else if (next == "AnimationLibOptions")
+                    {
+                        tokens.SkipName();
+                        int numOptions = tokens.NextInt();
+                        for (int i = 0; i < numOptions; i++)
+                        {
+                            string animationOption = tokens.NextString();
+                            animationOptions.Add(animationOption);
+                        }
+                        tokens.SkipToken().SkipToken();
+                    }
                 }
                 while (!tokens.AtEnd);
             }
@@ -196,7 +207,6 @@ namespace Animation.Content
             EffectMaterialContent content = new EffectMaterialContent();
             tokens.SkipName();
             string effectName = GetAbsolutePath(tokens.NextString());
-
             content.Effect = new ExternalReference<EffectContent>(effectName);
 
             // Find value initializers for the effect parameters and set the values
@@ -278,15 +288,24 @@ namespace Animation.Content
             for (string token = tokens.NextToken();
                 token != "}"; )
             {
-                if (token == "TextureFilename")
+                // Milkshape exports with capital N on name
+                if (token == "TextureFilename" || token=="TextureFileName")
                 {
                     // Get the absolute path of the texture
                     string fileName = tokens.SkipName().NextString();
                     if (fileName.TrimStart(' ', '"').TrimEnd(' ', '"') != "")
                     {
+
+                        if (!System.IO.File.Exists(fileName))
+                        {
+                            context.Logger.LogWarning("", new ContentIdentity(),
+                                "An absolute texture path that does not exist is stored in an .X file: " +
+                                fileName + "\n  Attempting to find texture via relative path.");
+                            fileName = System.IO.Path.GetFileName(fileName);
+                        }
+
                         texRef =
                             new ExternalReference<TextureContent>(GetAbsolutePath(fileName));
-
                     }
                     tokens.SkipToken();
                 }
@@ -326,9 +345,6 @@ namespace Animation.Content
         /// <returns>The absolute filename of the item</returns>
         public string GetAbsolutePath(string contentItem)
         {
-            //string absoluteModelPath = Path.GetDirectoryName(Path.GetFullPath(fileName));
-            //string absolutePath = Path.Combine(absoluteModelPath, contentItem);
-            //return absolutePath;
             return Path.GetFullPath(contentItem);
         }
 
@@ -445,8 +461,9 @@ namespace Animation.Content
                 else if (next == "{")
                     tokens.SkipNode();
             }
-            skeletonRoot = MeshHelper.FindSkeleton(root);
-            skeletonRoot.Animations.Add(animSet.Name, animSet);
+            //skeletonRoot = MeshHelper.FindSkeleton(root);
+            //skeletonRoot.Animations.Add(animSet.Name, animSet);
+            root.Animations.Add(animSet.Name, animSet);
         }
 
 
@@ -628,46 +645,6 @@ namespace Animation.Content
         }
         #endregion
 
-        #region Other Methods
-
-
-
-
-        // This allows us to replace BoneWeightCollection lists for each mesh.  These collections
-        // originally store the bone name attached to the weight, and boneIndices allows us to
-        // replace the name with the index, which is required for skinned animation
-        /// <summary>
-        /// Traverses the tree and fills a collection of bone name keys that map to the index of 
-        /// the given bone.
-        /// </summary>
-        /// <param name="root">The root of the tree that is traversed</param>
-        private void GetBoneIndices(NodeContent root)
-        {
-            //System.Diagnostics.Debugger.Launch();
-            //BoneContent skel = MeshHelper.FindSkeleton(root);
-            //IList<BoneContent> flatSkel = MeshHelper.FlattenSkeleton(skel);
-            //for (int i = 0; i < flatSkel.Count; i++)
-            //{
-            //    BoneContent bc = flatSkel[i];
-            //    boneIndices.Add(bc.Name, i);
-            //}
-            if (root.Name != null && root.Parent!=null)
-            {
-                if (root is MeshContent)
-                {
-                    boneIndices.Clear();
-                    curIndex = 0;
-                }
-                else
-                {
-                    boneIndices.Add(root.Name, curIndex);
-                    curIndex++;
-                }
-            }
-            foreach (NodeContent c in root.Children)
-                GetBoneIndices(c);
-        }
-        #endregion
 
     }
 }

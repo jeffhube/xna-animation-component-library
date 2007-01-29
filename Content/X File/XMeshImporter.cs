@@ -177,6 +177,10 @@ namespace Animation.Content
                 Matrix blendOffset = tokens.NextMatrix();
                 Util.ReflectMatrix(ref blendOffset);
                 skinTransformDictionary.Add(boneName, blendOffset);
+                SkinTransform trans = new SkinTransform();
+                trans.BoneName = boneName;
+                trans.Transform = blendOffset;
+                skinTransforms.Add(trans);
                 // end of skin weights
                 tokens.SkipToken();
 
@@ -260,6 +264,9 @@ namespace Animation.Content
                 int numNormals = tokens.NextInt();
                 if (numNormals == mesh.Positions.Count)
                     normals = new Vector3[numNormals];
+                else
+                    hasNormals = false;
+
                 for (int i = 0; i < numNormals; i++)
                 {
                     Vector3 norm = tokens.NextVector3();
@@ -383,10 +390,12 @@ namespace Animation.Content
             private void AddAllChannels()
             {
 
-                if (normals != null)
-                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString()+"0", normals);
-                else if (hasNormals)
+                if (model.AnimationOptions.Contains("RecalcNormals") || (normals == null && !hasNormals))
                     MeshHelper.CalculateNormals(mesh, true);
+                else
+                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString()+"0", normals);
+
+
                 if (texCoords != null)
                     AddChannel<Vector2>("TextureCoordinate0", texCoords);
 
@@ -462,66 +471,6 @@ namespace Animation.Content
                         skinTransforms.Add(transform);
                     }
                 }
-
-                /*
-                int numWeightChannels = 0;
-                // The index of the position that this vertex refers to
-                int index = 0;
-                foreach (BoneWeightCollection c in skinInfo)
-                {
-                    
-
-                    // The number of weights associated with the current vertex
-                    int ct = c.Count;
-                    int chansToAdd = (((ct-1) / 4) - numWeightChannels+1);
-                    while (chansToAdd > 0)
-                    {
-                        weights.Add(new Vector4[mesh.Positions.Count]);
-                        weightIndices.Add(new Byte4[mesh.Positions.Count]);
-                        chansToAdd--;
-                        numWeightChannels++;
-                    }
-
-                    Vector4[] weightsToAdd = new Vector4[numWeightChannels];
-                    byte[,] indicesToAdd = new byte[numWeightChannels, 4];
-                    int count = ct;
-                    for (int i = 0; i < numWeightChannels; i++)
-                    {
-
-                        weightsToAdd[i].X = c[i * 4].Weight;
-                        indicesToAdd[i, 0] = (byte)meshBoneIndices[c[i * 4].BoneName];
-                        count--;
-                        if (count <= 0)
-                            break;
-                        weightsToAdd[i].Y = c[i * 4 + 1].Weight;
-                        indicesToAdd[i, 1] = (byte)meshBoneIndices[c[i * 4 + 1].BoneName];
-                        count--;
-                        if (count <= 0)
-                            break;
-                        
-                        weightsToAdd[i].Z = c[i * 4 + 2].Weight;
-                        indicesToAdd[i, 2] = (byte)meshBoneIndices[c[i * 4 + 2].BoneName];
-                        count--;
-                        if (count <= 0)
-                            break;
-                        
-                        weightsToAdd[i].W = c[i * 4 + 3].Weight;
-                        indicesToAdd[i, 3] = (byte)meshBoneIndices[c[i * 4 + 3].BoneName];
-                        count--;
-                        if (count <= 0)
-                            break;
-                        
-                        
-                    }
-
-                    for (int i = 0; i < numWeightChannels; i++)
-                    {
-                        weights[i][index] = weightsToAdd[i];
-                        weightIndices[i][index] = new Byte4(indicesToAdd[i, 0], indicesToAdd[i, 1],
-                            indicesToAdd[i, 2], indicesToAdd[i, 3]);
-                    }
-                    index++;
-                }*/
 
             }
             #endregion
