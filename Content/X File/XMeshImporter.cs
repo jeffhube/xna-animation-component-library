@@ -390,10 +390,12 @@ namespace Animation.Content
             private void AddAllChannels()
             {
 
-                if (model.AnimationOptions.Contains("RecalcNormals") || (normals == null && !hasNormals))
-                    MeshHelper.CalculateNormals(mesh, true);
-                else
-                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString()+"0", normals);
+
+                bool recalcNormal = false;
+               if (model.AnimationOptions.Contains("RecalcNormals") || (normals == null && !hasNormals))
+                   recalcNormal=true;
+               else
+                    AddChannel<Vector3>(VertexElementUsage.Normal.ToString() + "0", normals);
 
 
                 if (texCoords != null)
@@ -425,7 +427,11 @@ namespace Animation.Content
 
                 MeshHelper.MergeDuplicatePositions(mesh, 0);
                 MeshHelper.MergeDuplicateVertices(mesh);
+                if (recalcNormal)
+                    MeshHelper.CalculateNormals(mesh, true);
                 MeshHelper.OptimizeForCache(mesh);
+
+
 
                 
             }
