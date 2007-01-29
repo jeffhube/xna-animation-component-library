@@ -725,7 +725,7 @@ namespace Animation.Content
                         }
                         // a string or name
                         else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-                            || c == '"')
+                            || c == '"' || c=='_')
                         {
                             groupnum = 1;
                             goto case 1;
