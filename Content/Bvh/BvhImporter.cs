@@ -184,6 +184,7 @@ namespace Animation.Content
                     frameTime = double.Parse(data[1].Trim());
                 }
             }
+            animation.Duration = TimeSpan.FromSeconds(frameTime * frames);
             root.Animations.Add(animation.Name, animation);
             foreach (BoneInfo b in bones)
             {
