@@ -36,6 +36,7 @@ using System.Collections;
 using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 using Microsoft.Xna.Framework.Content;
 using System.Globalization;
+using System.Xml;
 
 namespace Animation.Content
 {
@@ -107,15 +108,167 @@ namespace Animation.Content
             // Attach the animation and skinning data to the models tag
             FindAnimations(input);
             Dictionary<string, object> dict = new Dictionary<string, object>();
+            XmlDocument xmlDoc = ReadAnimationXML(input);
+            if (xmlDoc != null)
+            {
+                SubdivideAnimations(animations, xmlDoc);
+            }
+
             AnimationProcessor ap = new AnimationProcessor();
             dict.Add("Animations", ap.Interpolate(animations));
-            //dict.Add("Animations", animations);
+           // dict.Add("Animations", animations);
             dict.Add("SkinnedBones", bones.ToArray());            
             foreach (ModelMeshContent meshContent in c.Meshes)
                 ReplaceBasicEffects(meshContent);
             c.Tag = dict;
+
             return c;
         }
+
+        private void SubdivideAnimations(AnimationContentDictionary animDict, XmlDocument doc)
+        {
+
+
+            foreach (XmlElement child in doc)
+            {
+                string animName = child["name"].InnerText;
+                double animTicksPerSecond = 1.0, secondsPerTick = 0;
+                if (child["tickspersecond"] != null)
+                {
+                    animTicksPerSecond = double.Parse(child["tickspersecond"].InnerText);
+                }
+                secondsPerTick = 1.0 / animTicksPerSecond;
+                if (animDict.ContainsKey(animName))
+                {
+                    AnimationContent anim = animDict[animName];
+                    animDict.Remove(animName);
+                    XmlNodeList subAnimations = child.GetElementsByTagName("animationsubset");
+                    foreach (XmlElement subAnim in subAnimations)
+                    {
+                        AnimationContent newAnim = new AnimationContent();
+                        XmlElement subAnimNameElement = subAnim["name"];
+                        if (subAnimNameElement != null)
+                            newAnim.Name = subAnimNameElement.InnerText;
+
+
+                        long startTime, endTime;
+                        if (subAnim["starttime"] != null)
+                        {
+                            startTime = TimeSpan.FromSeconds(double.Parse(subAnim["starttime"].InnerText)).Ticks;
+                        }
+                        else
+                        {
+                            startTime = TimeSpan.FromSeconds(
+                                double.Parse(subAnim["startframe"].InnerText) * secondsPerTick).Ticks;
+                        }
+                        if (subAnim["endtime"] != null)
+                        {
+                            endTime = TimeSpan.FromSeconds(double.Parse(subAnim["endtime"].InnerText)).Ticks;
+                        }
+                        else
+                        {
+                            endTime = TimeSpan.FromSeconds(
+                                double.Parse(subAnim["endframe"].InnerText) * secondsPerTick).Ticks;
+                        }
+
+
+                        foreach (KeyValuePair<string, AnimationChannel> k in anim.Channels)
+                        {
+                            long curTicks,prevTicks,difCur,difNex;
+                            int startIndex = -1;
+                            int endIndex = -1;
+                            AnimationChannel newChan = new AnimationChannel();
+                            AnimationChannel oldChan = k.Value;
+
+                            for (int i = 0; i < oldChan.Count-1 && (startIndex==-1||endIndex==-1); i++)
+                            {
+
+                                curTicks = oldChan[i + 1].Time.Ticks;
+                                bool foundStart = startIndex == -1 && curTicks >= startTime;
+                                bool foundEnd = endIndex == -1 && curTicks >= endTime;
+
+                                if (foundStart || foundEnd)
+                                {
+                                    prevTicks = oldChan[i].Time.Ticks;
+                                    difCur = Math.Abs(curTicks - startTime);
+                                    difNex = Math.Abs(prevTicks - startTime);
+                                    if (foundStart)
+                                    {
+                                        if (difCur > difNex)
+                                        {
+                                            startIndex = i + 1;
+                                        }
+                                        else
+                                        {
+                                            startIndex = i;
+                                        }
+                                    }
+                                    if (foundEnd)
+                                    {
+                                        if (difCur > difNex)
+                                        {
+                                            endIndex = i + 1;
+                                        }
+                                        else
+                                        {
+                                            endIndex = i;
+                                        }
+                                    }
+                                }
+                            }
+                            if (endIndex == -1)
+                                endIndex = oldChan.Count - 1;
+
+
+
+
+
+                            for (int i = startIndex; i < endIndex; i++)
+                            {
+                                AnimationKeyframe keyframe = new AnimationKeyframe(
+                                    oldChan[i].Time-oldChan[startIndex].Time,
+                                    oldChan[i].Transform);
+                                newChan.Add(keyframe);
+                            }
+                            newAnim.Channels.Add(k.Key, newChan);
+                            if (newChan[newChan.Count - 1].Time > newAnim.Duration)
+                                newAnim.Duration = newChan[newChan.Count - 1].Time;
+
+
+                        }
+        
+                        animDict.Add(newAnim.Name, newAnim);
+
+
+                    }
+
+                }
+            }
+        }
+
+
+
+
+        private XmlDocument ReadAnimationXML(NodeContent root)
+        {
+            XmlDocument doc = null;
+            string filePath = Path.GetFullPath(root.Identity.SourceFilename);
+            string fileName = Path.GetFileName(filePath);
+            fileName = Path.GetDirectoryName(filePath);
+            if (fileName!="")
+                fileName += "\\";
+            fileName += System.IO.Path.GetFileNameWithoutExtension(filePath)
+                + "animation.xml";
+            bool animXMLExists = File.Exists(fileName);
+            if (animXMLExists)
+            {
+                doc = new XmlDocument();
+                doc.Load(fileName);
+            }
+            return doc;
+        }
+
+
 
         private void FlattenSkeleton(NodeContent node)
         {
