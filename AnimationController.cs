@@ -336,10 +336,18 @@ namespace Animation
             RunAnimation(animations[animationIndex].Name, affectedBones,blendAnimation);
         }
 
-        public void StopAnimation(string animName)
+        public void StopAnimation(string animName, bool blendAnimation)
         {
-            runningAnimations[animName].RemoveAllBones();
-            runningAnimations.Remove(animName);
+            if (blendAnimation)
+            {
+                runningBlendAnimations[animName].RemoveAllBones();
+                runningBlendAnimations.Remove(animName);
+            }
+            else
+            {
+                runningAnimations[animName].RemoveAllBones();
+                runningAnimations.Remove(animName);
+            }
 
         }
 
