@@ -55,9 +55,8 @@ namespace Animation
             if (frame.Time > duration)
                 duration = frame.Time;
         }
-
-
     }
+
 
     public struct BoneKeyframe
     {
@@ -71,42 +70,11 @@ namespace Animation
         }
     }
 
-
-    public class ModelAnimationBuilder
-    {
-        private ModelAnimation animation;
-        private SortedDictionary<string, BoneKeyframeCollection> boneAnimations;
-
-        public void StartAnimation(string animationName)
-        {
-            animation = new ModelAnimation(animationName);
-            boneAnimations = new SortedDictionary<string, BoneKeyframeCollection>();
-        }
-
-        public void AddKeyframe(string boneName, Matrix transform, long time)
-        {
-            if (!boneAnimations.ContainsKey(boneName))
-                boneAnimations.Add(boneName, new BoneKeyframeCollection(boneName));
-            boneAnimations[boneName].AddKeyframe(new BoneKeyframe(transform, time));
-
-        }
-        public ModelAnimation FinishAnimation()
-        {
-            if (animation == null)
-                throw new Exception("Can not finish an animation if one was not started.");
-            foreach (BoneKeyframeCollection keyFrames in boneAnimations.Values)
-                animation.AddBoneAnimation(keyFrames);
-            ModelAnimation tmp = animation;
-            animation = null;
-            return tmp;
-        }
-
-    }
-
     public class ModelAnimation
     {
         private long duration;
         private string animationName;
+        private int maxNumFrames = 1;
         
         private SortedList<string, BoneKeyframeCollection> boneAnimations =
             new SortedList<string, BoneKeyframeCollection>();
@@ -115,14 +83,17 @@ namespace Animation
         {
             this.animationName = animationName;
         }
-        internal void AddBoneAnimation(BoneKeyframeCollection collection)
+
+        internal void AddAnimationChannel(BoneKeyframeCollection collection)
         {
             boneAnimations.Add(collection.BoneName,collection);
             if (collection.Duration > duration)
                 duration = collection.Duration;
+            if (collection.Count > maxNumFrames)
+                maxNumFrames = collection.Count;
         }
 
-        public SortedList<string, BoneKeyframeCollection> BoneAnimations
+        public SortedList<string, BoneKeyframeCollection> AnimationChannels
         { get { return boneAnimations; } }
 
         public long Duration
@@ -133,9 +104,13 @@ namespace Animation
         {
             get { return animationName; }
         }
+        public int MaxNumFrames
+        {
+            get { return maxNumFrames; }
+        }
     }
 
-    public class ModelAnimationCollection : Dictionary<string, ModelAnimation>
+    public class ModelAnimationCollection : SortedList<string, ModelAnimation>
     {
         internal ModelAnimationCollection()
         {
@@ -145,16 +120,7 @@ namespace Animation
         {
             get
             {
-                int i = 0;
-                Dictionary<string,ModelAnimation>.ValueCollection.Enumerator enumer = base.Values.GetEnumerator();
-                enumer.MoveNext();
-                while (i < index)
-                {
-                    enumer.MoveNext();
-                    i++;
-                }
-                return enumer.Current;
-
+                return this.Values[index];
             }
         }
 

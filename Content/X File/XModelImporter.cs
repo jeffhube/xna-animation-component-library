@@ -83,6 +83,7 @@ namespace Animation.Content
             // skip header
             tokens.SkipTokens(3);
             root = new NodeContent();
+            root.Identity = new ContentIdentity(fileName, "Animation Library XImporter");
             // fill in the tree
             ImportRoot();
 

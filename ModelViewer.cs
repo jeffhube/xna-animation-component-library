@@ -43,7 +43,7 @@ namespace Animation
         List<Effect> effects=new List<Effect>();
         int animationIndex = 0;
         private BoundingSphere sphere;
-
+   
         Matrix world, view, projection;
         Vector3 eyePos, up;
         float fov, near, far, width, height, cx, cy, aspect;
@@ -94,7 +94,7 @@ namespace Animation
             foreach (ModelMesh mesh in model.Meshes)
                 sphere = BoundingSphere.CreateMerged(sphere, mesh.BoundingSphere);
             models.Add(model);
-            AnimationController controller=new AnimationController(Game, model, 0);
+            AnimationController controller=new AnimationController(Game, model);
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
             controller.Visible = true;
@@ -181,6 +181,7 @@ namespace Animation
 
         public override void Update(GameTime gameTime)
         {
+            
             MouseState state = Mouse.GetState();
             if (state.ScrollWheelValue != lastState.ScrollWheelValue)
             {
@@ -235,7 +236,7 @@ namespace Animation
                 ++animationIndex;
                 if (animationIndex >= controllers[0].Animations.Count)
                     animationIndex = 0;
-                controllers[0].ChangeAnimation(animationIndex);
+                controllers[0].RunAnimation(animationIndex,false);
             }
 
             lastState = state;

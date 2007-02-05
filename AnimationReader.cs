@@ -48,7 +48,7 @@ namespace Animation.Content
             ModelAnimationCollection dict = new ModelAnimationCollection();
 
             int numAnimations = input.ReadInt32();
-
+            
 
             for (int i = 0; i < numAnimations; i++)
             {
@@ -56,7 +56,6 @@ namespace Animation.Content
                 int numBoneAnimations = input.ReadInt32();
 
                 ModelAnimation anim = new ModelAnimation(animationName);
-
                 for (int j = 0; j < numBoneAnimations; j++)
                 {
                     string boneName = input.ReadString();
@@ -71,7 +70,7 @@ namespace Animation.Content
                         boneAnimation.AddKeyframe(frame);
                     }
 
-                    anim.AddBoneAnimation(boneAnimation);
+                    anim.AddAnimationChannel(boneAnimation);
                 }
                 dict.Add(animationName, anim);
             }

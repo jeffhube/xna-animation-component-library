@@ -50,8 +50,6 @@ namespace Animation.Content
 
         // Stores the byte code for the BasicPaletteEffect
         internal static byte[] paletteByteCode4Bones = null;
-        internal static byte[] paletteByteCode8Bones = null;
-        internal static byte[] paletteByteCode12Bones = null;
         private static bool paletteLoadAttempted = false;
         private ContentProcessorContext context;
         // stores all animations for the model
@@ -72,21 +70,9 @@ namespace Animation.Content
                 EffectProcessor processor = new EffectProcessor();
                 CompiledEffect compiledEffect4 = processor.Process(effect, context);
 
-                effect = new EffectContent();
-                effect.EffectCode = BasicPaletteEffect.SourceCode8BonesPerVertex;
-                processor = new EffectProcessor();
-                CompiledEffect compiledEffect8 = processor.Process(effect, context);
-
-                effect = new EffectContent();
-                effect.EffectCode = BasicPaletteEffect.SourceCode12BonesPerVertex;
-                processor = new EffectProcessor();
-                CompiledEffect compiledEffect12 = processor.Process(effect, context);
-
-                if (compiledEffect4.Success != false && compiledEffect8.Success != false)
+                if (compiledEffect4.Success != false )
                 {
                     paletteByteCode4Bones = compiledEffect4.GetEffectCode();
-                    paletteByteCode8Bones = compiledEffect8.GetEffectCode();
-                    paletteByteCode12Bones = compiledEffect12.GetEffectCode();
                 }
                 else
                 {
@@ -100,9 +86,7 @@ namespace Animation.Content
             this.input = input;
             this.context = context;
 
-            //if (input.Identity.SourceFilename.Contains("tiny"))
-            //    System.Diagnostics.Debugger.Launch();
-            //FlattenSkeleton(input);
+
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
             // Attach the animation and skinning data to the models tag
@@ -116,7 +100,6 @@ namespace Animation.Content
 
             AnimationProcessor ap = new AnimationProcessor();
             dict.Add("Animations", ap.Interpolate(animations));
-           // dict.Add("Animations", animations);
             dict.Add("SkinnedBones", bones.ToArray());            
             foreach (ModelMeshContent meshContent in c.Meshes)
                 ReplaceBasicEffects(meshContent);
@@ -272,12 +255,6 @@ namespace Animation.Content
 
         private void FlattenSkeleton(NodeContent node)
         {
-            /*IList<BoneContent> flatSkeleton = MeshHelper.FlattenSkeleton(MeshHelper.FindSkeleton(input));
-            for (int i = 0; i < flatSkeleton.Count; i++)
-            {
-                bones.Add(flatSkeleton[i].Name);
-                boneIndices.Add(flatSkeleton[i].Name, i);
-            }*/
             string name = node.Name;
             if (name == "" || name == null)
                 name = "noname" + bones.Count;
@@ -302,21 +279,8 @@ namespace Animation.Content
                     if (basic != null)
                     {
                         PaletteMaterialContent paletteContent = null;
-                        if (skinType == SkinningType.FourBonesPerVertex)
-                        {
-                            paletteContent = new PaletteMaterialContent(basic, paletteByteCode4Bones,
-                                context);
-                        }
-                        else if (skinType == SkinningType.EightBonesPerVertex)
-                        {
-                            paletteContent = new PaletteMaterialContent(basic, paletteByteCode8Bones,
-                                context);
-                        }
-                        else
-                        {
-                            paletteContent = new PaletteMaterialContent(basic, paletteByteCode12Bones,
-                                context);
-                        }
+                        paletteContent = new PaletteMaterialContent(basic, paletteByteCode4Bones,
+                            context);
                         part.Material = paletteContent;
                     }
                 }
