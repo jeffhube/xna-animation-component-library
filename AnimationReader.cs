@@ -35,7 +35,7 @@ namespace Animation.Content
     /// <summary>
     /// A class that reads in an XNB stream and converts it to a ModelInfo object
     /// </summary>
-    public sealed class AnimationReader : ContentTypeReader<ModelAnimationCollection>
+    public sealed class AnimationReader : ContentTypeReader<AnimationInfoCollection>
     {
         /// <summary>
         /// Reads in an XNB stream and converts it to a ModelInfo object
@@ -43,9 +43,9 @@ namespace Animation.Content
         /// <param name="input">The stream from which the data will be read</param>
         /// <param name="existingInstance">Not used</param>
         /// <returns>The unserialized ModelAnimationCollection object</returns>
-        protected override ModelAnimationCollection Read(ContentReader input, ModelAnimationCollection existingInstance)
+        protected override AnimationInfoCollection Read(ContentReader input, AnimationInfoCollection existingInstance)
         {
-            ModelAnimationCollection dict = new ModelAnimationCollection();
+            AnimationInfoCollection dict = new AnimationInfoCollection();
 
             int numAnimations = input.ReadInt32();
             
@@ -55,7 +55,7 @@ namespace Animation.Content
                 string animationName = input.ReadString();
                 int numBoneAnimations = input.ReadInt32();
 
-                ModelAnimation anim = new ModelAnimation(animationName);
+                AnimationInfo anim = new AnimationInfo(animationName);
                 for (int j = 0; j < numBoneAnimations; j++)
                 {
                     string boneName = input.ReadString();

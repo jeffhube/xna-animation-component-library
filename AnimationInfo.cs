@@ -1,5 +1,5 @@
 /*
- * ModelAnimation.cs
+ * ModelAnimationInfo.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -70,7 +70,7 @@ namespace Animation
         }
     }
 
-    public class ModelAnimation
+    public class AnimationInfo
     {
         private long duration;
         private string animationName;
@@ -78,8 +78,9 @@ namespace Animation
         
         private SortedList<string, BoneKeyframeCollection> boneAnimations =
             new SortedList<string, BoneKeyframeCollection>();
+        
 
-        internal ModelAnimation(string animationName)
+        internal AnimationInfo(string animationName)
         {
             this.animationName = animationName;
         }
@@ -96,6 +97,10 @@ namespace Animation
         public SortedList<string, BoneKeyframeCollection> AnimationChannels
         { get { return boneAnimations; } }
 
+        public IList<string> AffectedBones
+        { get { return boneAnimations.Keys; } }
+
+
         public long Duration
         {
             get { return duration; }
@@ -110,13 +115,13 @@ namespace Animation
         }
     }
 
-    public class ModelAnimationCollection : SortedList<string, ModelAnimation>
+    public class AnimationInfoCollection : SortedList<string, AnimationInfo>
     {
-        internal ModelAnimationCollection()
+        internal AnimationInfoCollection()
         {
         }
 
-        public ModelAnimation this[int index]
+        public AnimationInfo this[int index]
         {
             get
             {

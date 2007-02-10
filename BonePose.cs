@@ -34,13 +34,13 @@ namespace Animation
 
 
 
-    public class BoneAnimationCollection 
-        : System.Collections.ObjectModel.ReadOnlyCollection<BoneAnimation>
+    public class BonePoseCollection 
+        : System.Collections.ObjectModel.ReadOnlyCollection<BonePose>
     {
-        private Dictionary<string, BoneAnimation> boneDict 
-            = new Dictionary<string, BoneAnimation>();
+        private Dictionary<string, BonePose> boneDict 
+            = new Dictionary<string, BonePose>();
 
-        internal BoneAnimationCollection(IList<BoneAnimation> anims)
+        internal BonePoseCollection(IList<BonePose> anims)
             :
             base(anims)
         {
@@ -53,15 +53,15 @@ namespace Animation
             }
         }
 
-        internal static BoneAnimationCollection FromModelBoneCollection(
+        internal static BonePoseCollection FromModelBoneCollection(
             ModelBoneCollection bones)
         {
-            BoneAnimation[] anims = new BoneAnimation[bones.Count];
+            BonePose[] anims = new BonePose[bones.Count];
             for (int i = 0; i < bones.Count; i++)
             {
                 if (bones[i].Parent==null)
                 {
-                    BoneAnimation ba = new BoneAnimation(
+                    BonePose ba = new BonePose(
                         bones[i],
                         bones,
                         anims);
@@ -69,34 +69,36 @@ namespace Animation
                 }
             }
 
-            return new BoneAnimationCollection(anims);
+            return new BonePoseCollection(anims);
         }
 
 
 
-        public BoneAnimation this[string boneName]
+        public BonePose this[string boneName]
         {
             get { return boneDict[boneName]; }
         }
 
     }
 
-    public class BoneAnimation
+    public class BonePose
     {
         private Matrix defaultMatrix;
         private int index;
         private string name;
-        private BoneAnimation parent = null;
-        private RunningAnimation currentAnimation = null;
-        private RunningAnimation currentBlendAnimation = null;
+        private BonePose parent = null;
+        private AnimationController currentAnimation = null;
+        private AnimationController currentBlendAnimation = null;
         private float blendFactor = 0;
-        private BoneAnimationCollection children;
+        private BonePoseCollection children;
         private int frameNum;
+        private bool doesAnimContainChannel = false;
+        private bool doesBlendContainChannel = false;
 
 
-        internal BoneAnimation(ModelBone bone, 
+        internal BonePose(ModelBone bone, 
             ModelBoneCollection bones,
-            BoneAnimation[] anims)
+            BonePose[] anims)
         {
             index = bone.Index;
             name = bone.Name;
@@ -104,23 +106,44 @@ namespace Animation
             if (bone.Parent != null)
                 parent = anims[bone.Parent.Index];
             anims[index] = this;
-            List<BoneAnimation> childList = new List<BoneAnimation>();
+            List<BonePose> childList = new List<BonePose>();
             foreach (ModelBone child in bone.Children)
             {
-                BoneAnimation newChild = new BoneAnimation(
+                BonePose newChild = new BonePose(
                     bones[child.Index],
                     bones,
                     anims);
                 childList.Add(newChild);
             }
-            children = new BoneAnimationCollection(childList);
+            children = new BonePoseCollection(childList);
         }
 
-        public BoneAnimationCollection Children
+        public BonePoseCollection Children
         {
             get { return children; }
         }
-        public BoneAnimation Parent
+
+        private void FindHierarchy(List<string> names)
+        {
+            names.Add(name);
+            foreach (BonePose child in children)
+            {
+                child.FindHierarchy(names);
+            }
+        }
+
+        public List<string> HierarchyNames
+        {
+            get
+            {
+                List<string> names = new List<string>();
+                FindHierarchy(names);
+                return names;
+            }
+        }
+
+
+        public BonePose Parent
         {
             get { return parent; }
         }
@@ -134,30 +157,41 @@ namespace Animation
             get { return name; }
         }
 
-        public RunningAnimation CurrentAnimation
+        public AnimationController CurrentAnimation
         {
             get { return currentAnimation; }
         }
 
-        public RunningAnimation CurrentBlendAnimation
+        public AnimationController CurrentBlendAnimation
         {
             get { return currentBlendAnimation; }
+        }
+
+        internal void SetRunningAnimation(AnimationController anim)
+        {
+            currentAnimation = anim;
+            if (anim != null)
+            {
+                doesAnimContainChannel = anim.AffectedBones.Contains(name);
+            }
+            else
+                doesAnimContainChannel = false;
+        }
+        internal void SetBlendAnimation(AnimationController anim)
+        {
+            currentBlendAnimation = anim;
+            if (anim != null)
+            {
+                doesBlendContainChannel = anim.AffectedBones.Contains(name);
+            }
+            else
+                doesAnimContainChannel = false;
         }
 
         public float BlendFactor
         {
             get { return blendFactor; }
             set { blendFactor = value; }
-        }
-
-        internal void SetRunningAnimation(RunningAnimation anim)
-        {
-            this.currentAnimation = anim;
-        }
-
-        internal void SetBlendAnimation(RunningAnimation anim)
-        {
-            this.currentBlendAnimation = anim;
         }
 
         public Matrix DefaultTransform
@@ -198,9 +232,9 @@ namespace Animation
         {
             get
             {
-                if (currentAnimation == null)
+                if (currentAnimation == null || !doesAnimContainChannel)
                 {
-                    if (currentBlendAnimation == null)
+                    if (currentBlendAnimation == null || !doesBlendContainChannel)
                     {
                         return defaultMatrix;
                     }
@@ -237,7 +271,7 @@ namespace Animation
                         }
                     }
 
-                    if (currentBlendAnimation == null)
+                    if (currentBlendAnimation == null || !doesBlendContainChannel)
                     {
                         return channel[frameNum].Transform;
                     }

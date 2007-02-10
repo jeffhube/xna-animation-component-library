@@ -1,6 +1,6 @@
 /*
  * AnimationController.cs
- * Copyright (c) 2007 David Astle, Michael Nikonov
+ * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -22,418 +22,366 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#define GI
-#region Using Statements
+using System;
+using System.Collections.Generic;
+using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Collections.Generic;
-using System;
-#endregion
+using System.Collections.ObjectModel;
 
 namespace Animation
 {
+    /// <summary>
+    /// Used for when an animation controller affects a new bone or does not
+    /// affect a bone that it used to affect.
+    /// </summary>
+    /// <param name="sender">The controller that has gained a new bone to affect
+    /// or lost an old bone that was affected.</param>
+    /// <param name="pose">The bone for which the event refers.</param>
+    public delegate void BonePoseEventHandler(AnimationController sender,
+    BonePose pose);
+
+    /// <summary>
+    /// Used for events dealing with an animation controller.
+    /// </summary>
+    /// <param name="sender">The AnimationController that fired this event.</param>
+    public delegate void AnimationEventHandler(AnimationController sender);
 
 
     /// <summary>
-    /// Animates and draws a model that was processed with AnimatedModelProcessor
+    /// Controls an animation by advancing it's time and affecting
+    /// bone transforms
     /// </summary>
-    public partial class AnimationController : DrawableGameComponent
+    public class AnimationController 
     {
-        #region Member Variables
-        // Stores the world transform for the animation controller.
-        private Matrix world = Matrix.Identity;
-        // Model to be animated
-        private readonly Model model;
+        // Contains the interpolated transforms for all bones in an
+        // animation
+        private AnimationInfo animation;
+        // Multiplied by the time whenever the animation is advanced; determines
+        // the playback speed of the animation
+        private double speedFactor = 1.0;
+        // The elapsed time in the animation, can not be greater than the
+        // animation duration
+        private long elapsedTime = 0;
+        // Stores the frame index that is most likely to be the current
+        // animation index for any bone affected by the animation.  This is
+        // used internally by the BonePose class to find the true current
+        // frame in the animation.
+        private int defaultFrameNum;
+        // Used as a buffer to store the total elapsed ticks every frame so that
+        // a new long chunk doesn't have to be allocated every frame by every
+        // controller
+        private long elapsed;
+        // Contains the bones affected by the animation that the controller
+        // is currently moderating
+        private AffectedBoneCollection affectedBonePoses;
+        // Contains a list of the bone poses for the model that this controller
+        // is affecting
+        private BonePoseCollection animatedBones;
+        /// <summary>
+        /// Fired when the controller affects a new bone.
+        /// </summary>
+        public event BonePoseEventHandler BoneAdded;
+        /// <summary>
+        /// Fired when the controller no longer affects a bone that it used to
+        /// affect.
+        /// </summary>
+        public event BonePoseEventHandler BoneRemoved;
+        /// <summary>
+        /// Fired when the controller is not looping and the animation has ended.
+        /// </summary>
+        public event AnimationEventHandler AnimationEnded;
+        private bool isLooping = true;
 
-        // This stores all of the "World" matrix parameters for an unskinned model
-        private readonly EffectParameter[] worldParams, matrixPaletteParams;
+        /// <summary>
+        /// Creates a new animation controller.
+        /// </summary>
+        /// <param name="sourceAnimation">The source animation that the controller will use.
+        /// This is stored in the ModelAnimator class.</param>
+        /// <param name="animator">The ModelAnimator that will use this controller.</param>
+        public AnimationController(
+            AnimationInfo sourceAnimation,
+            ModelAnimator animator)
+        {
 
-        private BoneAnimationCollection animatedBones;
+            animation = sourceAnimation;
+            affectedBonePoses = new AffectedBoneCollection(this);
+            animatedBones=animator.BonePoses;
+            foreach (KeyValuePair<string, BoneKeyframeCollection> k in sourceAnimation.AnimationChannels)
+            {
+                affectedBonePoses.Add(animatedBones[k.Key]);
+            }
+        }
 
-        private SortedList<string, RunningAnimation> runningAnimations =
-            new SortedList<string, RunningAnimation>();
-        private SortedList<string, RunningAnimation> runningBlendAnimations =
-            new SortedList<string, RunningAnimation>();
-
-        private ModelAnimationCollection animations;
-
-        // Store the number of meshes in the model
-        private readonly int numMeshes;
-
-        private Matrix absoluteMeshTransform;
-        private Matrix[] pose;
-        private List<Matrix[]> skinTransforms=new List<Matrix[]>();
-        private Matrix[] palette;
-        private string[] skinnedBones;
-        private int[] paletteToBoneMapping;
-
-        #endregion
-
-        #region General Properties
+        /// <summary>
+        /// Creates a new animation controller.
+        /// </summary>
+        /// <param name="sourceAnimation">The source animation that the controller will use.
+        /// This is stored in the ModelAnimator class.</param>
+        /// <param name="animator">The ModelAnimator that will use this controller.</param>
+        /// <param name="affectedBoneNames">The names of the bones that this controller will 
+        /// initially affect.</param>
+        public AnimationController(
+            AnimationInfo sourceAnimation,
+            ModelAnimator animator,
+            ICollection<string> affectedBoneNames)
+        {
+            animation = sourceAnimation;
+            affectedBonePoses = new AffectedBoneCollection(this);
+            animatedBones = animator.BonePoses;
+            affectedBonePoses.AddRange(affectedBoneNames);
+        }
 
 
         /// <summary>
-        /// Gets or sets the world matrix for the animation scene.
+        /// Creates a new animation controller.
         /// </summary>
-        public Matrix World
+        /// <param name="sourceAnimation">The source animation that the controller will use.
+        /// This is stored in the ModelAnimator class.</param>
+        /// <param name="animator">The ModelAnimator that will use this controller.</param>
+        /// <param name="affectedBones">The bone poses that this controller will initially
+        /// affect.</param>
+        public AnimationController(
+            AnimationInfo sourceAnimation,
+            ModelAnimator animator,
+            ICollection<BonePose> affectedBones)
         {
-            get
+            animation = sourceAnimation;
+            affectedBonePoses = new AffectedBoneCollection(this);
+            animatedBones = animator.BonePoses;
+            affectedBonePoses.AddRange(affectedBones);
+        }
+
+
+
+        /// <summary>
+        /// Gets the bone poses currently affected by this controller.
+        /// </summary>
+        public AffectedBoneCollection AffectedBones
+        {
+            get { return affectedBonePoses; }
+        }
+
+
+        /// <summary>
+        /// Advances the controller time by the given amount and scales it by
+        /// the speed factor.
+        /// </summary>
+        /// <param name="time">The time that the controller will be advanced.</param>
+        public void AdvanceTime(GameTime time)
+        {
+            elapsed = (long)(speedFactor * time.ElapsedRealTime.Ticks);
+            if (isLooping)
             {
-                return world;
+                if (elapsed != 0)
+                {
+                    elapsedTime = (elapsedTime + elapsed) % animation.Duration;
+                    if (elapsedTime < 0)
+                        elapsedTime = animation.Duration;
+                }
+                defaultFrameNum = (int)(elapsedTime / Util.TICKS_PER_60FPS);
             }
+            else if (elapsedTime != animation.Duration)
+            {
+                if (elapsed != 0)
+                {
+                    elapsedTime = (elapsedTime + elapsed) % animation.Duration;
+                    if (elapsed > animation.Duration || elapsed<0)
+                    {
+                        elapsed = animation.Duration;
+                        if (AnimationEnded != null)
+                            AnimationEnded(this);
+                    }
+                }
+                defaultFrameNum = animation.MaxNumFrames - 1;
+            }
+        }
+
+        public bool IsLooping
+        {
+            get { return isLooping; }
+            set { isLooping = value; }
+        }
+
+
+        // see private member variable comment for more info
+        internal int DefaultFrameNum
+        {
+            get { return defaultFrameNum; }
+        }
+
+        /// <summary>
+        /// Gets the source animation that this controller is using.
+        /// </summary>
+        public AnimationInfo AnimationSource
+        {
+            get { return animation; }
+        }
+
+        /// <summary>
+        /// Gets or sets the elapsed time for the animation affected by the
+        /// controller.
+        /// </summary>
+        public long ElapsedTime
+        {
+            get { return elapsedTime; }
             set
             {
-                world = value;
+                elapsedTime = value % animation.Duration;
+                defaultFrameNum = (int)(elapsedTime / Util.TICKS_PER_60FPS);
             }
         }
 
-        public ModelAnimationCollection Animations
+        /// <summary>
+        /// Gets or sets the value that is multiplied by the time when it is
+        /// advanced to determine the playback speed of the animation.
+        /// </summary>
+        public double SpeedFactor
         {
-            get
-            {
-                return animations;
-            }
+            get { return speedFactor; }
+            set { speedFactor = value; }
         }
 
 
         /// <summary>
-        /// Gets the model associated with this controller.
+        /// A collection of bone poses affected by an animation controller.
         /// </summary>
-        public Model Model
-        { get { return model; } }
-
-        #endregion
-
-        #region Constructors
-
-        public AnimationController(Game game, Model model) : base(game)
+        public class AffectedBoneCollection : ICollection<BonePose>
         {
-            this.model = model;
-            animatedBones = BoneAnimationCollection.FromModelBoneCollection(
-                model.Bones);
-            numMeshes = model.Meshes.Count;
-            CheckForInvalidData();
-
-            // Find total number of effects used by the model
-            int numEffects = 0;
-            foreach (ModelMesh mesh in model.Meshes)
-                foreach (Effect effect in mesh.Effects)
-                    numEffects++;
-            // Initialize the arrays that store effect parameters
-            worldParams = new EffectParameter[numEffects];
-            matrixPaletteParams = new EffectParameter[numEffects];
-
-            InitializeEffectParams();
-
-            pose = new Matrix[model.Bones.Count];
-            model.CopyAbsoluteBoneTransformsTo(pose);
-            absoluteMeshTransform = Matrix.Identity;
-
-            InitializeSkinningInfo();
-
-            game.Components.Add(this);
-
-        }
+            // Most of the stuff in this class is pretty standard, but it 
+            // had to be implemented via an interface because I wanted to
+            // fire an event whenever a bone is added or removed.
+            private AnimationController anim;
+            private List<BonePose> bones = new List<BonePose>();
 
 
-
-
-        private void InitializeSkinningInfo()
-        {
-            for (int i = 0; i < model.Meshes.Count; i++)
+            internal AffectedBoneCollection(AnimationController anim)
             {
-                skinTransforms.Add(null);
-                if (isSkinned(model.Meshes[i]))
+                this.anim = anim;
+            }
+
+
+            private void OnBoneAdded(BonePose addedBone)
+            {
+
+                bones.Add(addedBone);
+                if (anim.BoneAdded != null)
+                    anim.BoneAdded(anim, addedBone);
+
+            }
+            private void OnBoneRemoved(BonePose removedBone)
+            {
+                bones.Remove(removedBone);
+                if (anim.BoneRemoved != null)
+                    anim.BoneRemoved(anim, removedBone);
+            }
+
+
+
+            #region ICollection<BoneAnimation> Members
+
+            public void Add(BonePose item)
+            {
+                OnBoneAdded(item);
+            }
+
+            public void Add(string boneName)
+            {
+                OnBoneAdded(anim.animatedBones[boneName]);
+            }
+
+            public void AddRange(ICollection<string> boneNames)
+            {
+                foreach (string s in boneNames)
+                    Add(s);
+            }
+
+
+            public void AddRange(ICollection<BonePose> bones)
+            {
+                foreach (BonePose a in bones)
+                    Add(a);
+            }
+
+
+            public void Clear()
+            {
+                if (anim.BoneRemoved != null)
                 {
-                    absoluteMeshTransform = pose[model.Meshes[i].ParentBone.Index];
-                    skinTransforms[i] = new Matrix[model.Bones.Count];
-                    for (int j = 0; j < skinTransforms[i].Length; j++)
+                    while (bones.Count > 0)
                     {
-                        skinTransforms[i][j] = absoluteMeshTransform * Matrix.Invert(pose[j]);
+                        OnBoneRemoved(bones[0]);
                     }
-                }
-            }
-            paletteToBoneMapping = new int[skinnedBones.Length];
-            for (int i = 0; i < skinnedBones.Length; i++)
-            {
-                paletteToBoneMapping[i] = model.Bones[skinnedBones[i]].Index;
-            }
-            palette = new Matrix[paletteToBoneMapping.Length];
-        }
-
-        private void CheckForInvalidData()
-        {
-            // Grab the tag that was set in the processor; this is a dictionary so that users can extend
-            // the processor and pass their own data into the program without messing up the animation data
-            Dictionary<string, object> modelTagData = (Dictionary<string, object>)model.Tag;
-            // An AnimationLibrary processor was not used if this is null
-            if (modelTagData == null)
-                throw new Exception("Model contains no animation info; the tag is not an instance of " +
-                    "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
-            if (!modelTagData.ContainsKey("Animations"))
-                throw new Exception("Model contains no animation info; please use the \"Model - Animation Library\"" +
-                    " processor or a subclass.");
-            // Now grab the animation info and store local references
-            animations = (ModelAnimationCollection)modelTagData["Animations"];
-            skinnedBones = (string[])modelTagData["SkinnedBones"];
-
-            if (isSkinned(model))
-            {
-                if (skinnedBones.Length > BasicPaletteEffect.PALETTE_SIZE)
-                    throw new Exception("Model uses too many bones for animation.\nMax number of bones: " +
-                        BasicPaletteEffect.PALETTE_SIZE.ToString() + "\nNumber of bones used: " +
-                            model.Bones.Count.ToString());
-            }
-        }
-
-        private void InitializeEffectParams()
-        {
-
-            // Now store the parameters in the arrays so the values they refer to can quickly be set
-            int index = 0;
-            foreach (ModelMesh mesh in model.Meshes)
-            {
-                bool skinned = isSkinned(mesh);
-                foreach (Effect effect in mesh.Effects)
-                {
-                    worldParams[index] = effect.Parameters["World"];
-                    if (skinned)
-                    {
-                        matrixPaletteParams[index] = effect.Parameters["MatrixPalette"];
-                    }
-                    index++;
-                }
-            }
-        }
-
-        private bool isSkinned(ModelMeshPart meshPart)
-        {
-            VertexElement[] ves = meshPart.VertexDeclaration.GetVertexElements();
-            foreach (VertexElement ve in ves)
-            {
-                //(BlendIndices with UsageIndex = 0) specifies matrix indices for fixed-function vertex processing using indexed paletted skinning.
-                if (ve.VertexElementUsage == VertexElementUsage.BlendIndices
-                    && ve.VertexElementFormat == VertexElementFormat.Byte4
-                    && ve.UsageIndex == 0)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private bool isSkinned(ModelMesh mesh)
-        {
-            foreach (ModelMeshPart mmp in mesh.MeshParts)
-            {
-                if (isSkinned(mmp))
-                    return true;
-            }
-            return false;
-        }
-
-        private bool isSkinned(Model model)
-        {
-            foreach (ModelMesh mm in model.Meshes)
-            {
-                if (isSkinned(mm))
-                    return true;
-            }
-            return false;
-        }
-
-        #endregion
-
-        #region Animation and Update Routines
-
-
-
-
-        public override void Update(GameTime gameTime)
-        {
-        }
-
-        public void GetCurrentTransforms(Matrix[] pose)
-        {
-            for (int i = 0; i < pose.Length; i++)
-            {
-                if (i > 0) // not root
-                {
-                    pose[i] = animatedBones[i].CurrentTransform *
-                        pose[animatedBones[i].Parent.Index];
                 }
                 else
                 {
-                    pose[i] = animatedBones[i].CurrentTransform;
+                    bones.Clear();
                 }
             }
-        }
 
-        public void RunAnimation(string animName, bool blendAnimation)
-        {
-            RunningAnimation runningAnim;
-            if (blendAnimation)
+            public bool Contains(BonePose item)
             {
-                if (runningBlendAnimations.ContainsKey(animName))
+                return bones.Contains(item);
+            }
+
+            public bool Contains(string boneName)
+            {
+                return bones.Contains(anim.animatedBones[boneName]);
+            }
+
+            public void CopyTo(BonePose[] array, int arrayIndex)
+            {
+                bones.CopyTo(array, arrayIndex);
+            }
+
+            public int Count
+            {
+                get { return bones.Count; }
+            }
+
+            public bool IsReadOnly
+            {
+                get { return false; }
+            }
+
+            public bool Remove(string boneName)
+            {
+                return Remove(anim.animatedBones[boneName]);
+            }
+
+            public bool Remove(BonePose item)
+            {
+                if (bones.Contains(item))
                 {
-                    runningAnim = runningBlendAnimations[animName];
-                    runningAnim.RemoveAllBones();
-                    runningBlendAnimations.Remove(animName);
+                    OnBoneRemoved(item);
+                    return true;
                 }
-                runningBlendAnimations.Add(animName,
-                    new RunningAnimation(animations[animName], animatedBones,true));
+                return false;
             }
-            else
+
+   
+
+            #endregion
+
+            #region IEnumerable<BoneAnimation> Members
+
+            public IEnumerator<BonePose> GetEnumerator()
             {
-                if (runningAnimations.ContainsKey(animName))
-                {
-                    runningAnim = runningAnimations[animName];
-                    runningAnim.RemoveAllBones();
-                    runningAnimations.Remove(animName);
-                }
-                runningAnimations.Add(animName,
-                    new RunningAnimation(animations[animName], animatedBones, false));
+                return bones.GetEnumerator();
             }
 
+            #endregion
 
-        }
+            #region IEnumerable Members
 
-        public void RunAnimation(string animName, IList<string> affectedBones, bool blendAnimation)
-        {
-            RunningAnimation runningAnim;
-            if (blendAnimation)
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
             {
-                if (runningBlendAnimations.ContainsKey(animName))
-                {
-                    runningAnim = runningBlendAnimations[animName];
-                    runningAnim.RemoveAllBones();
-                    runningBlendAnimations.Remove(animName);
-                }
-                runningBlendAnimations.Add(animName,
-                    new RunningAnimation(animations[animName], animatedBones, affectedBones,true));
-            }
-            else
-            {
-                if (runningAnimations.ContainsKey(animName))
-                {
-                    runningAnim = runningAnimations[animName];
-                    runningAnim.RemoveAllBones();
-                    runningAnimations.Remove(animName);
-                }
-                runningAnimations.Add(animName,
-                    new RunningAnimation(animations[animName], animatedBones, affectedBones,false));
-            }
-        }
-
-        public void RunAnimation(int animationIndex, bool blendAnimation)
-        {
-            RunAnimation(animations[animationIndex].Name, blendAnimation);
-        }
-
-        public void RunAnimation(int animationIndex, IList<string> affectedBones,
-            bool blendAnimation)
-        {
-            RunAnimation(animations[animationIndex].Name, affectedBones,blendAnimation);
-        }
-
-        public void StopAnimation(string animName, bool blendAnimation)
-        {
-            if (blendAnimation)
-            {
-                runningBlendAnimations[animName].RemoveAllBones();
-                runningBlendAnimations.Remove(animName);
-            }
-            else
-            {
-                runningAnimations[animName].RemoveAllBones();
-                runningAnimations.Remove(animName);
+                return bones.GetEnumerator();
             }
 
+            #endregion
         }
 
-        public IList<RunningAnimation> RunningAnimations
-        {
-            get
-            {
-                return runningAnimations.Values;
-            }
-        }
-
-        public IList<RunningAnimation> BlendAnimations
-        {
-            get
-            {
-                return runningBlendAnimations.Values;
-            }
-        }
-
-        public RunningAnimation GetRunningAnimation(string animName)
-        {
-            return runningAnimations[animName];
-        }
-        public RunningAnimation GetBlendAnimation(string animName)
-        {
-            return runningBlendAnimations[animName];
-        }
-
-
-        
-
-
-        public BoneAnimationCollection BoneAnimations
-        {
-            get { return animatedBones; }
-        }
-
-
-        /// <summary>
-        /// Draws the current frame
-        /// </summary>
-        /// <param name="gameTime">The game time</param>
-        public override void Draw(GameTime gameTime)
-        {
-            if (Enabled)
-            {
-                foreach (RunningAnimation anim in runningAnimations.Values)
-                {
-                    anim.AdvanceTime(gameTime);
-                }
-                foreach (RunningAnimation anim in runningBlendAnimations.Values)
-                {
-                    anim.AdvanceTime(gameTime);
-                }
-                GetCurrentTransforms(pose);
-                int index = 0;
-                for (int i = 0; i < numMeshes; i++)
-                {
-                    ModelMesh mesh = model.Meshes[i];
-                    if (matrixPaletteParams[index] != null)
-                    {
-                        for (int j = 0; j < palette.Length; j++)
-                        {
-                            int p = paletteToBoneMapping[j];
-                            Matrix.Multiply(ref skinTransforms[i][p], ref pose[p], out palette[j]);
-                        }
-                        foreach (Effect effect in mesh.Effects)
-                        {
-                            worldParams[index].SetValue(world);
-                            matrixPaletteParams[index].SetValue(palette);
-                            index++;
-                        }
-                    }
-                    else
-                    {
-                        foreach (Effect effect in mesh.Effects)
-                        {
-
-                            worldParams[index].SetValue(pose[mesh.ParentBone.Index] * world);
-                            index++;
-                        }
-                    }
-                    mesh.Draw();
-                }
-            }
-        }
-        #endregion
     }
+
 }

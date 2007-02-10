@@ -237,4 +237,73 @@ namespace Animation
     }
 
 
+
+    public abstract class FiniteStateMachine : GameComponent
+    {
+        private List<string> states = new List<string>();
+        private string currentState;
+        private TimeSpan timeInState;
+        private bool transitioned = false;
+
+        public FiniteStateMachine(Game game,
+            string initialState)
+            : base(game)
+        {
+            states.Add(initialState);
+            currentState = initialState;
+            game.Components.Add(this);
+        }
+
+
+        public List<string> States
+        { get { return states; } }
+
+        public string CurrentState
+        {
+            get { return currentState; }
+        }
+
+        protected void Transition(string targetStateName)
+        {
+            string oldName = currentState;
+            currentState = targetStateName;
+            timeInState = new TimeSpan();
+            transitioned = true;
+            OnTransition(oldName);
+        }
+
+        /// <summary>
+        /// This is fired when a state transition occurs.
+        /// </summary>
+        /// <param name="oldStateName">The name of the state from which
+        /// this state was transitioned.</param>
+        protected abstract void OnTransition(string oldStateName);
+
+        public TimeSpan TimeInState
+        {
+            get { return timeInState; }
+        }
+
+        protected abstract void RunCurrentState(GameTime gameTime);
+
+        public sealed override void Update(GameTime gameTime)
+        {
+            if (currentState != null)
+            {
+                transitioned = false;
+                RunCurrentState(gameTime);
+                while (transitioned)
+                {
+                    transitioned = false;
+                    if (currentState != null)
+                        RunCurrentState(gameTime);
+                }
+                timeInState += gameTime.ElapsedGameTime;
+            }
+            base.Update(gameTime);
+        }
+
+    }
+
+
 }

@@ -39,7 +39,7 @@ namespace Animation
     public partial class ModelViewer : DrawableGameComponent
     {
         List<Model> models=new List<Model>();
-        private List<AnimationController> controllers=new List<AnimationController>();
+        private List<ModelAnimator> controllers=new List<ModelAnimator>();
         List<Effect> effects=new List<Effect>();
         int animationIndex = 0;
         private BoundingSphere sphere;
@@ -54,7 +54,7 @@ namespace Animation
         MouseState lastState;
         KeyboardState lastKeyboardState;
 
-        public List<AnimationController> Controllers
+        public List<ModelAnimator> Controllers
         {
             get { return controllers; }
         }
@@ -94,7 +94,7 @@ namespace Animation
             foreach (ModelMesh mesh in model.Meshes)
                 sphere = BoundingSphere.CreateMerged(sphere, mesh.BoundingSphere);
             models.Add(model);
-            AnimationController controller=new AnimationController(Game, model);
+            ModelAnimator controller=new ModelAnimator(Game, model);
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
             controller.Visible = true;
@@ -145,11 +145,10 @@ namespace Animation
                         BasicEffect effect = (BasicEffect)ef;
                         effect.EnableDefaultLighting();
                         effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
-                        effect.TextureEnabled = true;
-                        //effect.DirectionalLight1.Enabled = false;
-                        //effect.DirectionalLight2.Enabled = false;
-                        //effect.AmbientLightColor = Color.Black.ToVector3();
-                        //effect.EmissiveColor = Color.Black.ToVector3();
+                        effect.DirectionalLight1.Enabled = false;
+                        effect.DirectionalLight2.Enabled = false;
+                        effect.AmbientLightColor = Color.Black.ToVector3();
+                        effect.EmissiveColor = Color.Black.ToVector3();
                     }
                 }
             }
@@ -183,6 +182,7 @@ namespace Animation
         {
             
             MouseState state = Mouse.GetState();
+            KeyboardState ks = Keyboard.GetState();
             if (state.ScrollWheelValue != lastState.ScrollWheelValue)
             {
                 float zoom = sphere.Radius * 5 -
@@ -206,19 +206,35 @@ namespace Animation
                 if (IntersectPoint(lastState.X, lastState.Y, out lastPt)
                     && IntersectPoint(state.X, state.Y, out curPt))
                 {
+                    Vector3 cross = Vector3.Cross(lastPt, curPt);
+                    cross.Normalize();
+                    lastPt.Normalize();
+                    curPt.Normalize();
+                    float ang = (float)Math.Acos(Vector3.Dot(lastPt,
+                        curPt));
+                    Matrix axisRot = Matrix.CreateFromAxisAngle(
+                        cross, ang * 2.0f);
                     if (state.LeftButton == ButtonState.Pressed)
                     {
-                        Vector3 cross = Vector3.Cross(lastPt, curPt);
-                        cross.Normalize();
-                        lastPt.Normalize();
-                        curPt.Normalize();
-                        float ang = (float)Math.Acos(Vector3.Dot(lastPt,
-                            curPt));
-                        Matrix axisRot = Matrix.CreateFromAxisAngle(
-                            cross, ang * 2.0f);
                         world *= axisRot;
                     }
-                    else if (state.RightButton == ButtonState.Pressed)
+
+                    if (state.RightButton == ButtonState.Pressed &&
+                        ks.IsKeyUp(Keys.LeftShift))
+                    {
+                        Matrix invertRot = Matrix.Invert(axisRot);
+
+                        eyePos = Vector3.Transform(eyePos,
+                            invertRot);
+                        up = Vector3.Normalize(Vector3.Transform(up,
+                            invertRot));
+                        view = Matrix.CreateLookAt(
+                            eyePos, Vector3.Zero,
+                            up);
+                    }
+
+                    if (state.RightButton == ButtonState.Pressed
+                        && ks.IsKeyDown(Keys.LeftShift))
                     {
                         modelPos.X = state.X - lastState.X;
                         modelPos.Y = -state.Y + lastState.Y;
@@ -236,7 +252,7 @@ namespace Animation
                 ++animationIndex;
                 if (animationIndex >= controllers[0].Animations.Count)
                     animationIndex = 0;
-                controllers[0].RunAnimation(animationIndex,false);
+
             }
 
             lastState = state;
