@@ -39,13 +39,14 @@ namespace Animation.Content
     /// Produces AnimationContentDictionary;
     /// warns of incompatibilities of model and skeleton.
     /// </summary>
-    [ContentProcessor(DisplayName = "Animation - Animation Library")]
-    public class AnimationProcessor : ContentProcessor<BoneContent,AnimationContentDictionary>
+    [ContentProcessor(DisplayName = "ModelAnimationCollection - Animation Library")]
+    public class AnimationProcessor : ContentProcessor<BoneContent, AnimationContentDictionary>
     {
         protected ContentProcessorContext context;
         protected BoneContent inputSkeleton;
         protected NodeContent model;
         protected BoneContent modelSkeleton;
+
 
         /// <summary>
         /// Produces ModelAnimationInfo from skeleton and animations.
@@ -77,8 +78,7 @@ namespace Animation.Content
                     "animation filename should follow the <modelName>_<animationName>.<ext> pattern to get animation skeleton checked against model");
             }
 
-            //AnimationContentDictionary animations = Interpolate(input.Animations);
-            AnimationContentDictionary animations = input.Animations;
+            AnimationContentDictionary animations = Interpolate(input.Animations);
             return animations;
         }
 
@@ -101,23 +101,23 @@ namespace Animation.Content
         {
             if (modelBone.Name != skeletonBone.Name)
             {
-                context.Logger.LogWarning("", inputSkeleton.Identity, 
+                context.Logger.LogWarning("", inputSkeleton.Identity,
                 "model bone " + modelBone.Name
                     + " does not match skeletone bone " + skeletonBone.Name);
             }
             if (modelBone.Children.Count != skeletonBone.Children.Count)
             {
-                context.Logger.LogWarning("", inputSkeleton.Identity, 
+                context.Logger.LogWarning("", inputSkeleton.Identity,
                     "model bone " + modelBone.Name + " has " + modelBone.Children.Count
                     + " children but corresponding skeletone bone has " + skeletonBone.Children.Count + " children");
             }
             float diff = modelBone.Transform.Translation.Length() - skeletonBone.Transform.Translation.Length();
-            if (diff*diff > 0.0001f)
+            if (diff * diff > 0.0001f)
             {
                 context.Logger.LogWarning("", inputSkeleton.Identity,
                     "model bone " + modelBone.Name + " translation "
                     + "(Lenght=" + modelBone.Transform.Translation.Length() + ")"
-                    +" does not match translation of skeletone bone "
+                    + " does not match translation of skeletone bone "
                     + skeletonBone.Name
                     + " (Lenght=" + skeletonBone.Transform.Translation.Length() + ")"
                     );
@@ -151,68 +151,77 @@ namespace Animation.Content
             return output;
         }
 
+        // Interpolates an AnimationContent object to 60 fps
         public virtual AnimationContent Interpolate(AnimationContent input)
         {
-            string[] channels = new string[input.Channels.Count];
-            int ci = 0;
-            foreach (string c in input.Channels.Keys)
-            {
-                channels[ci++] = c;
-            }
-            long ticksPerFrame = TimeSpan.MaxValue.Ticks;
-            foreach (AnimationChannel c in input.Channels.Values)
-            {
-                for (int i = 0; i < c.Count - 1; i++)
-                {
-                    long ticks = c[i + 1].Time.Ticks - c[i].Time.Ticks;
-                    if (ticks < ticksPerFrame)
-                        ticksPerFrame = ticks;
-                }
-            }
-            long ticksPerFrameMin = TimeSpan.FromSeconds(1).Ticks / 60;
-            if (ticksPerFrame > ticksPerFrameMin)
-                ticksPerFrame = ticksPerFrameMin;
-            return Interpolate(input, ticksPerFrame);
-        }
-
-        public virtual AnimationContent Interpolate(AnimationContent input, long ticksPerFrame)
-        {
-            int numFrames = (int)(input.Duration.Ticks / ticksPerFrame);
             AnimationContent output = new AnimationContent();
-            foreach (string channelName in input.Channels.Keys)
+            long time = 0;
+            long animationDuration = input.Duration.Ticks;
+            foreach (KeyValuePair<string, AnimationChannel> c in input.Channels)
             {
-                AnimationChannel channel = input.Channels[channelName];
-                output.Channels.Add(channelName, new AnimationChannel());
-                for (int i = 0; i < numFrames; i++)
+                time = 0;
+                string channelName = c.Key;
+                AnimationChannel channel = c.Value;
+                AnimationChannel outChannel = new AnimationChannel();
+                int currentFrame = 0;
+                while (time < animationDuration)
                 {
-                    long time = i * ticksPerFrame;
-                    int oldFrameNum = channel.Count - 1;
-                    while (channel[oldFrameNum].Time.Ticks > time && oldFrameNum > 0)
+                    if (time > animationDuration)
+                        time = animationDuration;
+                    AnimationKeyframe keyframe;
+                    if (channel.Count == 1 || time < channel[0].Time.Ticks)
                     {
-                        --oldFrameNum;
+                        keyframe = new AnimationKeyframe(new TimeSpan(time), channel[0].Transform);
                     }
-                    AnimationKeyframe prevFrame = channel[oldFrameNum];
-                    AnimationKeyframe nextFrame = prevFrame;
-                    if (oldFrameNum < channel.Count - 1)
-                        nextFrame = channel[oldFrameNum + 1];
-                    Matrix transform = Interpolate(prevFrame, nextFrame, time);
-                    output.Channels[channelName].Add(new AnimationKeyframe(new TimeSpan(time), transform));
+                    else if (channel[channel.Count - 1].Time.Ticks < time)
+                    {
+                        keyframe = new AnimationKeyframe(new TimeSpan(time), channel[channel.Count - 1].Transform);
+                    }
+                    else
+                    {
+                        while (channel[currentFrame + 1].Time.Ticks < time)
+                        {
+                            currentFrame++;
+                        }
+                        double interpNumerator = (double)(time - channel[currentFrame].Time.Ticks);
+                        double interpDenom = (double)(channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks);
+                        double interpAmount = interpNumerator / interpDenom;
+                        if (channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks
+                            <= Util.TICKS_PER_60FPS * 1.05)
+                        {
+                            keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                Matrix.Lerp(
+                                channel[currentFrame].Transform,
+                                channel[currentFrame + 1].Transform,
+                                (float)interpAmount));
+                        }
+                        else if (channel[currentFrame].Transform != channel[currentFrame + 1].Transform)
+                        {
+                            keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                Util.SlerpMatrix(
+                                channel[currentFrame].Transform,
+                                channel[currentFrame + 1].Transform,
+                                (float)interpAmount));
+                        }
+                        else
+                        {
+                            keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                channel[currentFrame].Transform);
+                        }
+                    }
+                    outChannel.Add(keyframe);
+                    time += Util.TICKS_PER_60FPS;
                 }
+                output.Channels.Add(channelName, outChannel);
+
             }
             output.Duration = input.Duration;
             return output;
+
         }
 
-        public virtual Matrix Interpolate(AnimationKeyframe prevFrame, AnimationKeyframe nextFrame, long time)
-        {
-            
-            float location = time - prevFrame.Time.Ticks;
-            float distance = nextFrame.Time.Ticks - prevFrame.Time.Ticks;
-            float amount = location / distance;
-            if (prevFrame.Transform == nextFrame.Transform)
-                return prevFrame.Transform;
-            return Util.SlerpMatrix(prevFrame.Transform, nextFrame.Transform, amount);
-        }
+
+
     }
 }
 

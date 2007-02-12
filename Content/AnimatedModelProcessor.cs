@@ -115,6 +115,7 @@ namespace Animation.Content
             foreach (XmlElement child in doc)
             {
                 string animName = child["name"].InnerText;
+
                 double animTicksPerSecond = 1.0, secondsPerTick = 0;
                 if (child["tickspersecond"] != null)
                 {
@@ -123,6 +124,7 @@ namespace Animation.Content
                 secondsPerTick = 1.0 / animTicksPerSecond;
                 if (animDict.ContainsKey(animName))
                 {
+
                     AnimationContent anim = animDict[animName];
                     animDict.Remove(animName);
                     XmlNodeList subAnimations = child.GetElementsByTagName("animationsubset");
@@ -157,56 +159,35 @@ namespace Animation.Content
 
                         foreach (KeyValuePair<string, AnimationChannel> k in anim.Channels)
                         {
-                            long curTicks,prevTicks,difCur,difNex;
+                            long currentStartDiff, currentEndDiff, 
+                                bestStartDiff=long.MaxValue, bestEndDiff=long.MaxValue;
                             int startIndex = -1;
                             int endIndex = -1;
                             AnimationChannel newChan = new AnimationChannel();
                             AnimationChannel oldChan = k.Value;
 
-                            for (int i = 0; i < oldChan.Count-1 && (startIndex==-1||endIndex==-1); i++)
+                            for (int i = 0; i < oldChan.Count; i++)
                             {
-
-                                curTicks = oldChan[i + 1].Time.Ticks;
-                                bool foundStart = startIndex == -1 && curTicks >= startTime;
-                                bool foundEnd = endIndex == -1 && curTicks >= endTime;
-
-                                if (foundStart || foundEnd)
+                                long ticks = oldChan[i].Time.Ticks;
+                                currentStartDiff = Math.Abs(startTime - ticks);
+                                currentEndDiff = Math.Abs(endTime - ticks);
+                                if (startIndex == -1 || currentStartDiff<bestStartDiff)
                                 {
-                                    prevTicks = oldChan[i].Time.Ticks;
-                                    difCur = Math.Abs(curTicks - startTime);
-                                    difNex = Math.Abs(prevTicks - startTime);
-                                    if (foundStart)
-                                    {
-                                        if (difCur > difNex)
-                                        {
-                                            startIndex = i + 1;
-                                        }
-                                        else
-                                        {
-                                            startIndex = i;
-                                        }
-                                    }
-                                    if (foundEnd)
-                                    {
-                                        if (difCur > difNex)
-                                        {
-                                            endIndex = i + 1;
-                                        }
-                                        else
-                                        {
-                                            endIndex = i;
-                                        }
-                                    }
+                                    startIndex = i;
+                                    bestStartDiff = currentStartDiff;
                                 }
+
+
+                                if (endIndex == -1 || currentEndDiff<bestEndDiff)
+                                {
+                                    endIndex = i;
+                                    bestEndDiff = currentEndDiff;
+                                }
+
+
                             }
-                            if (endIndex == -1)
-                                endIndex = oldChan.Count - 1;
 
-
-
-
-
-                            for (int i = startIndex; i < endIndex; i++)
+                            for (int i = startIndex; i <= endIndex; i++)
                             {
                                 AnimationKeyframe keyframe = new AnimationKeyframe(
                                     oldChan[i].Time-oldChan[startIndex].Time,

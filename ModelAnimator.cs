@@ -54,11 +54,6 @@ namespace Animation
 
         private BonePoseCollection bonePoses;
 
-        private AnimationControllerCollection controllers;
-        private AnimationControllerCollection blendControllers;
-
-        
-
         private AnimationInfoCollection animations;
 
         // Store the number of meshes in the model
@@ -91,6 +86,8 @@ namespace Animation
             }
         }
 
+
+
         public AnimationInfoCollection Animations
         {
             get
@@ -115,8 +112,6 @@ namespace Animation
             this.model = model;
             bonePoses = BonePoseCollection.FromModelBoneCollection(
                 model.Bones);
-            controllers = new AnimationControllerCollection(this,false);
-            blendControllers = new AnimationControllerCollection(this, true);
             numMeshes = model.Meshes.Count;
             CheckForInvalidData();
             // Find total number of effects used by the model
@@ -285,16 +280,6 @@ namespace Animation
             get { return bonePoses; }
         }
 
-        public AnimationControllerCollection BlendControllers
-        {
-            get { return blendControllers; }
-        }
-
-        public AnimationControllerCollection Controllers
-        {
-            get { return controllers; }
-        }
-
         /// <summary>
         /// Draws the current frame
         /// </summary>
@@ -303,14 +288,7 @@ namespace Animation
         {
             if (Enabled)
             {
-                foreach (AnimationController anim in controllers)
-                {
-                    anim.AdvanceTime(gameTime);
-                }
-                foreach (AnimationController anim in blendControllers)
-                {
-                    anim.AdvanceTime(gameTime);
-                }
+
                 CopyCurrentTransformsTo(pose);
                 int index = 0;
                 for (int i = 0; i < numMeshes; i++)

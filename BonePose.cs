@@ -123,22 +123,22 @@ namespace Animation
             get { return children; }
         }
 
-        private void FindHierarchy(List<string> names)
+        private void FindHierarchy(List<BonePose> poses)
         {
-            names.Add(name);
+            poses.Add(this);
             foreach (BonePose child in children)
             {
-                child.FindHierarchy(names);
+                child.FindHierarchy(poses);
             }
         }
 
-        public List<string> HierarchyNames
+        public BonePoseCollection Hierarchy
         {
             get
             {
-                List<string> names = new List<string>();
-                FindHierarchy(names);
-                return names;
+                List<BonePose> poses = new List<BonePose>();
+                FindHierarchy(poses);
+                return new BonePoseCollection(poses);
             }
         }
 
@@ -160,33 +160,59 @@ namespace Animation
         public AnimationController CurrentAnimation
         {
             get { return currentAnimation; }
+            set
+            {
+                if (currentAnimation != value)
+                {
+                    if (currentAnimation != null)
+                    {
+                        currentAnimation.AffectedBlendBones.InternalRemove(this);
+                    }
+                    if (value != null)
+                    {
+                        value.AffectedBlendBones.InternalAdd(this);
+                        if (name != null)
+                        {
+                            doesAnimContainChannel =
+                                value.AnimationSource.AffectedBones.Contains(name);
+                        }
+                    }
+                    else
+                        doesAnimContainChannel = false;
+                    currentAnimation = value;
+                }
+            }
+
         }
 
         public AnimationController CurrentBlendAnimation
         {
             get { return currentBlendAnimation; }
+            set
+            {
+                if (currentBlendAnimation != value)
+                {
+                    if (currentBlendAnimation != null)
+                    {
+                        currentBlendAnimation.AffectedBones.InternalRemove(this);
+                    }
+                    if (value != null)
+                    {
+                        value.AffectedBones.InternalAdd(this);
+                        if (name != null)
+                        {
+                            doesBlendContainChannel =
+                                value.AnimationSource.AffectedBones.Contains(name);
+                        }
+                    }
+                    else
+                        doesBlendContainChannel = false;
+                    currentBlendAnimation = value;
+                }
+            }
         }
 
-        internal void SetRunningAnimation(AnimationController anim)
-        {
-            currentAnimation = anim;
-            if (anim != null)
-            {
-                doesAnimContainChannel = anim.AffectedBones.Contains(name);
-            }
-            else
-                doesAnimContainChannel = false;
-        }
-        internal void SetBlendAnimation(AnimationController anim)
-        {
-            currentBlendAnimation = anim;
-            if (anim != null)
-            {
-                doesBlendContainChannel = anim.AffectedBones.Contains(name);
-            }
-            else
-                doesAnimContainChannel = false;
-        }
+
 
         public float BlendFactor
         {
@@ -202,7 +228,7 @@ namespace Animation
 
         private void Blend(ref Matrix source)
         {
-            frameNum = currentAnimation.DefaultFrameNum;
+            frameNum = currentBlendAnimation.DefaultFrameNum;
 
             BoneKeyframeCollection channel = this.currentBlendAnimation.AnimationSource.AnimationChannels[
                 name];
@@ -212,7 +238,7 @@ namespace Animation
                     / channel.Duration);
                 if (frameNum >= channel.Count)
                     frameNum = channel.Count - 1;
-                while (frameNum < channel.Count - 1
+                while (frameNum < channel.Count
                     && channel[frameNum].Time < currentBlendAnimation.ElapsedTime)
                 {
                     ++frameNum;
@@ -259,12 +285,12 @@ namespace Animation
                             / channel.Duration);
                         if (frameNum >= channel.Count)
                             frameNum = channel.Count - 1;
-                        while (frameNum < channel.Count - 1
-                            && channel[frameNum].Time < currentAnimation.ElapsedTime)
+                        while (frameNum < channel.Count-1
+                            && channel[frameNum+1].Time <= currentAnimation.ElapsedTime)
                         {
                             ++frameNum;
                         }
-                        while (frameNum > 0 && channel[frameNum - 1].Time > 
+                        while (frameNum > 0 && channel[frameNum].Time > 
                             currentAnimation.ElapsedTime)
                         {
                             --frameNum;

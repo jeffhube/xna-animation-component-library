@@ -269,15 +269,9 @@ namespace Animation
             currentState = targetStateName;
             timeInState = new TimeSpan();
             transitioned = true;
-            OnTransition(oldName);
         }
 
-        /// <summary>
-        /// This is fired when a state transition occurs.
-        /// </summary>
-        /// <param name="oldStateName">The name of the state from which
-        /// this state was transitioned.</param>
-        protected abstract void OnTransition(string oldStateName);
+
 
         public TimeSpan TimeInState
         {
@@ -286,7 +280,7 @@ namespace Animation
 
         protected abstract void RunCurrentState(GameTime gameTime);
 
-        public sealed override void Update(GameTime gameTime)
+        public override void Update(GameTime gameTime)
         {
             if (currentState != null)
             {

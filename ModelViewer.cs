@@ -39,7 +39,7 @@ namespace Animation
     public partial class ModelViewer : DrawableGameComponent
     {
         List<Model> models=new List<Model>();
-        private List<ModelAnimator> controllers=new List<ModelAnimator>();
+        private List<ModelAnimator> animators=new List<ModelAnimator>();
         List<Effect> effects=new List<Effect>();
         int animationIndex = 0;
         private BoundingSphere sphere;
@@ -54,9 +54,9 @@ namespace Animation
         MouseState lastState;
         KeyboardState lastKeyboardState;
 
-        public List<ModelAnimator> Controllers
+        public System.Collections.ObjectModel.ReadOnlyCollection<ModelAnimator> Animators
         {
-            get { return controllers; }
+            get { return animators.AsReadOnly(); }
         }
 
         public ModelViewer(Game game): base(game)
@@ -98,22 +98,22 @@ namespace Animation
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
             controller.Visible = true;
-            controllers.Add(controller);
+            animators.Add(controller);
             InitializeEffects(model);
             Arrange();
         }
 
         private void Arrange()
         {
-            int columns = controllers.Count;
+            int columns = animators.Count;
             if (columns > 5)
                 columns = 5;
-            for (int i = 0; i < controllers.Count; i++)
+            for (int i = 0; i < animators.Count; i++)
             {
                 int column = i % columns;
                 int row = i / columns;
                 Matrix t=Matrix.CreateTranslation(sphere.Radius * (column-columns/2), 0, - sphere.Radius * row);
-                controllers[i].World = t * world;
+                animators[i].World = t * world;
             }
         }
 
@@ -250,7 +250,7 @@ namespace Animation
             if (keyboardState.IsKeyDown(Keys.Space) && !lastKeyboardState.IsKeyDown(Keys.Space))
             {
                 ++animationIndex;
-                if (animationIndex >= controllers[0].Animations.Count)
+                if (animationIndex >= animators[0].Animations.Count)
                     animationIndex = 0;
 
             }
