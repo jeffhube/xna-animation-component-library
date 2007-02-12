@@ -32,20 +32,7 @@ using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 namespace Animation.Content
 {
 
-    [ContentTypeWriter]
-    public class SkinTransformWriter : ContentTypeWriter<SkinTransform>
-    {
-        protected override void Write(ContentWriter output, SkinTransform value)
-        {
-            output.Write(value.BoneName);
-            output.Write(value.Transform);
-        }
 
-        public override string GetRuntimeReader(TargetPlatform targetPlatform)
-        {
-            return typeof(SkinTransformReader).AssemblyQualifiedName;
-        }
-    }
 
     internal class ContentUtil
     {
