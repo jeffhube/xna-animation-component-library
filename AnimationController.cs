@@ -124,7 +124,7 @@ namespace Animation
             {
                 if (elapsed != 0)
                 {
-                    elapsedTime = (elapsedTime + elapsed) % animation.Duration;
+                    elapsedTime = (elapsedTime + elapsed) % (animation.Duration+1);
                     if (elapsedTime < 0)
                         elapsedTime = animation.Duration;
                 }
@@ -182,7 +182,7 @@ namespace Animation
             {
                 if (value < 0)
                     value = animation.Duration - Math.Abs(value);
-                elapsedTime = value % animation.Duration;
+                elapsedTime = value % (animation.Duration+1);
                 defaultFrameNum = (int)(elapsedTime / Util.TICKS_PER_60FPS);
             }
         }
