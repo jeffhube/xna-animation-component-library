@@ -21,7 +21,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#define XBOX360
+#define WINDOWS
 #region Using Statements
 using System;
 using System.Collections.Generic;
@@ -38,12 +38,12 @@ namespace Animation
     /// </summary>
     public partial class ModelViewer : DrawableGameComponent
     {
-        List<Model> models=new List<Model>();
-        private List<ModelAnimator> animators=new List<ModelAnimator>();
-        List<Effect> effects=new List<Effect>();
+        List<Model> models = new List<Model>();
+        private List<ModelAnimator> animators = new List<ModelAnimator>();
+        List<Effect> effects = new List<Effect>();
 
         private BoundingSphere sphere;
-   
+
         Matrix world, view, projection;
         Vector3 cameraPosition, up;
         float fov, near, far, width, height, cx, cy, aspect;
@@ -60,13 +60,14 @@ namespace Animation
             get { return animators.AsReadOnly(); }
         }
 
-        public ModelViewer(Game game): base(game)
+        public ModelViewer(Game game)
+            : base(game)
         {
-            sphere=new BoundingSphere(Vector3.Zero, 1.0f);
+            sphere = new BoundingSphere(Vector3.Zero, 1.0f);
             game.Components.Add(this);
             game.IsMouseVisible = true;
             UpdateOrder = 0;
-            IGraphicsDeviceService graphics = 
+            IGraphicsDeviceService graphics =
                 (IGraphicsDeviceService)game.Services.GetService(
                 typeof(IGraphicsDeviceService));
             viewPort = graphics.GraphicsDevice.Viewport;
@@ -95,7 +96,7 @@ namespace Animation
             foreach (ModelMesh mesh in model.Meshes)
                 sphere = BoundingSphere.CreateMerged(sphere, mesh.BoundingSphere);
             models.Add(model);
-            ModelAnimator controller=new ModelAnimator(Game, model);
+            ModelAnimator controller = new ModelAnimator(Game, model);
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
             controller.Visible = true;
@@ -113,7 +114,7 @@ namespace Animation
             {
                 int column = i % columns;
                 int row = i / columns;
-                Matrix t=Matrix.CreateTranslation(sphere.Radius * (column-columns/2), 0, - sphere.Radius * row);
+                Matrix t = Matrix.CreateTranslation(sphere.Radius * (column - columns / 2), 0, -sphere.Radius * row);
                 animators[i].World = t * world;
             }
         }
@@ -155,7 +156,7 @@ namespace Animation
             }
         }
 
-        
+
         // Returns true if the user clicked on the boundings sphere, false otherwise
         bool IntersectPoint(int x, int y,
             out Vector3 intersectionPoint)
@@ -180,7 +181,7 @@ namespace Animation
             }
             else
             {
-                intersectionPoint = cameraPosition + 
+                intersectionPoint = cameraPosition +
                     (direction * ((float)intersectFactor));
                 return true;
             }
@@ -255,13 +256,6 @@ namespace Animation
             Arrange();
 
             KeyboardState keyboardState = Keyboard.GetState();
-            if (keyboardState.IsKeyDown(Keys.Space) && !lastKeyboardState.IsKeyDown(Keys.Space))
-            {
-                ++animationIndex;
-                if (animationIndex >= animators[0].Animations.Count)
-                    animationIndex = 0;
-
-            }
 
             lastState = state;
             lastKeyboardState = keyboardState;
@@ -275,5 +269,3 @@ namespace Animation
         }
     }
 }
-
-
