@@ -176,7 +176,7 @@ namespace Animation
             // Now grab the animation info and store local references
             animations = (AnimationInfoCollection)modelTagData["Animations"];
             skinnedBones = (string[])modelTagData["SkinnedBones"];
-
+            /*
             if (isSkinned(model))
             {
                 if (skinnedBones.Length > BasicPaletteEffect.PALETTE_SIZE)
@@ -184,9 +184,10 @@ namespace Animation
                         BasicPaletteEffect.PALETTE_SIZE.ToString() + "\nNumber of bones used: " +
                             model.Bones.Count.ToString());
             }
+             */
         }
 
-        private void InitializeEffectParams()
+        public void InitializeEffectParams()
         {
 
             // Now store the parameters in the arrays so the values they refer to can quickly be set

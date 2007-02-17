@@ -48,9 +48,6 @@ namespace Animation.Content
     public class AnimatedModelProcessor : ModelProcessor
     {
 
-        // Stores the byte code for the BasicPaletteEffect
-        internal static byte[] paletteByteCode4Bones = null;
-        private static bool paletteLoadAttempted = false;
         private ContentProcessorContext context;
         // stores all animations for the model
         private AnimationContentDictionary animations = new AnimationContentDictionary();
@@ -63,25 +60,6 @@ namespace Animation.Content
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
-            if (!paletteLoadAttempted)
-            {
-                EffectContent effect = new EffectContent();
-                effect.EffectCode = BasicPaletteEffect.SourceCode4BonesPerVertex;
-                EffectProcessor processor = new EffectProcessor();
-                CompiledEffect compiledEffect4 = processor.Process(effect, context);
-
-                if (compiledEffect4.Success != false )
-                {
-                    paletteByteCode4Bones = compiledEffect4.GetEffectCode();
-                }
-                else
-                {
-                    context.Logger.LogWarning("",
-                        new ContentIdentity(),
-                        "Compilation of BasicPaletteEffect failed.");
-                }
-                paletteLoadAttempted = true;
-            }
 
             this.input = input;
             this.context = context;
@@ -252,17 +230,26 @@ namespace Animation.Content
         {
             foreach (ModelMeshPartContent part in input.MeshParts)
             {
-                SkinningType skinType = Util.CheckSkinningType(part.GetVertexDeclaration());
+                SkinningType skinType = ContentUtil.CheckSkinningType(part.GetVertexDeclaration());
                 if (skinType != SkinningType.None)
                 {
-
+                    
                     BasicMaterialContent basic = part.Material as BasicMaterialContent;
                     if (basic != null)
                     {
-                        PaletteMaterialContent paletteContent = null;
-                        paletteContent = new PaletteMaterialContent(basic, paletteByteCode4Bones,
-                            context);
-                        part.Material = paletteContent;
+                        PaletteSourceCode source;
+                        if (context.TargetPlatform != TargetPlatform.Xbox360)
+                        {
+                            source = new PaletteSourceCode(56);
+                        }
+                        else
+                        {
+                            source = new PaletteSourceCode(40);
+                        }
+                        PaletteInfoProcessor processor = new PaletteInfoProcessor();
+                        part.Material = processor.Process(
+                            new PaletteInfo(source.SourceCode4BonesPerVertex,
+                            source.PALETTE_SIZE,basic), context);
                     }
                 }
             }

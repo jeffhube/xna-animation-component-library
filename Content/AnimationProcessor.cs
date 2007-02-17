@@ -56,6 +56,7 @@ namespace Animation.Content
         /// <returns>AnimationContentDictionary</returns>
         public override AnimationContentDictionary Process(BoneContent input, ContentProcessorContext context)
         {
+            
             inputSkeleton = input;
             inputSkeleton.Identity.FragmentIdentifier = "";
             this.context = context;
@@ -166,51 +167,62 @@ namespace Animation.Content
                 int currentFrame = 0;
                 while (time < animationDuration)
                 {
-                    if (time > animationDuration)
-                        time = animationDuration;
                     AnimationKeyframe keyframe;
-                    if (channel.Count == 1 || time < channel[0].Time.Ticks)
+
+                    if (time >= animationDuration)
                     {
-                        keyframe = new AnimationKeyframe(new TimeSpan(time), channel[0].Transform);
-                    }
-                    else if (channel[channel.Count - 1].Time.Ticks < time)
-                    {
-                        keyframe = new AnimationKeyframe(new TimeSpan(time), channel[channel.Count - 1].Transform);
+                        time = animationDuration;
+                        keyframe = new AnimationKeyframe(new TimeSpan(time),
+                            channel[channel.Count - 1].Transform);
                     }
                     else
                     {
-                        while (channel[currentFrame + 1].Time.Ticks < time)
+                        if (channel.Count == 1 || time < channel[0].Time.Ticks)
                         {
-                            currentFrame++;
+                            keyframe = new AnimationKeyframe(new TimeSpan(time), channel[0].Transform);
                         }
-                        double interpNumerator = (double)(time - channel[currentFrame].Time.Ticks);
-                        double interpDenom = (double)(channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks);
-                        double interpAmount = interpNumerator / interpDenom;
-                        if (channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks
-                            <= Util.TICKS_PER_60FPS * 1.05)
+                        else if (channel[channel.Count - 1].Time.Ticks <= time)
                         {
-                            keyframe = new AnimationKeyframe(new TimeSpan(time),
-                                Matrix.Lerp(
-                                channel[currentFrame].Transform,
-                                channel[currentFrame + 1].Transform,
-                                (float)interpAmount));
-                        }
-                        else if (channel[currentFrame].Transform != channel[currentFrame + 1].Transform)
-                        {
-                            keyframe = new AnimationKeyframe(new TimeSpan(time),
-                                Util.SlerpMatrix(
-                                channel[currentFrame].Transform,
-                                channel[currentFrame + 1].Transform,
-                                (float)interpAmount));
+                            keyframe = new AnimationKeyframe(new TimeSpan(time), channel[channel.Count - 1].Transform);
                         }
                         else
                         {
-                            keyframe = new AnimationKeyframe(new TimeSpan(time),
-                                channel[currentFrame].Transform);
+                            while (channel[currentFrame + 1].Time.Ticks < time)
+                            {
+                                currentFrame++;
+                            }
+                            double interpNumerator = (double)(time - channel[currentFrame].Time.Ticks);
+                            double interpDenom = (double)(channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks);
+                            double interpAmount = interpNumerator / interpDenom;
+                            
+                            if (channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks
+                                <= ContentUtil.TICKS_PER_60FPS * 1.05)
+                            {
+                                keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                    Matrix.Lerp(
+                                    channel[currentFrame].Transform,
+                                    channel[currentFrame + 1].Transform,
+                                    (float)interpAmount));
+                            }
+                            else
+                                if (channel[currentFrame].Transform != channel[currentFrame + 1].Transform)
+                            {
+                                keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                    ContentUtil.SlerpMatrix(
+                                    channel[currentFrame].Transform,
+                                    channel[currentFrame + 1].Transform,
+                                    (float)interpAmount));
+                            }
+                            else
+                            {
+                                keyframe = new AnimationKeyframe(new TimeSpan(time),
+                                    channel[currentFrame].Transform);
+                            }
+
                         }
                     }
                     outChannel.Add(keyframe);
-                    time += Util.TICKS_PER_60FPS;
+                    time += ContentUtil.TICKS_PER_60FPS;
                 }
                 output.Channels.Add(channelName, outChannel);
 
@@ -219,6 +231,8 @@ namespace Animation.Content
             return output;
 
         }
+
+
 
 
 

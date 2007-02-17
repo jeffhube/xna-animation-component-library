@@ -48,8 +48,9 @@ namespace Animation.Content
             IGraphicsDeviceService graphics =
                 (IGraphicsDeviceService)manager.ServiceProvider.GetService(typeof(IGraphicsDeviceService));
             byte[] effectCode = input.ReadRawObject<byte[]>();
+            int paletteSize = input.ReadInt32();
             BasicPaletteEffect effect = new BasicPaletteEffect(graphics.GraphicsDevice,
-                effectCode);
+                effectCode,paletteSize);
             if (input.ReadBoolean())
             {
                 effect.Texture = input.ReadExternalReference<Texture2D>();

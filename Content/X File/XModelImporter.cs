@@ -88,13 +88,13 @@ namespace Animation.Content
             ImportRoot();
 
             Matrix absoluteMeshTransform=Matrix.Identity;
-            List<SkinTransform[]> skinTransforms = new List<SkinTransform[]>();
+            List<SkinTransformContent[]> skinTransforms = new List<SkinTransformContent[]>();
             // Now that we have mapped bone names to their indices, we can create the vertices
             // in each mesh so that they contain indices and weights
             foreach (XMeshImporter mesh in meshes)
             {
                 mesh.CreateGeometry();
-                SkinTransform[] meshSkinTransforms = mesh.SkinTransforms;
+                SkinTransformContent[] meshSkinTransforms = mesh.SkinTransforms;
                 skinTransforms.Add(mesh.SkinTransforms);
                 if (mesh.SkinTransforms!=null && mesh.SkinTransforms.Length > 0)
                 {
@@ -107,11 +107,11 @@ namespace Animation.Content
 
             // Calculates bind pose as required for compatibility with XNA Content DOM
             Dictionary<string, Matrix> absTransformsDict = new Dictionary<string, Matrix>(skinTransforms.Count);
-            foreach (SkinTransform[] sst in skinTransforms)
+            foreach (SkinTransformContent[] sst in skinTransforms)
             {
                 if (sst != null)
                 {
-                    foreach (SkinTransform st in sst)
+                    foreach (SkinTransformContent st in sst)
                     {
                         Matrix abs = Matrix.Invert(Matrix.Invert(absoluteMeshTransform) * st.Transform);
                         absTransformsDict.Add(st.BoneName, abs);
@@ -416,7 +416,7 @@ namespace Animation.Content
             Matrix m = tokens.SkipName().NextMatrix();
             // Reflect the matrix across the Z axis to swap from left hand to right hand
             // coordinate system
-            Util.ReflectMatrix(ref m);
+            ContentUtil.ReflectMatrix(ref m);
             // skip the "}" at the end of the node
             tokens.SkipToken();
             return m;
@@ -623,7 +623,7 @@ namespace Animation.Content
                 for (int i = 0; i < matrixFrames.Count; i++)
                 {
                     Matrix m = matrixFrames[i].Transform;
-                    Util.ReflectMatrix(ref m);
+                    ContentUtil.ReflectMatrix(ref m);
                     matrixFrames[i].Transform = m;
                     anim.Add(matrixFrames[i]);
                 }
@@ -635,7 +635,7 @@ namespace Animation.Content
                 for (int i = 0; i < combinedFrames.Count; i++)
                 {
                     Matrix m = combinedFrames[i].Transform;
-                    Util.ReflectMatrix(ref m);
+                    ContentUtil.ReflectMatrix(ref m);
                     combinedFrames[i].Transform = m; //* Matrix.CreateRotationX(MathHelper.PiOver2);
                     anim.Add(combinedFrames[i]);
                     

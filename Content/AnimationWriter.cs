@@ -82,7 +82,17 @@ namespace Animation.Content
         /// <returns>The string that describes the reader used for a ModelInfo object</returns>
         public override string GetRuntimeReader(TargetPlatform targetPlatform)
         {
-            return typeof(AnimationReader).AssemblyQualifiedName;
+            if (targetPlatform != TargetPlatform.Xbox360)
+            {
+                return "Animation.Content.AnimationReader, Animationx86, "
+                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+            }
+            else
+            {
+                return "Animation.Content.AnimationReader, Animation360, "
+                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+            }
+
         }
         
         /// <summary>
@@ -94,7 +104,17 @@ namespace Animation.Content
         /// the stream</returns>
         public override string GetRuntimeType(TargetPlatform targetPlatform)
         {
-            return typeof(AnimationContentDictionary).AssemblyQualifiedName;
+            if (targetPlatform != TargetPlatform.Xbox360)
+            {
+                return "Animation.AnimationInfoCollection, Animationx86, "
+                    + "Verstion=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+            }
+            else
+            {
+                return "Animation.AnimationInfoCollection, Animation360, "
+                    + "Verstion=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+            }
+
         }
     }
  

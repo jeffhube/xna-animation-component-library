@@ -98,9 +98,10 @@ namespace Animation.Content
             // of the bone to which that weight belongs.
             private List<BoneWeightCollection> skinInfo =
                 new List<BoneWeightCollection>();
-            private SortedDictionary<string, Matrix> skinTransformDictionary =
-                new SortedDictionary<string, Matrix>();
-            private List<SkinTransform> skinTransforms = new List<SkinTransform>();
+            private SortedList<string, Matrix> skinTransformDictionary =
+                new SortedList<string, Matrix>();
+            private List<SkinTransformContent> skinTransforms =
+                new List<SkinTransformContent>();
 
             // We will give each mesh a unique name because the default model processor
             // doesn't apply the correct transform to meshes that have a null name
@@ -175,9 +176,9 @@ namespace Animation.Content
                 // Add the matrix that transforms the vertices to the space of the bone.
                 // we will need this for skinned animation.
                 Matrix blendOffset = tokens.NextMatrix();
-                Util.ReflectMatrix(ref blendOffset);
+                ContentUtil.ReflectMatrix(ref blendOffset);
                 skinTransformDictionary.Add(boneName, blendOffset);
-                SkinTransform trans = new SkinTransform();
+                SkinTransformContent trans = new SkinTransformContent();
                 trans.BoneName = boneName;
                 trans.Transform = blendOffset;
                 skinTransforms.Add(trans);
@@ -471,7 +472,7 @@ namespace Animation.Content
                     if (skinTransformDictionary.ContainsKey(k.Key))
                     {
                         meshBoneIndices.Add(k.Key, currentIndex++);
-                        SkinTransform transform = new SkinTransform();
+                        SkinTransformContent transform = new SkinTransformContent();
                         transform.BoneName = k.Key;
                         transform.Transform = skinTransformDictionary[k.Key];
                         skinTransforms.Add(transform);
@@ -527,7 +528,7 @@ namespace Animation.Content
 
             }
 
-            public SkinTransform[] SkinTransforms
+            public SkinTransformContent[] SkinTransforms
             {
                 get { return skinTransforms.Count > 0 ? skinTransforms.ToArray() : null; }
             }

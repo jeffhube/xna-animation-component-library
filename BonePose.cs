@@ -46,9 +46,10 @@ namespace Animation
         {
             for (int i = 0; i < anims.Count; i++)
             {
-                if (anims[i].Name != null)
+                string boneName = anims[i].Name;
+                if (boneName != null && boneName != "" && !boneDict.ContainsKey(boneName))
                 {
-                    boneDict.Add(anims[i].Name, anims[i]);
+                    boneDict.Add(boneName, anims[i]);
                 }
             }
         }

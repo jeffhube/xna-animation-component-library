@@ -21,7 +21,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
+#define XBOX360
 #region Using Statements
 using System;
 using System.Collections.Generic;
@@ -41,18 +41,19 @@ namespace Animation
         List<Model> models=new List<Model>();
         private List<ModelAnimator> animators=new List<ModelAnimator>();
         List<Effect> effects=new List<Effect>();
-        int animationIndex = 0;
+
         private BoundingSphere sphere;
    
         Matrix world, view, projection;
-        Vector3 eyePos, up;
+        Vector3 cameraPosition, up;
         float fov, near, far, width, height, cx, cy, aspect;
         float arcRadius;
         Viewport viewPort;
         Vector3 modelPos = Vector3.One;
-
+#if WINDOWS
         MouseState lastState;
         KeyboardState lastKeyboardState;
+#endif
 
         public System.Collections.ObjectModel.ReadOnlyCollection<ModelAnimator> Animators
         {
@@ -119,17 +120,17 @@ namespace Animation
 
         private void InitializeEffects(Model model)
         {
-            eyePos = new Vector3(0, 0, sphere.Radius * 5);
-            arcRadius = eyePos.Length() / 2.0f;
+            cameraPosition = new Vector3(0, 0, sphere.Radius * 5);
+            arcRadius = cameraPosition.Length() / 2.0f;
             view = Matrix.CreateLookAt(
-                eyePos, Vector3.Zero, up);
+                cameraPosition, Vector3.Zero, up);
             foreach (ModelMesh mesh in model.Meshes)
             {
                 foreach (Effect ef in mesh.Effects)
                 {
                     effects.Add(ef);
                     ef.Parameters["View"].SetValue(view);
-                    ef.Parameters["EyePosition"].SetValue(eyePos);
+                    ef.Parameters["EyePosition"].SetValue(cameraPosition);
                     ef.Parameters["Projection"].SetValue(projection);
                     ef.Parameters["World"].SetValue(Matrix.Identity);
 
@@ -154,33 +155,40 @@ namespace Animation
             }
         }
 
-
-        bool IntersectPoint(int x, int y, out Vector3 intPt)
+        
+        // Returns true if the user clicked on the boundings sphere, false otherwise
+        bool IntersectPoint(int x, int y,
+            out Vector3 intersectionPoint)
         {
-            Vector3 loc = new Vector3(x, y, 0);
-            loc = viewPort.Unproject(loc, projection, view, Matrix.Identity);
-            Vector3 dir = loc - eyePos;
-            dir.Normalize();
-            Ray r = new Ray(eyePos, dir);
-            float? f = r.Intersects(
-                new BoundingSphere(
-                Vector3.Zero,
-                arcRadius));
-            if (f == null)
+            BoundingSphere sphere = new BoundingSphere(new Vector3(),
+                arcRadius);
+            // Convert the mouse position to a 3d vector
+            Vector3 location = new Vector3(x, y, 0);
+            // Location of mouse point converted to true 3d space
+            location = viewPort.Unproject(location, projection, view, Matrix.Identity);
+            // direction vector of camera
+            Vector3 direction = location - cameraPosition;
+            direction.Normalize();
+            // Ray in the direction of the direction vector
+            Ray r = new Ray(cameraPosition, direction);
+            // Used to calculate where the ray intersects the sphere
+            float? intersectFactor = r.Intersects(sphere);
+            if (intersectFactor == null)
             {
-                intPt = Vector3.Zero;
+                intersectionPoint = Vector3.Zero;
                 return false;
             }
             else
             {
-                intPt = eyePos + (dir * ((float)f));
+                intersectionPoint = cameraPosition + 
+                    (direction * ((float)intersectFactor));
                 return true;
             }
         }
 
         public override void Update(GameTime gameTime)
         {
-            
+#if WINDOWS
             MouseState state = Mouse.GetState();
             KeyboardState ks = Keyboard.GetState();
             if (state.ScrollWheelValue != lastState.ScrollWheelValue)
@@ -191,10 +199,10 @@ namespace Animation
                 if (zoom < sphere.Radius)
                     zoom = sphere.Radius;
                 arcRadius = zoom / 2.0f;
-                Vector3 n = Vector3.Normalize(eyePos);
-                eyePos = n * zoom;
+                Vector3 n = Vector3.Normalize(cameraPosition);
+                cameraPosition = n * zoom;
                 view = Matrix.CreateLookAt(
-                    eyePos, Vector3.Zero,
+                    cameraPosition, Vector3.Zero,
                     up);
             }
 
@@ -224,12 +232,12 @@ namespace Animation
                     {
                         Matrix invertRot = Matrix.Invert(axisRot);
 
-                        eyePos = Vector3.Transform(eyePos,
+                        cameraPosition = Vector3.Transform(cameraPosition,
                             invertRot);
                         up = Vector3.Normalize(Vector3.Transform(up,
                             invertRot));
                         view = Matrix.CreateLookAt(
-                            eyePos, Vector3.Zero,
+                            cameraPosition, Vector3.Zero,
                             up);
                     }
 
@@ -261,8 +269,9 @@ namespace Animation
             foreach (Effect effect in effects)
             {
                 effect.Parameters["View"].SetValue(view);
-                effect.Parameters["EyePosition"].SetValue(eyePos);
+                effect.Parameters["EyePosition"].SetValue(cameraPosition);
             }
+#endif
         }
     }
 }
