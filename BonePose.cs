@@ -165,13 +165,8 @@ namespace Animation
             {
                 if (currentAnimation != value)
                 {
-                    if (currentAnimation != null)
-                    {
-                        currentAnimation.AffectedBlendBones.InternalRemove(this);
-                    }
                     if (value != null)
                     {
-                        value.AffectedBlendBones.InternalAdd(this);
                         if (name != null)
                         {
                             doesAnimContainChannel =
@@ -193,13 +188,9 @@ namespace Animation
             {
                 if (currentBlendAnimation != value)
                 {
-                    if (currentBlendAnimation != null)
-                    {
-                        currentBlendAnimation.AffectedBones.InternalRemove(this);
-                    }
+
                     if (value != null)
                     {
-                        value.AffectedBones.InternalAdd(this);
                         if (name != null)
                         {
                             doesBlendContainChannel =

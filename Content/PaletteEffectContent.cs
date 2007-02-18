@@ -490,9 +490,7 @@ struct VS_INPUT
 	float2 texcoord : TEXCOORD0;
 	float3 normal : NORMAL0;
 	half4 indices : BLENDINDICES0;
-    half4 indices1: BLENDINDICES1;
 	float4 weights : BLENDWEIGHT0;
-    float4 weights1: BLENDWEIGHT1;
 };
 
 struct VS_OUTPUT
@@ -517,6 +515,7 @@ struct SKIN_OUTPUT
 SKIN_OUTPUT Skin4( const VS_INPUT input)
 {
     SKIN_OUTPUT output = (SKIN_OUTPUT)0;
+
 
     float lastWeight = 1.0;
     float weight = 0;

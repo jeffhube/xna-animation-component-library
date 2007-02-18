@@ -46,6 +46,7 @@ namespace Animation
         #region Member Variables
         // Stores the world transform for the animation controller.
         private Matrix world = Matrix.Identity;
+
         // Model to be animated
         private readonly Model model;
 
@@ -54,7 +55,7 @@ namespace Animation
 
         private BonePoseCollection bonePoses;
 
-        private AnimationInfoCollection animations;
+        private AnimationCollection animations;
 
         // Store the number of meshes in the model
         private readonly int numMeshes;
@@ -87,21 +88,14 @@ namespace Animation
         }
 
 
-
-        public AnimationInfoCollection Animations
-        {
-            get
-            {
-                return animations;
-            }
-        }
-
-
         /// <summary>
         /// Gets the model associated with this controller.
         /// </summary>
         public Model Model
         { get { return model; } }
+
+        public AnimationCollection Animations
+        { get { return animations; } }
 
         #endregion
 
@@ -110,6 +104,7 @@ namespace Animation
         public ModelAnimator(Game game, Model model) : base(game)
         {
             this.model = model;
+            animations = AnimationCollection.FromModel(model);
             bonePoses = BonePoseCollection.FromModelBoneCollection(
                 model.Bones);
             numMeshes = model.Meshes.Count;
@@ -168,13 +163,8 @@ namespace Animation
             Dictionary<string, object> modelTagData = (Dictionary<string, object>)model.Tag;
             // An AnimationLibrary processor was not used if this is null
             if (modelTagData == null)
-                throw new Exception("Model contains no animation info; the tag is not an instance of " +
-                    "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
-            if (!modelTagData.ContainsKey("Animations"))
-                throw new Exception("Model contains no animation info; please use the \"Model - Animation Library\"" +
-                    " processor or a subclass.");
-            // Now grab the animation info and store local references
-            animations = (AnimationInfoCollection)modelTagData["Animations"];
+                throw new Exception("Please use the \"Model - Animation Library\" processor or a subclass.");
+ 
             skinnedBones = (string[])modelTagData["SkinnedBones"];
             /*
             if (isSkinned(model))

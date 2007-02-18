@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
 using System.Collections.ObjectModel;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Animation
 {
@@ -85,12 +86,12 @@ namespace Animation
         }
     }
 
-    public class AnimationInfoChannelCollection : ReadOnlyCollection<BoneKeyframeCollection>
+    public class AnimationChannelCollection : ReadOnlyCollection<BoneKeyframeCollection>
     {
         private Dictionary<string, BoneKeyframeCollection> dict =
             new Dictionary<string, BoneKeyframeCollection>();
         private ReadOnlyCollection<string> affectedBones;
-        public AnimationInfoChannelCollection(IList<BoneKeyframeCollection> channels)
+        public AnimationChannelCollection(IList<BoneKeyframeCollection> channels)
             : base(channels)
         {
             List<string> affected = new List<string>();
@@ -113,16 +114,16 @@ namespace Animation
         }
     }
 
-    public class AnimationInfo
+    public class Animation
     {
         private long duration = 0;
         private string animationName;
         private int maxNumFrames = 1;
 
-        private AnimationInfoChannelCollection boneAnimations;
+        private AnimationChannelCollection boneAnimations;
         
 
-        internal AnimationInfo(string animationName, AnimationInfoChannelCollection 
+        internal Animation(string animationName, AnimationChannelCollection 
             anims)
         {
             this.animationName = animationName;
@@ -135,7 +136,7 @@ namespace Animation
         }
 
 
-        public AnimationInfoChannelCollection AnimationChannels
+        public AnimationChannelCollection AnimationChannels
         { get { return boneAnimations; } }
 
         public ReadOnlyCollection<string> AffectedBones
@@ -156,13 +157,28 @@ namespace Animation
         }
     }
 
-    public class AnimationInfoCollection : SortedList<string, AnimationInfo>
+    public class AnimationCollection : SortedList<string, Animation>
     {
-        internal AnimationInfoCollection()
+        internal AnimationCollection()
         {
         }
 
-        public AnimationInfo this[int index]
+        public static AnimationCollection FromModel(Model model)
+        {
+            // Grab the tag that was set in the processor; this is a dictionary so that users can extend
+            // the processor and pass their own data into the program without messing up the animation data
+            Dictionary<string, object> modelTagData = (Dictionary<string, object>)model.Tag;
+            // An AnimationLibrary processor was not used if this is null
+            if (modelTagData == null)
+                throw new Exception("Model contains no animation info; the tag is not an instance of " +
+                    "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
+
+            // Now grab the animation info and store local references
+            AnimationCollection animations = (AnimationCollection)modelTagData["Animations"];
+            return animations;
+        }
+
+        public Animation this[int index]
         {
             get
             {

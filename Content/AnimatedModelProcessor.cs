@@ -49,6 +49,7 @@ namespace Animation.Content
     {
 
         private ContentProcessorContext context;
+        
         // stores all animations for the model
         private AnimationContentDictionary animations = new AnimationContentDictionary();
         private NodeContent input;
@@ -84,13 +85,15 @@ namespace Animation.Content
 
             }
             dict.Add("Animations", processedAnims);
+
             foreach (ModelMeshContent meshContent in c.Meshes)
                 ReplaceBasicEffects(meshContent);
             c.Tag = dict;
 
             return c;
         }
-
+        protected ContentProcessorContext ProcessorContext
+        { get { return context; } }
         protected virtual AnimationContent
             ProcessAnimation(AnimationContent animation)
         {

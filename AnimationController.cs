@@ -58,7 +58,7 @@ namespace Animation
     {
         // Contains the interpolated transforms for all bones in an
         // animation
-        private AnimationInfo animation;
+        private Animation animation;
         // Multiplied by the time whenever the animation is advanced; determines
         // the playback speed of the animation
         private double speedFactor = 1.0;
@@ -70,9 +70,7 @@ namespace Animation
         // a new long chunk doesn't have to be allocated every frame by every
         // controller
         private long elapsed;
-        // Contains the bones affected by the animation that the controller
-        // is currently moderating
-        private AffectedBoneCollection affectedBonePoses, affectedBlendBonePoses;
+
 
         /// <summary>
         /// Fired when the controller is not looping and the animation has ended.
@@ -88,28 +86,12 @@ namespace Animation
         /// <param name="animator">The ModelAnimator that will use this controller.</param>
         public AnimationController(
             Game game,
-            AnimationInfo sourceAnimation) : base(game)
+            Animation sourceAnimation) : base(game)
         {
             animation = sourceAnimation;
-            affectedBonePoses = new AffectedBoneCollection(this);
-            affectedBlendBonePoses = new AffectedBoneCollection(this);
             game.Components.Add(this);
         }
 
-
-
-        /// <summary>
-        /// Gets the bone poses currently affected by this controller.
-        /// </summary>
-        public AffectedBoneCollection AffectedBones
-        {
-            get { return affectedBonePoses; }
-        }
-
-        public AffectedBoneCollection AffectedBlendBones
-        {
-            get { return affectedBlendBonePoses; }
-        }
 
 
 
@@ -154,7 +136,7 @@ namespace Animation
         /// <summary>
         /// Gets the source animation that this controller is using.
         /// </summary>
-        public AnimationInfo AnimationSource
+        public Animation AnimationSource
         {
             get { return animation; }
         }
@@ -185,166 +167,7 @@ namespace Animation
         }
 
 
-        /// <summary>
-        /// A collection of bone poses affected by an animation controller.
-        /// </summary>
-        public class AffectedBoneCollection : ICollection<BonePose>
-        {
-            // Most of the stuff in this class is pretty standard, but it 
-            // had to be implemented via an interface because I wanted to
-            // fire an event whenever a bone is added or removed.
-            private AnimationController anim;
-            private List<BonePose> bones = new List<BonePose>();
-            private Dictionary<string, BonePose> boneDict 
-                = new Dictionary<string, BonePose>();
-            /// <summary>
-            /// Fired when the controller affects a new bone.
-            /// </summary>
-            public event BonePoseEventHandler BoneAdded;
-            /// <summary>
-            /// Fired when the controller no longer affects a bone that it used to
-            /// affect.
-            /// </summary>
-            public event BonePoseEventHandler BoneRemoved;
-            internal AffectedBoneCollection(AnimationController anim)
-            {
-                this.anim = anim;
-            }
 
-
-            private void OnBoneAdded(BonePose addedBone)
-            {
-
-                bones.Add(addedBone);
-                if (addedBone.Name != null && addedBone.Name != "")
-                {
-                    boneDict.Add(addedBone.Name, addedBone);
-                }
-                if (BoneAdded != null)
-                    BoneAdded(anim, addedBone);
-
-            }
-            private void OnBoneRemoved(BonePose removedBone)
-            {
-                bones.Remove(removedBone);
-                if (removedBone.Name != null && removedBone.Name != "")
-                {
-                    boneDict.Remove(removedBone.Name);
-                }
-                if (BoneRemoved != null)
-                    BoneRemoved(anim, removedBone);
-            }
-
-
-            internal void InternalAdd(BonePose item)
-            {
-                OnBoneAdded(item);
-            }
-
-
-
-            internal void InternalAddRange(ICollection<BonePose> bones)
-            {
-                foreach (BonePose a in bones)
-                    InternalAdd(a);
-            }
-
-
-            internal void InternalClear()
-            {
-
-                while (bones.Count > 0)
-                {
-                    OnBoneRemoved(bones[0]);
-                }
-            }
-
-
-
-
-            public void CopyTo(BonePose[] array, int arrayIndex)
-            {
-                bones.CopyTo(array, arrayIndex);
-            }
-
-            public int Count
-            {
-                get { return bones.Count; }
-            }
-
-            public bool IsReadOnly
-            {
-                get { return true; }
-            }
-
-
-            internal bool InternalRemove(BonePose item)
-            {
-                if (bones.Contains(item))
-                {
-                    OnBoneRemoved(item);
-                    return true;
-                }
-                return false;
-            }
-
-   
-
-
-
-
-            public IEnumerator<BonePose> GetEnumerator()
-            {
-                return bones.GetEnumerator();
-            }
-
-
-
-            void ICollection<BonePose>.Add(BonePose item)
-            {
-                throw new NotSupportedException("Collection is read-only.");
-            }
-
-            void ICollection<BonePose>.Clear()
-            {
-                throw new NotSupportedException("Collection is read-only.");
-            }
-
-
-            bool ICollection<BonePose>.Remove(BonePose item)
-            {
-                throw new NotSupportedException("Collection is read-only.");
-            }
-
- 
-
-
-
-            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-            {
-                return bones.GetEnumerator();
-            }
-
-
-
-
-
-            public bool Contains(BonePose item)
-            {
-                return bones.Contains(item);
-            }
-
-            public bool Contains(string boneName)
-            {
-                return boneDict.ContainsKey(boneName);
-            }
-
-            public BonePose this[string boneName]
-            {
-                get { return boneDict[boneName]; }
-            }
-
-        }
 
     }
 
