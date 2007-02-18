@@ -165,7 +165,8 @@ namespace Animation.Content
                 AnimationChannel channel = c.Value;
                 AnimationChannel outChannel = new AnimationChannel();
                 int currentFrame = 0;
-                while (time < animationDuration)
+
+                while (time <= animationDuration)
                 {
                     AnimationKeyframe keyframe;
 
