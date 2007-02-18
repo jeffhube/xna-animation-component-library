@@ -48,6 +48,7 @@ namespace Animation
     public delegate void AnimationEventHandler(AnimationController sender);
 
 
+    
     /// <summary>
     /// Controls an animation by advancing it's time and affecting
     /// bone transforms
@@ -89,7 +90,6 @@ namespace Animation
             Game game,
             AnimationInfo sourceAnimation) : base(game)
         {
-
             animation = sourceAnimation;
             affectedBonePoses = new AffectedBoneCollection(this);
             affectedBlendBonePoses = new AffectedBoneCollection(this);
@@ -149,8 +149,6 @@ namespace Animation
                 
             }
         }
-
-
 
 
         /// <summary>
@@ -218,7 +216,7 @@ namespace Animation
             {
 
                 bones.Add(addedBone);
-                if (addedBone.Name != null)
+                if (addedBone.Name != null && addedBone.Name != "")
                 {
                     boneDict.Add(addedBone.Name, addedBone);
                 }
@@ -229,7 +227,7 @@ namespace Animation
             private void OnBoneRemoved(BonePose removedBone)
             {
                 bones.Remove(removedBone);
-                if (removedBone.Name != null)
+                if (removedBone.Name != null && removedBone.Name != "")
                 {
                     boneDict.Remove(removedBone.Name);
                 }
