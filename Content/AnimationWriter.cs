@@ -82,6 +82,7 @@ namespace Animation.Content
         /// <returns>The string that describes the reader used for a ModelInfo object</returns>
         public override string GetRuntimeReader(TargetPlatform targetPlatform)
         {
+
             if (targetPlatform != TargetPlatform.Xbox360)
             {
                 return "Animation.Content.AnimationReader, Animationx86, "

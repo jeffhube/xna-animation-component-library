@@ -229,27 +229,11 @@ namespace Animation
 
         private void Blend(ref Matrix source)
         {
-            frameNum = currentBlendAnimation.DefaultFrameNum;
+
 
             BoneKeyframeCollection channel = this.currentBlendAnimation.AnimationSource.AnimationChannels[
                 name];
-            if (channel.Count <= currentBlendAnimation.AnimationSource.MaxNumFrames)
-            {
-                frameNum = channel.Count * (int)(currentBlendAnimation.ElapsedTime
-                    / channel.Duration);
-                if (frameNum >= channel.Count)
-                    frameNum = channel.Count - 1;
-                while (frameNum < channel.Count
-                    && channel[frameNum].Time < currentBlendAnimation.ElapsedTime)
-                {
-                    ++frameNum;
-                }
-                while (frameNum > 0 && channel[frameNum - 1].Time >
-                    currentBlendAnimation.ElapsedTime)
-                {
-                    --frameNum;
-                }
-            }
+            frameNum = channel.GetIndexByTime(currentAnimation.ElapsedTime);
             source = Util.SlerpMatrix(source, channel[frameNum].Transform, blendFactor);
         }
 
@@ -272,32 +256,13 @@ namespace Animation
                         return m;
 
                     }
-
                 }
                 else
                 {
-
-                    frameNum = currentAnimation.DefaultFrameNum;
                     BoneKeyframeCollection channel = currentAnimation.AnimationSource.AnimationChannels[
                         name];
-                    if (channel.Count <= currentAnimation.AnimationSource.MaxNumFrames)
-                    {
-                        frameNum = channel.Count * (int)(currentAnimation.ElapsedTime
-                            / channel.Duration);
-                        if (frameNum >= channel.Count)
-                            frameNum = channel.Count - 1;
-                        while (frameNum < channel.Count-1
-                            && channel[frameNum+1].Time <= currentAnimation.ElapsedTime)
-                        {
-                            ++frameNum;
-                        }
-                        while (frameNum > 0 && channel[frameNum].Time > 
-                            currentAnimation.ElapsedTime)
-                        {
-                            --frameNum;
-                        }
-                    }
 
+                    frameNum = channel.GetIndexByTime(currentAnimation.ElapsedTime);
                     if (currentBlendAnimation == null || !doesBlendContainChannel)
                     {
                         return channel[frameNum].Transform;
@@ -308,10 +273,7 @@ namespace Animation
                         Blend(ref m);
                         return m;
                     }
-
                 }
-               
-
             }
         }
     }

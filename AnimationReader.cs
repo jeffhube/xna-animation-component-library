@@ -55,23 +55,28 @@ namespace Animation.Content
                 string animationName = input.ReadString();
                 int numBoneAnimations = input.ReadInt32();
 
-                AnimationInfo anim = new AnimationInfo(animationName);
+
+                List<BoneKeyframeCollection> animList 
+                    = new List<BoneKeyframeCollection>();
                 for (int j = 0; j < numBoneAnimations; j++)
                 {
                     string boneName = input.ReadString();
                     int numKeyFrames = input.ReadInt32();
-
-                    BoneKeyframeCollection boneAnimation = new BoneKeyframeCollection(boneName);
+                    List<BoneKeyframe> boneAnimationList = new List<BoneKeyframe>();
                     for (int k = 0; k < numKeyFrames; k++)
                     {
                         BoneKeyframe frame = new BoneKeyframe(
                             input.ReadMatrix(),
                             input.ReadInt64());
-                        boneAnimation.AddKeyframe(frame);
+                        boneAnimationList.Add(frame);
                     }
+                    BoneKeyframeCollection boneAnimation = 
+                        new BoneKeyframeCollection(boneName,boneAnimationList);
 
-                    anim.AddAnimationChannel(boneAnimation);
+                    animList.Add(boneAnimation);
                 }
+                AnimationInfo anim = new AnimationInfo(animationName,
+                    new AnimationInfoChannelCollection(animList));
                 dict.Add(animationName, anim);
             }
             return dict;

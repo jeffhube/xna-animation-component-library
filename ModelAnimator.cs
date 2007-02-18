@@ -252,10 +252,6 @@ namespace Animation
 
         public override void Update(GameTime gameTime)
         {
-        }
-
-        public void CopyCurrentTransformsTo(Matrix[] pose)
-        {
             for (int i = 0; i < pose.Length; i++)
             {
                 if (i > 0) // not root
@@ -272,8 +268,20 @@ namespace Animation
 
 
 
+        public void CopyAbsoluteTransformsTo(Matrix[] transforms)
+        {
+            pose.CopyTo(transforms, 0);
+        }
 
-        
+        public Matrix GetAbsoluteTransform(int boneIndex)
+        {
+            return pose[boneIndex];
+        }
+
+
+
+
+
 
 
         public BonePoseCollection BonePoses
@@ -290,7 +298,7 @@ namespace Animation
             if (Enabled)
             {
 
-                CopyCurrentTransformsTo(pose);
+
                 int index = 0;
                 for (int i = 0; i < numMeshes; i++)
                 {

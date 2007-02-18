@@ -64,11 +64,7 @@ namespace Animation
         // The elapsed time in the animation, can not be greater than the
         // animation duration
         private long elapsedTime = 0;
-        // Stores the frame index that is most likely to be the current
-        // animation index for any bone affected by the animation.  This is
-        // used internally by the BonePose class to find the true current
-        // frame in the animation.
-        private int defaultFrameNum;
+
         // Used as a buffer to store the total elapsed ticks every frame so that
         // a new long chunk doesn't have to be allocated every frame by every
         // controller
@@ -128,7 +124,6 @@ namespace Animation
                     if (elapsedTime < 0)
                         elapsedTime = animation.Duration;
                 }
-                defaultFrameNum = (int)(elapsedTime / Util.TICKS_PER_60FPS);
             }
             else if (elapsedTime != animation.Duration)
             {
@@ -142,7 +137,6 @@ namespace Animation
                             AnimationEnded(this);
                     }
                 }
-                defaultFrameNum = animation.MaxNumFrames - 1;
             }
         }
 
@@ -157,11 +151,7 @@ namespace Animation
         }
 
 
-        // see private member variable comment for more info
-        internal int DefaultFrameNum
-        {
-            get { return defaultFrameNum; }
-        }
+
 
         /// <summary>
         /// Gets the source animation that this controller is using.
@@ -183,7 +173,6 @@ namespace Animation
                 if (value < 0)
                     value = animation.Duration - Math.Abs(value);
                 elapsedTime = value % (animation.Duration+1);
-                defaultFrameNum = (int)(elapsedTime / Util.TICKS_PER_60FPS);
             }
         }
 

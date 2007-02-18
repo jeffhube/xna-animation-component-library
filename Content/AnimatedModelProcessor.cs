@@ -75,10 +75,16 @@ namespace Animation.Content
             {
                 SubdivideAnimations(animations, xmlDoc);
             }
+            dict.Add("SkinnedBones", bones.ToArray());
+            AnimationContentDictionary processedAnims
+                = new AnimationContentDictionary();
+            foreach (AnimationContent anim in animations.Values)
+            {
+                AnimationContent processedAnim = ProcessAnimation(anim);
+                processedAnims.Add(processedAnim.Name, processedAnim);
 
-            AnimationProcessor ap = new AnimationProcessor();
-            dict.Add("Animations", ap.Interpolate(animations));
-            dict.Add("SkinnedBones", bones.ToArray());            
+            }
+            dict.Add("Animations", processedAnims);
             foreach (ModelMeshContent meshContent in c.Meshes)
                 ReplaceBasicEffects(meshContent);
             c.Tag = dict;
@@ -86,9 +92,17 @@ namespace Animation.Content
             return c;
         }
 
-        private void SubdivideAnimations(AnimationContentDictionary animDict, XmlDocument doc)
+        protected virtual AnimationContent
+            ProcessAnimation(AnimationContent animation)
         {
+            AnimationProcessor ap = new AnimationProcessor();
+            return ap.Interpolate(animation);
+; 
+        }
 
+        protected virtual void SubdivideAnimations(
+            AnimationContentDictionary animDict, XmlDocument doc)
+        {
 
             foreach (XmlElement child in doc)
             {
@@ -189,8 +203,6 @@ namespace Animation.Content
         }
 
 
-
-
         private XmlDocument ReadAnimationXML(NodeContent root)
         {
             XmlDocument doc = null;
@@ -210,8 +222,6 @@ namespace Animation.Content
             return doc;
         }
 
-
-
         private void FlattenSkeleton(NodeContent node)
         {
             string name = node.Name;
@@ -225,6 +235,27 @@ namespace Animation.Content
             }
         }
 
+        protected virtual void ReplaceBasicEffect(SkinningType skinningType,
+            ModelMeshPartContent meshPart)
+        {
+            BasicMaterialContent basic = meshPart.Material as BasicMaterialContent;
+            if (basic != null)
+            {
+                PaletteSourceCode source;
+                if (context.TargetPlatform != TargetPlatform.Xbox360)
+                {
+                    source = new PaletteSourceCode(56);
+                }
+                else
+                {
+                    source = new PaletteSourceCode(40);
+                }
+                PaletteInfoProcessor processor = new PaletteInfoProcessor();
+                meshPart.Material = processor.Process(
+                    new PaletteInfo(source.SourceCode4BonesPerVertex,
+                    source.PALETTE_SIZE, basic), context);
+            }
+        }
 
         private void ReplaceBasicEffects(ModelMeshContent input)
         {
@@ -233,27 +264,10 @@ namespace Animation.Content
                 SkinningType skinType = ContentUtil.CheckSkinningType(part.GetVertexDeclaration());
                 if (skinType != SkinningType.None)
                 {
-                    
-                    BasicMaterialContent basic = part.Material as BasicMaterialContent;
-                    if (basic != null)
-                    {
-                        PaletteSourceCode source;
-                        if (context.TargetPlatform != TargetPlatform.Xbox360)
-                        {
-                            source = new PaletteSourceCode(56);
-                        }
-                        else
-                        {
-                            source = new PaletteSourceCode(40);
-                        }
-                        PaletteInfoProcessor processor = new PaletteInfoProcessor();
-                        part.Material = processor.Process(
-                            new PaletteInfo(source.SourceCode4BonesPerVertex,
-                            source.PALETTE_SIZE,basic), context);
-                    }
+                    ReplaceBasicEffect(skinType, part);
+
                 }
             }
-
         }
 
 
@@ -289,7 +303,8 @@ namespace Animation.Content
         {
             if (geometry.Vertices.Channels[vertexChannelIndex].Name == VertexChannelNames.Weights())
             {
-                VertexChannel<BoneWeightCollection> vc = (VertexChannel<BoneWeightCollection>)geometry.Vertices.Channels[vertexChannelIndex];
+                VertexChannel<BoneWeightCollection> vc = 
+                    (VertexChannel<BoneWeightCollection>)geometry.Vertices.Channels[vertexChannelIndex];
                 int maxBonesPerVertex = 0;
                 for (int i = 0; i < vc.Count; i++)
                 {
