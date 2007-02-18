@@ -233,7 +233,7 @@ namespace Animation
 
             BoneKeyframeCollection channel = this.currentBlendAnimation.AnimationSource.AnimationChannels[
                 name];
-            frameNum = channel.GetIndexByTime(currentAnimation.ElapsedTime);
+            frameNum = channel.GetIndexByTime(currentBlendAnimation.ElapsedTime);
             source = Util.SlerpMatrix(source, channel[frameNum].Transform, blendFactor);
         }
 
