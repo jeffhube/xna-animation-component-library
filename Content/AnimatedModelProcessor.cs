@@ -60,7 +60,6 @@ namespace Animation.Content
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
-
             this.input = input;
             this.context = context;
 
@@ -96,7 +95,9 @@ namespace Animation.Content
             ProcessAnimation(AnimationContent animation)
         {
             AnimationProcessor ap = new AnimationProcessor();
-            return ap.Interpolate(animation);
+            AnimationContent newAnim = ap.Interpolate(animation);
+            newAnim.Name = animation.Name;
+            return newAnim;
 ; 
         }
 
