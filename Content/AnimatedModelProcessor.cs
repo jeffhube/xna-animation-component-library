@@ -65,7 +65,6 @@ namespace Animation.Content
             this.input = input;
             this.context = context;
 
-
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
             // Attach the animation and skinning data to the models tag
@@ -131,19 +130,23 @@ namespace Animation.Content
                     {
                         AnimationContent newAnim = new AnimationContent();
                         XmlElement subAnimNameElement = subAnim["name"];
+
                         if (subAnimNameElement != null)
                             newAnim.Name = subAnimNameElement.InnerText;
-
 
                         long startTime, endTime;
                         if (subAnim["starttime"] != null)
                         {
+
                             startTime = TimeSpan.FromSeconds(double.Parse(subAnim["starttime"].InnerText)).Ticks;
                         }
                         else
                         {
+                            double seconds = 
+                                double.Parse(subAnim["startframe"].InnerText) * secondsPerTick;
+
                             startTime = TimeSpan.FromSeconds(
-                                double.Parse(subAnim["startframe"].InnerText) * secondsPerTick).Ticks;
+                                seconds).Ticks;
                         }
                         if (subAnim["endtime"] != null)
                         {
@@ -151,10 +154,11 @@ namespace Animation.Content
                         }
                         else
                         {
+                            double seconds = double.Parse(subAnim["endframe"].InnerText)
+                                * secondsPerTick;
                             endTime = TimeSpan.FromSeconds(
-                                double.Parse(subAnim["endframe"].InnerText) * secondsPerTick).Ticks;
+                                seconds).Ticks;
                         }
-
 
                         foreach (KeyValuePair<string, AnimationChannel> k in anim.Channels)
                         {
@@ -186,13 +190,26 @@ namespace Animation.Content
 
                             }
 
+
+                            
                             for (int i = startIndex; i <= endIndex; i++)
                             {
+                                AnimationKeyframe frame = oldChan[i];
+                                long time;
+                                if (frame.Time.Ticks < startTime)
+                                    time = 0;
+                                else if (frame.Time.Ticks > endTime)
+                                    time = endTime - startTime;
+                                else
+                                    time = frame.Time.Ticks - startTime;
                                 AnimationKeyframe keyframe = new AnimationKeyframe(
-                                    oldChan[i].Time-oldChan[startIndex].Time,
-                                    oldChan[i].Transform);
+                                    TimeSpan.FromTicks(time),
+                                    frame.Transform);
+                                
                                 newChan.Add(keyframe);
                             }
+                            
+                            
                             newAnim.Channels.Add(k.Key, newChan);
                             if (newChan[newChan.Count - 1].Time > newAnim.Duration)
                                 newAnim.Duration = newChan[newChan.Count - 1].Time;
