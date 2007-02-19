@@ -190,7 +190,14 @@ namespace Animation
             }
             return verts;
         }
-        
+
+
+        private static Quaternion qStart, qEnd, qResult;
+        private static Vector3 curTrans, nextTrans, lerpedTrans;
+        private static Vector3 curScale, nextScale, lerpedScale;
+        private static Matrix startRotation, endRotation;
+        private static Matrix returnMatrix;
+
         /// <summary>
         /// Roughly decomposes two matrices and performs spherical linear interpolation
         /// </summary>
@@ -199,40 +206,104 @@ namespace Animation
         /// <param name="slerpAmount">Ratio of interpolation</param>
         /// <returns></returns>
         public static Matrix SlerpMatrix(Matrix start, Matrix end,
-            double slerpAmount)
+            float slerpAmount)
         {
             // Get rotation components and interpolate (not completely accurate but I don't want 
             // to get into polar decomposition and this seems smooth enough)
-            Quaternion qStart = Quaternion.CreateFromRotationMatrix(start);
-            Quaternion qEnd = Quaternion.CreateFromRotationMatrix(end);
-            Quaternion qResult = Quaternion.Lerp(qStart, qEnd, (float)slerpAmount);
+            Quaternion.CreateFromRotationMatrix(ref start, out qStart);
+            Quaternion.CreateFromRotationMatrix(ref end, out qEnd);
+            Quaternion.Lerp(ref qStart, ref qEnd, slerpAmount, out qResult);
 
-            // Get translation components 
-            Vector3 curTrans = start.Translation;
-            Vector3 nextTrans = end.Translation;
+            // Get final translation components
+            curTrans.X = start.M41;
+            curTrans.Y = start.M42;
+            curTrans.Z = start.M43;
+            nextTrans.X = end.M41;
+            nextTrans.Y = end.M42;
+            nextTrans.Z = end.M43;
+            Vector3.Lerp(ref curTrans, ref nextTrans, slerpAmount, out lerpedTrans);
 
-            // Get scale/translation matrices
-            Matrix curScale = start - Matrix.CreateFromQuaternion(qStart);
-            Matrix nextScale = end - Matrix.CreateFromQuaternion(qEnd);
-
-            // Interpolate scale components linearly
-            Vector3 v = Vector3.Lerp(new Vector3(curScale.M11, curScale.M22, curScale.M33),
-                new Vector3(nextScale.M11, nextScale.M22, nextScale.M33),
-                (float)slerpAmount);
+            // Get final scale component
+            Matrix.CreateFromQuaternion(ref qStart, out startRotation);
+            Matrix.CreateFromQuaternion(ref qEnd, out endRotation);
+            curScale.X = start.M11 - startRotation.M11;
+            curScale.Y = start.M22 - startRotation.M22;
+            curScale.Z = start.M33 - startRotation.M33;
+            nextScale.X = end.M11 - endRotation.M11;
+            nextScale.Y = end.M22 - endRotation.M22;
+            nextScale.Z = end.M33 - endRotation.M33;
+            Vector3.Lerp(ref curScale, ref nextScale, slerpAmount, out lerpedScale);
 
             // Create the rotation matrix from the slerped quaternions
-            Matrix result = Matrix.CreateFromQuaternion(qResult);
+            Matrix.CreateFromQuaternion(ref qResult, out returnMatrix);
 
-            // Add the lerped translation component
-            result.Translation = Vector3.Lerp(curTrans, nextTrans,
-                (float)slerpAmount);
+            // Set the translation
+            returnMatrix.M41 = lerpedTrans.X;
+            returnMatrix.M42 = lerpedTrans.Y;
+            returnMatrix.M43 = lerpedTrans.Z;
 
             // And the lerped scale component
-            result.M11 += v.X;
-            result.M22 += v.Y;
-            result.M33 += v.Z;
-            return result;
+            returnMatrix.M11 += lerpedScale.X;
+            returnMatrix.M22 += lerpedScale.Y;
+            returnMatrix.M33 += lerpedScale.Z;
+            return returnMatrix;
         }
+
+        /// <summary>
+        /// Roughly decomposes two matrices and performs spherical linear interpolation
+        /// </summary>
+        /// <param name="start">Source matrix for interpolation</param>
+        /// <param name="end">Destination matrix for interpolation</param>
+        /// <param name="slerpAmount">Ratio of interpolation</param>
+        /// <returns></returns>
+        public static void SlerpMatrix(
+            ref Matrix start, 
+            ref Matrix end,
+            float slerpAmount,
+            out Matrix result)
+        {
+            // Get rotation components and interpolate (not completely accurate but I don't want 
+            // to get into polar decomposition and this seems smooth enough)
+            Quaternion.CreateFromRotationMatrix(ref start, out qStart);
+            Quaternion.CreateFromRotationMatrix(ref end, out qEnd);
+            Quaternion.Lerp(ref qStart, ref qEnd, slerpAmount, out qResult);
+
+            // Get final translation components
+            curTrans.X = start.M41;
+            curTrans.Y = start.M42;
+            curTrans.Z = start.M43;
+            nextTrans.X = end.M41;
+            nextTrans.Y = end.M42;
+            nextTrans.Z = end.M43;
+            Vector3.Lerp(ref curTrans, ref nextTrans, slerpAmount, out lerpedTrans);
+
+            // Get final scale component
+            Matrix.CreateFromQuaternion(ref qStart, out startRotation);
+            Matrix.CreateFromQuaternion(ref qEnd, out endRotation);
+            curScale.X = start.M11 - startRotation.M11;
+            curScale.Y = start.M22 - startRotation.M22;
+            curScale.Z = start.M33 - startRotation.M33;
+            nextScale.X = end.M11 - endRotation.M11;
+            nextScale.Y = end.M22 - endRotation.M22;
+            nextScale.Z = end.M33 - endRotation.M33;
+            Vector3.Lerp(ref curScale, ref nextScale, slerpAmount, out lerpedScale);
+
+            // Create the rotation matrix from the slerped quaternions
+            Matrix.CreateFromQuaternion(ref qResult, out result);
+
+            // Set the translation
+            result.M41 = lerpedTrans.X;
+            result.M42 = lerpedTrans.Y;
+            result.M43 = lerpedTrans.Z;
+
+            // Add the lerped scale component
+            result.M11 += lerpedScale.X;
+            result.M22 += lerpedScale.Y;
+            result.M33 += lerpedScale.Z;
+        }
+
+
+
          
     }
 

@@ -37,6 +37,7 @@ using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 using Microsoft.Xna.Framework.Content;
 using System.Globalization;
 using System.Xml;
+using System.Collections.ObjectModel;
 
 namespace Animation.Content
 {
@@ -92,6 +93,8 @@ namespace Animation.Content
 
             return c;
         }
+        protected ReadOnlyCollection<string> SkinnedBoneNames
+        { get { return bones.AsReadOnly(); } }
         protected ContentProcessorContext ProcessorContext
         { get { return context; } }
         protected virtual AnimationContent

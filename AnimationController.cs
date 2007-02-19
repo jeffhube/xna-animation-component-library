@@ -47,13 +47,26 @@ namespace Animation
     /// <param name="sender">The AnimationController that fired this event.</param>
     public delegate void AnimationEventHandler(AnimationController sender);
 
-
+    /// <summary>
+    /// An interface used by BonePose that allows an animation to affect the bone
+    /// as a function of time.
+    /// </summary>
+    public interface IAnimationController : IUpdateable
+    {
+        event AnimationEventHandler AnimationEnded;
+        bool IsLooping { get; set;}
+        long Duration { get;}
+        void GetCurrentBoneTransform(BonePose pose, out Matrix transform);
+        long ElapsedTime { get;set;}
+        double SpeedFactor { get;set;}
+        bool ContainsAnimationTrack(BonePose pose);
+    }
     
     /// <summary>
     /// Controls an animation by advancing it's time and affecting
     /// bone transforms
     /// </summary>
-    public class AnimationController : GameComponent
+    public class AnimationController : GameComponent, IAnimationController
 
     {
         // Contains the interpolated transforms for all bones in an
@@ -65,6 +78,8 @@ namespace Animation
         // The elapsed time in the animation, can not be greater than the
         // animation duration
         private long elapsedTime = 0;
+
+        int boneIndex;
 
         // Used as a buffer to store the total elapsed ticks every frame so that
         // a new long chunk doesn't have to be allocated every frame by every
@@ -91,9 +106,6 @@ namespace Animation
             animation = sourceAnimation;
             game.Components.Add(this);
         }
-
-
-
 
         public override void Update(GameTime gameTime)
         {
@@ -127,9 +139,13 @@ namespace Animation
             get { return isLooping; }
             set 
             {
-                isLooping = value;
-                
+                isLooping = value;           
             }
+        }
+
+        public long Duration
+        {
+            get { return animation.Duration; }
         }
 
 
@@ -166,8 +182,20 @@ namespace Animation
             set { speedFactor = value; }
         }
 
+        public void GetCurrentBoneTransform(BonePose pose, out Matrix transform)
+        {
+            BoneKeyframeCollection channel = animation.AnimationChannels[pose.Name];
+            boneIndex = channel.GetIndexByTime(elapsedTime);
+            transform = channel[boneIndex].Transform;
+        }
 
 
+
+        public bool ContainsAnimationTrack(BonePose pose)
+        {
+            return animation.AnimationChannels.AffectedBones.Contains(
+                pose.Name);
+        }
 
     }
 

@@ -84,15 +84,17 @@ namespace Animation
 
     public class BonePose
     {
+        // Used when no animation is set
         private Matrix defaultMatrix;
+        // Buffers for interpolation when blending
+        private static Matrix returnMatrix, blendMatrix, currentMatrixBuffer;
         private int index;
         private string name;
         private BonePose parent = null;
-        private AnimationController currentAnimation = null;
-        private AnimationController currentBlendAnimation = null;
+        private IAnimationController currentAnimation = null;
+        private IAnimationController currentBlendAnimation = null;
         private float blendFactor = 0;
         private BonePoseCollection children;
-        private int frameNum;
         private bool doesAnimContainChannel = false;
         private bool doesBlendContainChannel = false;
 
@@ -119,6 +121,9 @@ namespace Animation
             children = new BonePoseCollection(childList);
         }
 
+        /// <summary>
+        /// Gets the immediate children of the current bone.
+        /// </summary>
         public BonePoseCollection Children
         {
             get { return children; }
@@ -133,6 +138,10 @@ namespace Animation
             }
         }
 
+        /// <summary>
+        /// Gets a collection of bones that represents the tree of BonePoses with
+        /// the current BonePose as the root.
+        /// </summary>
         public BonePoseCollection Hierarchy
         {
             get
@@ -144,21 +153,35 @@ namespace Animation
         }
 
 
+        /// <summary>
+        /// Gets the bone's parent.
+        /// </summary>
         public BonePose Parent
         {
             get { return parent; }
         }
+
+        /// <summary>
+        /// Gets the index of the bone.
+        /// </summary>
         public int Index
         {
             get { return index; }
         }
 
+        /// <summary>
+        /// Gets the name of the bone.
+        /// </summary>
         public string Name
         {
             get { return name; }
         }
 
-        public AnimationController CurrentAnimation
+        /// <summary>
+        /// Gets or sets the current animation that affects this bone.  If null,
+        /// then DefaultTransform will be used for this bone's transform.
+        /// </summary>
+        public IAnimationController CurrentAnimation
         {
             get { return currentAnimation; }
             set
@@ -169,8 +192,8 @@ namespace Animation
                     {
                         if (name != null)
                         {
-                            doesAnimContainChannel =
-                                value.AnimationSource.AffectedBones.Contains(name);
+                            doesAnimContainChannel = 
+                                value.ContainsAnimationTrack(this);
                         }
                     }
                     else
@@ -181,7 +204,11 @@ namespace Animation
 
         }
 
-        public AnimationController CurrentBlendAnimation
+        /// <summary>
+        /// Gets or sets the blend animation that affects this bone.  If the value
+        /// is null, then no blending will occur.
+        /// </summary>
+        public IAnimationController CurrentBlendAnimation
         {
             get { return currentBlendAnimation; }
             set
@@ -194,7 +221,7 @@ namespace Animation
                         if (name != null)
                         {
                             doesBlendContainChannel =
-                                value.AnimationSource.AffectedBones.Contains(name);
+                                value.ContainsAnimationTrack(this);
                         }
                     }
                     else
@@ -205,66 +232,77 @@ namespace Animation
         }
 
 
-
+        /// <summary>
+        /// Gets or sets the amount to interpolate between the current animation and
+        /// the current blend animation, if the current blend animation is not null
+        /// </summary>
         public float BlendFactor
         {
             get { return blendFactor; }
             set { blendFactor = value; }
         }
-
+        
+        /// <summary>
+        /// Represents the matrix used by the BonePose when it is not affected by
+        /// an animation or when the animation does not contain a track for the bone.
+        /// </summary>
         public Matrix DefaultTransform
         {
             get { return defaultMatrix; }
             set { defaultMatrix = value; }
         }
 
-        private void Blend(ref Matrix source)
-        {
-
-
-            BoneKeyframeCollection channel = this.currentBlendAnimation.AnimationSource.AnimationChannels[
-                name];
-            frameNum = channel.GetIndexByTime(currentBlendAnimation.ElapsedTime);
-            source = Util.SlerpMatrix(source, channel[frameNum].Transform, blendFactor);
-        }
-
-
-
+        /// <summary>
+        /// Returns the current transform, based on the animations, for the bone
+        /// represented by the BonePose object.
+        /// </summary>
         public Matrix CurrentTransform
         {
             get
             {
+                // If the bone is not currently affected by an animation
                 if (currentAnimation == null || !doesAnimContainChannel)
                 {
-                    if (currentBlendAnimation == null || !doesBlendContainChannel)
+                    // If the bone is affected by a blend animation,
+                    // blend the defaultTransform with the blend animation
+                    if (currentBlendAnimation != null && doesBlendContainChannel)
                     {
-                        return defaultMatrix;
+                        currentBlendAnimation.GetCurrentBoneTransform(this, out blendMatrix);
+                        Util.SlerpMatrix(
+                            ref defaultMatrix, 
+                            ref blendMatrix, 
+                            BlendFactor,
+                            out returnMatrix);
                     }
+                        // else return the default transform
                     else
-                    {
-                        Matrix m = defaultMatrix;
-                        Blend(ref m);
-                        return m;
-
-                    }
+                        return defaultMatrix;
                 }
+                    // The bone is affected by an animation
                 else
                 {
-                    BoneKeyframeCollection channel = currentAnimation.AnimationSource.AnimationChannels[
-                        name];
-
-                    frameNum = channel.GetIndexByTime(currentAnimation.ElapsedTime);
-                    if (currentBlendAnimation == null || !doesBlendContainChannel)
+                    // Find the current transform in the animation for the bone
+                    currentAnimation.GetCurrentBoneTransform(this, 
+                        out currentMatrixBuffer);
+                    // If the bone is affected by a blend animation, blend the
+                    // current animation transform with the current blend animation
+                    // transform
+                    if (currentBlendAnimation != null && doesBlendContainChannel)
                     {
-                        return channel[frameNum].Transform;
+                        currentBlendAnimation.GetCurrentBoneTransform(this,
+                            out blendMatrix);
+                        Util.SlerpMatrix(
+                            ref currentMatrixBuffer,
+                            ref blendMatrix, 
+                            BlendFactor,
+                            out returnMatrix);
                     }
+                        // Else just return the current animation transform
                     else
-                    {
-                        Matrix m = channel[frameNum].Transform;
-                        Blend(ref m);
-                        return m;
-                    }
+                        return currentMatrixBuffer;
                 }
+                
+                return returnMatrix;
             }
         }
     }
