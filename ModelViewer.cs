@@ -66,7 +66,7 @@ namespace Animation
             sphere = new BoundingSphere(Vector3.Zero, 1.0f);
             game.Components.Add(this);
             game.IsMouseVisible = true;
-            UpdateOrder = 0;
+            UpdateOrder = 3;
             IGraphicsDeviceService graphics =
                 (IGraphicsDeviceService)game.Services.GetService(
                 typeof(IGraphicsDeviceService));

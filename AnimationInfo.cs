@@ -114,7 +114,7 @@ namespace Animation
         }
     }
 
-    public class Animation
+    public class AnimationInfo
     {
         private long duration = 0;
         private string animationName;
@@ -123,7 +123,7 @@ namespace Animation
         private AnimationChannelCollection boneAnimations;
         
 
-        internal Animation(string animationName, AnimationChannelCollection 
+        internal AnimationInfo(string animationName, AnimationChannelCollection 
             anims)
         {
             this.animationName = animationName;
@@ -157,13 +157,13 @@ namespace Animation
         }
     }
 
-    public class AnimationCollection : SortedList<string, Animation>
+    public class AnimationInfoCollection : SortedList<string, AnimationInfo>
     {
-        internal AnimationCollection()
+        internal AnimationInfoCollection()
         {
         }
 
-        public static AnimationCollection FromModel(Model model)
+        public static AnimationInfoCollection FromModel(Model model)
         {
             // Grab the tag that was set in the processor; this is a dictionary so that users can extend
             // the processor and pass their own data into the program without messing up the animation data
@@ -174,11 +174,11 @@ namespace Animation
                     "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
 
             // Now grab the animation info and store local references
-            AnimationCollection animations = (AnimationCollection)modelTagData["Animations"];
+            AnimationInfoCollection animations = (AnimationInfoCollection)modelTagData["Animations"];
             return animations;
         }
 
-        public Animation this[int index]
+        public AnimationInfo this[int index]
         {
             get
             {

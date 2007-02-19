@@ -55,7 +55,7 @@ namespace Animation
 
         private BonePoseCollection bonePoses;
 
-        private AnimationCollection animations;
+        private AnimationInfoCollection animations;
 
         // Store the number of meshes in the model
         private readonly int numMeshes;
@@ -94,7 +94,7 @@ namespace Animation
         public Model Model
         { get { return model; } }
 
-        public AnimationCollection Animations
+        public AnimationInfoCollection Animations
         { get { return animations; } }
 
         #endregion
@@ -104,7 +104,7 @@ namespace Animation
         public ModelAnimator(Game game, Model model) : base(game)
         {
             this.model = model;
-            animations = AnimationCollection.FromModel(model);
+            animations = AnimationInfoCollection.FromModel(model);
             bonePoses = BonePoseCollection.FromModelBoneCollection(
                 model.Bones);
             numMeshes = model.Meshes.Count;
@@ -125,8 +125,9 @@ namespace Animation
             absoluteMeshTransform = Matrix.Identity;
 
             InitializeSkinningInfo();
-            
+            base.UpdateOrder = 1;
             game.Components.Add(this);
+
 
         }
 
@@ -272,8 +273,6 @@ namespace Animation
 
 
 
-
-
         public BonePoseCollection BonePoses
         {
             get { return bonePoses; }
@@ -285,40 +284,36 @@ namespace Animation
         /// <param name="gameTime">The game time</param>
         public override void Draw(GameTime gameTime)
         {
-            if (Enabled)
+            int index = 0;
+            for (int i = 0; i < numMeshes; i++)
             {
-
-
-                int index = 0;
-                for (int i = 0; i < numMeshes; i++)
+                ModelMesh mesh = model.Meshes[i];
+                if (matrixPaletteParams[index] != null)
                 {
-                    ModelMesh mesh = model.Meshes[i];
-                    if (matrixPaletteParams[index] != null)
+                    for (int j = 0; j < palette.Length; j++)
                     {
-                        for (int j = 0; j < palette.Length; j++)
-                        {
-                            int p = paletteToBoneMapping[j];
-                            Matrix.Multiply(ref skinTransforms[i][p], ref pose[p], out palette[j]);
-                        }
-                        foreach (Effect effect in mesh.Effects)
-                        {
-                            worldParams[index].SetValue(world);
-                            matrixPaletteParams[index].SetValue(palette);
-                            index++;
-                        }
+                        int p = paletteToBoneMapping[j];
+                        Matrix.Multiply(ref skinTransforms[i][p], ref pose[p], out palette[j]);
                     }
-                    else
+                    foreach (Effect effect in mesh.Effects)
                     {
-                        foreach (Effect effect in mesh.Effects)
-                        {
-
-                            worldParams[index].SetValue(pose[mesh.ParentBone.Index] * world);
-                            index++;
-                        }
+                        worldParams[index].SetValue(world);
+                        matrixPaletteParams[index].SetValue(palette);
+                        index++;
                     }
-                    mesh.Draw();
                 }
+                else
+                {
+                    foreach (Effect effect in mesh.Effects)
+                    {
+
+                        worldParams[index].SetValue(pose[mesh.ParentBone.Index] * world);
+                        index++;
+                    }
+                }
+                mesh.Draw();
             }
+            
         }
         #endregion
     }

@@ -71,7 +71,7 @@ namespace Animation
     {
         // Contains the interpolated transforms for all bones in an
         // animation
-        private Animation animation;
+        private AnimationInfo animation;
         // Multiplied by the time whenever the animation is advanced; determines
         // the playback speed of the animation
         private double speedFactor = 1.0;
@@ -101,10 +101,14 @@ namespace Animation
         /// <param name="animator">The ModelAnimator that will use this controller.</param>
         public AnimationController(
             Game game,
-            Animation sourceAnimation) : base(game)
+            AnimationInfo sourceAnimation) : base(game)
         {
             animation = sourceAnimation;
+            base.UpdateOrder = 0;
             game.Components.Add(this);
+
+
+
         }
 
         public override void Update(GameTime gameTime)
@@ -152,7 +156,7 @@ namespace Animation
         /// <summary>
         /// Gets the source animation that this controller is using.
         /// </summary>
-        public Animation AnimationSource
+        public AnimationInfo AnimationSource
         {
             get { return animation; }
         }
@@ -171,6 +175,8 @@ namespace Animation
                 elapsedTime = value % (animation.Duration+1);
             }
         }
+
+
 
         /// <summary>
         /// Gets or sets the value that is multiplied by the time when it is

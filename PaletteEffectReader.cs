@@ -72,7 +72,10 @@ namespace Animation.Content
                 effect.DiffuseColor = input.ReadVector3();
             else
                 effect.DiffuseColor = Color.Black.ToVector3();
-
+            if (input.ReadBoolean())
+                effect.Alpha = input.ReadSingle();
+            else
+                effect.Alpha = 1.0f;
 
             return effect;
 

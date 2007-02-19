@@ -296,17 +296,17 @@ namespace Animation.Content
                     string fileName = tokens.SkipName().NextString();
                     if (fileName.TrimStart(' ', '"').TrimEnd(' ', '"') != "")
                     {
-
-                        if (!System.IO.File.Exists(fileName))
+                        string path = GetAbsolutePath(fileName);
+                        if (Path.IsPathRooted(fileName) && !System.IO.File.Exists(path))
                         {
                             context.Logger.LogWarning("", new ContentIdentity(),
                                 "An absolute texture path that does not exist is stored in an .X file: " +
-                                fileName + "\n  Attempting to find texture via relative path.");
-                            fileName = System.IO.Path.GetFileName(fileName);
+                                path + "\n  Attempting to find texture via relative path.");
+                            path = GetAbsolutePath(Path.GetFileName(fileName));
                         }
 
                         texRef =
-                            new ExternalReference<TextureContent>(GetAbsolutePath(fileName));
+                            new ExternalReference<TextureContent>(path);
                     }
                     tokens.SkipToken();
                 }
@@ -346,7 +346,12 @@ namespace Animation.Content
         /// <returns>The absolute filename of the item</returns>
         public string GetAbsolutePath(string contentItem)
         {
-            return Path.GetFullPath(contentItem);
+            if (Path.IsPathRooted(contentItem))
+                return contentItem;
+            string path = Path.GetDirectoryName(fileName) + Path.DirectorySeparatorChar
+                + contentItem;
+            return Path.GetFullPath(path);
+            
         }
 
 

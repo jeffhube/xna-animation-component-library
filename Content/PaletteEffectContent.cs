@@ -62,6 +62,9 @@ namespace Animation.Content
             output.Write(value.DiffuseColor != null);
             if (value.DiffuseColor != null)
                 output.Write((Vector3)value.DiffuseColor);
+            output.Write(value.Alpha != null);
+            if (value.Alpha != null)
+                output.Write((float)value.Alpha);
 
         }
 
@@ -207,6 +210,7 @@ float3 DirLight2DiffuseColor;
 float3 DirLight0SpecularColor;
 float3 DirLight1SpecularColor;
 float3 DirLight2SpecularColor;
+float Alpha;
 uniform extern float4x4 MatrixPalette[" + this.PALETTE_SIZE.ToString() + @"];
 float SpecularPower;
 bool TextureEnabled;
@@ -216,11 +220,7 @@ texture BasicTexture;
 sampler TextureSampler = sampler_state
 {
    Texture = (BasicTexture);
-   ADDRESSU = WRAP;
-   ADDRESSV = WRAP;
-   MAGFILTER = LINEAR;
-   MINFILTER = LINEAR;
-   MIPFILTER = LINEAR;
+
 };
 ";
             }
@@ -270,8 +270,10 @@ void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
 		// Now we apply the aforementioned phong formulate to get the final color
 		output.color.xyz = TextureEnabled ? tex2D(TextureSampler, input.texcoord).xyz  * input.color.xyz
             : input.color.xyz;
+
 	}
-		output.color.w   = input.color.w;
+        output.color.w   = 
+            TextureEnabled ? tex2D(TextureSampler, input.texcoord).w * Alpha : Alpha;
 }
 ";
             }

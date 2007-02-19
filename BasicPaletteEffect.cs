@@ -44,6 +44,7 @@ namespace Animation
 
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
+            alphaParam,
             specColorParam, specPowerParam, texEnabledParam, texParam, paletteParam;
         private BasicDirectionalLight light0, light1, light2;
         private Vector3 eye;
@@ -104,6 +105,7 @@ namespace Animation
             diffuseParam = Parameters["DiffuseColor"];
             specColorParam = Parameters["SpecularColor"];
             specPowerParam = Parameters["SpecularPower"];
+            alphaParam = Parameters["Alpha"];
             light0 = new BasicDirectionalLight(this, 0);
             light1 = new BasicDirectionalLight(this, 1);
             light2 = new BasicDirectionalLight(this, 2);
@@ -137,6 +139,7 @@ namespace Animation
             SpecularColor = effect.SpecularColor;
             EmissiveColor = effect.EmissiveColor;
             SpecularPower = effect.SpecularPower;
+            Alpha = effect.Alpha;
             this.Texture = effect.Texture;
             this.TextureEnabled = effect.TextureEnabled;
             SetParamsFromBasicLight(effect.DirectionalLight0, light0);
@@ -206,6 +209,8 @@ namespace Animation
             }
 
 
+
+
             /// <summary>
             /// Gets or sets the specular color of this light.
             /// </summary>
@@ -250,6 +255,18 @@ namespace Animation
             set
             {
                 texParam.SetValue(value);
+            }
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return alphaParam.GetValueSingle();
+            }
+            set
+            {
+                alphaParam.SetValue(value);
             }
         }
 
