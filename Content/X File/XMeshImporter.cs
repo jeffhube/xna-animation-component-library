@@ -33,7 +33,7 @@ using Microsoft.Xna.Framework.Graphics.PackedVector;
 using System.IO;
 #endregion
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
 
     internal partial class XModelImporter

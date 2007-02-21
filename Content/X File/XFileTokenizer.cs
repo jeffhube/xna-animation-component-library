@@ -32,7 +32,7 @@ using System.Globalization;
 #endregion
 
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Tokenizes a .X file and provides methods to parse those tokens.

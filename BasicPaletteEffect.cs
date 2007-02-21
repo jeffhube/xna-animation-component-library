@@ -152,6 +152,10 @@ namespace XCLNA.XNA.Animation
             Alpha = effect.Alpha;
             this.Texture = effect.Texture;
             this.TextureEnabled = effect.TextureEnabled;
+            FogColor = effect.FogColor;
+            FogStart = effect.FogStart;
+            FogEnd = effect.FogEnd;
+            FogEnabled = effect.FogEnabled;
             SetParamsFromBasicLight(effect.DirectionalLight0, light0);
             SetParamsFromBasicLight(effect.DirectionalLight1, light1);
             SetParamsFromBasicLight(effect.DirectionalLight2, light2);

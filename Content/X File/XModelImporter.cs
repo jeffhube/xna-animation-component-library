@@ -32,7 +32,7 @@ using System.IO;
 using System.Globalization;
 #endregion
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Imports a directx model that contains skinning info.
