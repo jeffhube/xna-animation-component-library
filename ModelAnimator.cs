@@ -160,6 +160,8 @@ namespace XCLNA.XNA.Animation
                     {
                         matrixPaletteParams[index] = effect.Parameters["MatrixPalette"];
                     }
+                    else
+                        matrixPaletteParams[index]=null;
                     index++;
                 }
             }
@@ -223,30 +225,38 @@ namespace XCLNA.XNA.Animation
         /// <param name="gameTime">The game time</param>
         public override void Draw(GameTime gameTime)
         {
-            int index = 0;
-            // Update all the effects with the palette and world and draw the meshes
-            for (int i = 0; i < numMeshes; i++)
+            try
             {
-                ModelMesh mesh = model.Meshes[i];
-                if (matrixPaletteParams[index] != null)
+                int index = 0;
+                // Update all the effects with the palette and world and draw the meshes
+                for (int i = 0; i < numMeshes; i++)
                 {
-                    foreach (Effect effect in mesh.Effects)
+                    ModelMesh mesh = model.Meshes[i];
+                    if (matrixPaletteParams[index] != null)
                     {
-                        worldParams[index].SetValue(world);
-                        matrixPaletteParams[index].SetValue(palette);
-                        index++;
+                        foreach (Effect effect in mesh.Effects)
+                        {
+                            worldParams[index].SetValue(world);
+                            matrixPaletteParams[index].SetValue(palette);
+                            index++;
+                        }
                     }
-                }
-                else
-                {
-                    foreach (Effect effect in mesh.Effects)
+                    else
                     {
+                        foreach (Effect effect in mesh.Effects)
+                        {
 
-                        worldParams[index].SetValue(pose[mesh.ParentBone.Index] * world);
-                        index++;
+                            worldParams[index].SetValue(pose[mesh.ParentBone.Index] * world);
+                            index++;
+                        }
                     }
+                    mesh.Draw();
                 }
-                mesh.Draw();
+            }
+            catch (NullReferenceException)
+            {
+                throw new InvalidOperationException("The effects on the model for a " +
+                    "ModelAnimator were changed without calling ModelAnimator.InitializeEffectParams().");
             }
             
         }
