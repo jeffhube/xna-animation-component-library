@@ -42,10 +42,37 @@ namespace XCLNA.XNA.Animation.Content
     [ContentProcessor(DisplayName = "ModelAnimationCollection - Animation Library")]
     public class AnimationProcessor : ContentProcessor<BoneContent, AnimationContentDictionary>
     {
-        protected ContentProcessorContext context;
-        protected BoneContent inputSkeleton;
-        protected NodeContent model;
-        protected BoneContent modelSkeleton;
+
+        private ContentProcessorContext context;
+        private BoneContent inputSkeleton;
+        private NodeContent model;
+        private BoneContent modelSkeleton;
+
+
+        /// <summary>
+        /// The context for the processor.
+        /// </summary>
+        protected ContentProcessorContext Context
+        { get { return context; } }
+
+        /// <summary>
+        /// The input skeleton.
+        /// </summary>
+        protected BoneContent InputSkeleton
+        { get { return inputSkeleton; } }
+
+
+        /// <summary>
+        /// The model.
+        /// </summary>
+        protected NodeContent Model
+        { get { return model; } }
+
+        /// <summary>
+        /// The skeleton contained in the model.
+        /// </summary>
+        protected BoneContent ModelSkeleton
+        { get { return modelSkeleton; } }
 
 
         /// <summary>
@@ -69,7 +96,7 @@ namespace XCLNA.XNA.Animation.Content
                 ExternalReference<NodeContent> er = new ExternalReference<NodeContent>(modelFilePath);
                 model = (NodeContent)context.BuildAndLoadAsset<NodeContent, Object>(er, "PassThroughProcessor");
                 modelSkeleton = MeshHelper.FindSkeleton(model);
-                checkBones(modelSkeleton, inputSkeleton);
+                CheckBones(modelSkeleton, inputSkeleton);
             }
             else
             {
@@ -83,6 +110,11 @@ namespace XCLNA.XNA.Animation.Content
             return animations;
         }
 
+        /// <summary>
+        /// Gets the path of the model.
+        /// </summary>
+        /// <param name="animationId">The identity of the AnimationContent object.</param>
+        /// <returns>The path of the model file.</returns>
         protected virtual string GetModelFilePath(ContentIdentity animationId)
         {
             string dir = Path.GetDirectoryName(animationId.SourceFilename);
@@ -98,7 +130,12 @@ namespace XCLNA.XNA.Animation.Content
             }
         }
 
-        protected virtual void checkBones(BoneContent modelBone, BoneContent skeletonBone)
+        /// <summary>
+        /// Checks the bones to make sure the skeleton is valid.
+        /// </summary>
+        /// <param name="modelBone">The model bone to check.</param>
+        /// <param name="skeletonBone">The skeleton bone to check</param>
+        protected virtual void CheckBones(BoneContent modelBone, BoneContent skeletonBone)
         {
             if (modelBone.Name != skeletonBone.Name)
             {
@@ -133,7 +170,7 @@ namespace XCLNA.XNA.Animation.Content
                 if (modelBoneDict.ContainsKey(sb.Name))
                 {
                     BoneContent mb = modelBoneDict[sb.Name];
-                    checkBones(mb, sb);
+                    CheckBones(mb, sb);
                 }
                 else
                 {
@@ -142,6 +179,12 @@ namespace XCLNA.XNA.Animation.Content
                 }
             }
         }
+
+        /// <summary>
+        /// Interpolates all the AnimationContent in the specified dictionary to 60 fps.
+        /// </summary>
+        /// <param name="input">The animation dictionary to interpolate.</param>
+        /// <returns>An interpolated dictionary of animations.</returns>
         public virtual AnimationContentDictionary Interpolate(AnimationContentDictionary input)
         {
             AnimationContentDictionary output = new AnimationContentDictionary();
@@ -152,7 +195,11 @@ namespace XCLNA.XNA.Animation.Content
             return output;
         }
 
-        // Interpolates an AnimationContent object to 60 fps
+        /// <summary>
+        /// Interpolates an AnimationContent object to 60 fps.
+        /// </summary>
+        /// <param name="input">The AnimationContent to interpolate.</param>
+        /// <returns>The interpolated AnimationContent.</returns>
         public virtual AnimationContent Interpolate(AnimationContent input)
         {
             AnimationContent output = new AnimationContent();
@@ -166,10 +213,12 @@ namespace XCLNA.XNA.Animation.Content
                 AnimationChannel outChannel = new AnimationChannel();
                 int currentFrame = 0;
 
+                // Step through time until the time passes the animation duration
                 while (time <= animationDuration)
                 {
                     AnimationKeyframe keyframe;
-
+                    // Clamp the time to the duration of the animation and make this 
+                    // keyframe equal to the last animation frame.
                     if (time >= animationDuration)
                     {
                         time = animationDuration;
@@ -178,24 +227,34 @@ namespace XCLNA.XNA.Animation.Content
                     }
                     else
                     {
+                        // If the channel only has one keyframe, set the transform for the current time
+                        // to that keyframes transform
                         if (channel.Count == 1 || time < channel[0].Time.Ticks)
                         {
                             keyframe = new AnimationKeyframe(new TimeSpan(time), channel[0].Transform);
                         }
+                        // If the current track duration is less than the animation duration,
+                        // use the last transform in the track once the time surpasses the duration
                         else if (channel[channel.Count - 1].Time.Ticks <= time)
                         {
                             keyframe = new AnimationKeyframe(new TimeSpan(time), channel[channel.Count - 1].Transform);
                         }
-                        else
+                        else // proceed as normal
                         {
+                            // Go to the next frame that is less than the current time
                             while (channel[currentFrame + 1].Time.Ticks < time)
                             {
                                 currentFrame++;
                             }
+                            // Numerator of the interpolation factor
                             double interpNumerator = (double)(time - channel[currentFrame].Time.Ticks);
+                            // Denominator of the interpolation factor
                             double interpDenom = (double)(channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks);
+                            // The interpolation factor, or amount to interpolate between the current
+                            // and next frame
                             double interpAmount = interpNumerator / interpDenom;
                             
+                            // If the frames are roughly 60 frames per second apart, use linear interpolation
                             if (channel[currentFrame + 1].Time.Ticks - channel[currentFrame].Time.Ticks
                                 <= ContentUtil.TICKS_PER_60FPS * 1.05)
                             {
@@ -205,7 +264,8 @@ namespace XCLNA.XNA.Animation.Content
                                     channel[currentFrame + 1].Transform,
                                     (float)interpAmount));
                             }
-                            else
+                            else // else if the transforms between the current frame and the next aren't identical
+                                 // decompose the matrix and interpolate the rotation separately
                                 if (channel[currentFrame].Transform != channel[currentFrame + 1].Transform)
                             {
                                 keyframe = new AnimationKeyframe(new TimeSpan(time),
@@ -214,7 +274,8 @@ namespace XCLNA.XNA.Animation.Content
                                     channel[currentFrame + 1].Transform,
                                     (float)interpAmount));
                             }
-                            else
+                            else // Else the adjacent frames have identical transforms and we can use
+                                    // the current frames transform for the current keyframe.
                             {
                                 keyframe = new AnimationKeyframe(new TimeSpan(time),
                                     channel[currentFrame].Transform);
@@ -222,12 +283,15 @@ namespace XCLNA.XNA.Animation.Content
 
                         }
                     }
+                    // Add the interpolated keyframe to the new channel.
                     outChannel.Add(keyframe);
+                    // Step the time forward by 1/60th of a second
                     time += ContentUtil.TICKS_PER_60FPS;
                 }
+                // Add the interpolated channel to the animation
                 output.Channels.Add(channelName, outChannel);
-
             }
+            // Set the interpolated duration to equal the inputs duration for consistency
             output.Duration = input.Duration;
             return output;
 

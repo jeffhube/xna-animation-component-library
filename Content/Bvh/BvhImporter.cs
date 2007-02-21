@@ -35,14 +35,14 @@ using System.Xml;
 using System.Globalization;
 #endregion
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Imports BVH (Biovision hierarchical) animation data.
     /// </summary>
     [ContentImporter(".BVH", CacheImportedData = true, DefaultProcessor = "AnimationProcessor",
         DisplayName = "BVH - Animation Library")]
-    public sealed class BvhImporter : ContentImporter<BoneContent>
+    internal sealed class BvhImporter : ContentImporter<BoneContent>
     {
         private char[] whiteSpace = { ' ', '\t', '\r', '\n' };
         private ContentImporterContext context;

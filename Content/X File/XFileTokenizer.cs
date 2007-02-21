@@ -202,7 +202,9 @@ namespace XCLNA.XNA.Animation.Content
         }
 
  
-
+        /// <summary>
+        /// The current token index of the tokenizer.
+        /// </summary>
         public long CurrentIndex
         {
             get { return tokenIndex; }

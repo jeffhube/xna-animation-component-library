@@ -33,20 +33,26 @@ using Microsoft.Xna.Framework.Input;
 namespace XCLNA.XNA.Animation
 {
     /// <summary>
-    /// A viewer for animated models. To view your model, just do 
-    ///     new ModelViewer(game, model);
+    /// A viewer animated models.
     /// </summary>
-    public partial class ModelViewer : DrawableGameComponent
+    public class ModelViewer : DrawableGameComponent
     {
-        List<Model> models = new List<Model>();
+        // The list of models contained in the viewer
+        private List<Model> models = new List<Model>();
+        // The animators for the models
         private List<ModelAnimator> animators = new List<ModelAnimator>();
+
+        // The effects
         List<Effect> effects = new List<Effect>();
 
+        // The viewing space bounding sphere.
         private BoundingSphere sphere;
 
         Matrix world, view, projection;
         Vector3 cameraPosition, up;
-        float fov, near, far, width, height, cx, cy, aspect;
+        float fieldOfView, nearDistance, farDistance, windowWidth, windowHeight,
+            centerX, centerY, aspectRatio;
+        // Radius of hte arcball
         float arcRadius;
         Viewport viewPort;
         Vector3 modelPos = Vector3.One;
@@ -55,14 +61,22 @@ namespace XCLNA.XNA.Animation
         KeyboardState lastKeyboardState;
 #endif
 
+        /// <summary>
+        /// Gets the collection of animators for this viewer.
+        /// </summary>
         public System.Collections.ObjectModel.ReadOnlyCollection<ModelAnimator> Animators
         {
             get { return animators.AsReadOnly(); }
         }
 
+        /// <summary>
+        /// Creates a new instance of ModelViewer.
+        /// </summary>
+        /// <param name="game">The game to which the viewer will be attached.</param>
         public ModelViewer(Game game)
             : base(game)
         {
+            // Basic parameter initialization
             sphere = new BoundingSphere(Vector3.Zero, 1.0f);
             game.Components.Add(this);
             game.IsMouseVisible = true;
@@ -71,31 +85,42 @@ namespace XCLNA.XNA.Animation
                 (IGraphicsDeviceService)game.Services.GetService(
                 typeof(IGraphicsDeviceService));
             viewPort = graphics.GraphicsDevice.Viewport;
-            width = (float)viewPort.Width;
-            height = (float)viewPort.Height;
-            fov = MathHelper.PiOver4;
-            near = .1f;
-            far = 10000.0f;
-            cx = width / 2.0f;
-            cy = height / 2.0f;
-            aspect = width / height;
+            windowWidth = (float)viewPort.Width;
+            windowHeight = (float)viewPort.Height;
+            fieldOfView = MathHelper.PiOver4;
+            nearDistance = .1f;
+            farDistance = 100000.0f;
+            centerX = windowWidth / 2.0f;
+            centerY = windowHeight / 2.0f;
+            aspectRatio = windowWidth / windowHeight;
             up = Vector3.Up;
             projection = Matrix.CreatePerspectiveFieldOfView(
-                fov, aspect, near, far);
+                fieldOfView, aspectRatio, nearDistance, farDistance);
             world = Matrix.Identity;
         }
 
+        /// <summary>
+        /// Creates a new instance of ModelViewer.
+        /// </summary>
+        /// <param name="game">The game to which the viewer will be attached.</param>
+        /// <param name="model">The model to view.</param>
         public ModelViewer(Game game, Model model)
             : this(game)
         {
             Add(model);
         }
 
+        /// <summary>
+        /// ADds a model to the viewer.
+        /// </summary>
+        /// <param name="model">The moedl to add.</param>
         public void Add(Model model)
         {
+            // Merge the bounding spheres
             foreach (ModelMesh mesh in model.Meshes)
                 sphere = BoundingSphere.CreateMerged(sphere, mesh.BoundingSphere);
             models.Add(model);
+            // Create an init the new controller
             ModelAnimator controller = new ModelAnimator(Game, model);
             controller.World = Matrix.CreateRotationY(MathHelper.Pi / 4.0f);
             controller.Enabled = true;
@@ -105,6 +130,7 @@ namespace XCLNA.XNA.Animation
             Arrange();
         }
 
+        // Arrange the models in the viewer to display nicely
         private void Arrange()
         {
             int columns = animators.Count;
@@ -114,11 +140,14 @@ namespace XCLNA.XNA.Animation
             {
                 int column = i % columns;
                 int row = i / columns;
-                Matrix t = Matrix.CreateTranslation(sphere.Radius * (column - columns / 2), 0, -sphere.Radius * row);
+                Matrix t = Matrix.CreateTranslation(sphere.Radius 
+                    * (column - columns / 2), 0, -sphere.Radius * row);
                 animators[i].World = t * world;
             }
         }
 
+        // Initialize the effects so the models look reasonable and the lighting
+        // Is as it is in the directx Mesh viewer
         private void InitializeEffects(Model model)
         {
             cameraPosition = new Vector3(0, 0, sphere.Radius * 5);
@@ -158,7 +187,7 @@ namespace XCLNA.XNA.Animation
 
 
         // Returns true if the user clicked on the boundings sphere, false otherwise
-        bool IntersectPoint(int x, int y,
+        private bool IntersectPoint(int x, int y,
             out Vector3 intersectionPoint)
         {
             BoundingSphere sphere = new BoundingSphere(new Vector3(),
@@ -187,22 +216,34 @@ namespace XCLNA.XNA.Animation
             }
         }
 
+        /// <summary>
+        /// Gets the position of the camera.
+        /// </summary>
         public Vector3 CameraPosition
         { get { return cameraPosition; } }
 
+        /// <summary>
+        /// Updates hte ModelViewer.
+        /// </summary>
+        /// <param name="gameTime">The GameTime.</param>
         public override void Update(GameTime gameTime)
         {
 #if WINDOWS
             MouseState state = Mouse.GetState();
             KeyboardState ks = Keyboard.GetState();
+
+            // Adjust the zoom
             if (state.ScrollWheelValue != lastState.ScrollWheelValue)
             {
                 float zoom = sphere.Radius * 5 -
                     (sphere.Radius / 10.0f) * 
                     (((float)state.ScrollWheelValue) / 20.0f);
+                // Clamp the zoom to the model radius
                 if (zoom < sphere.Radius)
                     zoom = sphere.Radius;
+                // Re-adjust the arcball radius
                 arcRadius = zoom / 2.0f;
+                // Re-adjust the camera position
                 Vector3 n = Vector3.Normalize(cameraPosition);
                 cameraPosition = n * zoom;
                 view = Matrix.CreateLookAt(
@@ -210,14 +251,18 @@ namespace XCLNA.XNA.Animation
                     up);
             }
 
+            // Update the view if the user drags the mouse
             if ((state.LeftButton == ButtonState.Pressed
                 || state.RightButton == ButtonState.Pressed)
                 && (state.X != lastState.X || state.Y != lastState.Y) )
             {
+                // The current click point and last clik point
                 Vector3 curPt, lastPt;
+                // If the mouse click intersects the arcball bounding sphere
                 if (IntersectPoint(lastState.X, lastState.Y, out lastPt)
                     && IntersectPoint(state.X, state.Y, out curPt))
                 {
+                    // Do all sorts of crazy trig!
                     Vector3 cross = Vector3.Cross(lastPt, curPt);
                     cross.Normalize();
                     lastPt.Normalize();

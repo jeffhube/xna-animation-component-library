@@ -31,19 +31,19 @@ using Microsoft.Xna.Framework.Graphics;
 namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
-    /// Reads a BasicPaletteEffect from the content pipeline
+    /// Reads a BasicPaletteEffect from the content pipeline.
     /// </summary>
     public class PaletteEffectReader : ContentTypeReader<BasicPaletteEffect>
     {
         /// <summary>
-        /// Reads a BasicPaletteEffect
+        /// Reads a BasicPaletteEffect.
         /// </summary>
-        /// <param name="input">The input stream</param>
-        /// <param name="existingInstance">N/A</param>
-        /// <returns>A new instance of BasicPaletteEffect</returns>
+        /// <param name="input">The input stream.</param>
+        /// <param name="existingInstance">N/A.</param>
+        /// <returns>A new instance of BasicPaletteEffec.t</returns>
         protected override BasicPaletteEffect Read(ContentReader input, BasicPaletteEffect existingInstance)
         {
-
+            // Read in the parameters, including the byte code, and create the effect.
             ContentManager manager = input.ContentManager;
             IGraphicsDeviceService graphics =
                 (IGraphicsDeviceService)manager.ServiceProvider.GetService(typeof(IGraphicsDeviceService));

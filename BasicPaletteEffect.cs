@@ -36,24 +36,26 @@ namespace XCLNA.XNA.Animation
 {
 
     /// <summary>
-    /// Provides functionality similar to that of BasicEffect, but uses phong shading
-    /// and a matrix palette.
+    /// Provides functionality similar to that of BasicEffect, but uses a 
+    /// Matrix Palette.
     /// </summary>
     public sealed class BasicPaletteEffect : Effect
     {
-
+        // All the effect parameters
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
             alphaParam,
             specColorParam, specPowerParam, texEnabledParam, texParam, paletteParam,
             fogEnabledParam, fogStartParam, fogEndParam, fogColorParam;
         private BasicDirectionalLight light0, light1, light2;
+        // The location of the camera
         private Vector3 eye;
+        // Used to help determine the eye position
         private static Vector3 zero = Vector3.Zero;
 
 
         /// <summary>
-        /// The max number of bones in the effects matrix palette.
+        /// The max number of bones in the effect's matrix palette.
         /// </summary>
         public readonly int PALETTE_SIZE;
 
@@ -73,6 +75,9 @@ namespace XCLNA.XNA.Animation
             InitializeParameters();
         }
 
+        /// <summary>
+        /// Enables the default lighting for this effect.
+        /// </summary>
         public void EnableDefaultLighting()
         {
             this.LightingEnabled = true;
@@ -272,6 +277,9 @@ namespace XCLNA.XNA.Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the vertex fog start distance.
+        /// </summary>
         public float FogStart
         {
             get
@@ -284,6 +292,9 @@ namespace XCLNA.XNA.Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the vertex fog end distance.
+        /// </summary>
         public float FogEnd
         {
             get
@@ -292,10 +303,14 @@ namespace XCLNA.XNA.Animation
             }
             set
             {
+            
                 fogEndParam.SetValue(value);
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value enabling the fog. 
+        /// </summary>
         public bool FogEnabled
         {
             get
@@ -308,6 +323,9 @@ namespace XCLNA.XNA.Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the fog color.
+        /// </summary>
         public Vector3 FogColor
         {
             get
@@ -320,6 +338,9 @@ namespace XCLNA.XNA.Animation
             }
         }
 
+        /// <summary>
+        /// Gets or sets the alhpa blending value.
+        /// </summary>
         public float Alpha
         {
             get
@@ -333,7 +354,7 @@ namespace XCLNA.XNA.Animation
         }
 
         /// <summary>
-        /// True if textures are enabled.
+        /// Gets or sets a value enabling the textures.
         /// </summary>
         public bool TextureEnabled
         {

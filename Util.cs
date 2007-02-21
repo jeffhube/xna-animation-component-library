@@ -32,11 +32,26 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 namespace XCLNA.XNA.Animation
 {
+    /// <summary>
+    /// Info on how a model is skinned.
+    /// </summary>
     public enum SkinningType
     {
+        /// <summary>
+        /// No skinning.
+        /// </summary>
         None,
+        /// <summary>
+        /// A max of four influences per vertex.
+        /// </summary>
         FourBonesPerVertex,
+        /// <summary>
+        /// A max of eight influences per vertex.
+        /// </summary>
         EightBonesPerVertex,
+        /// <summary>
+        /// A max of twelve influences per vertex.
+        /// </summary>
         TwelveBonesPerVertex
     }
     /// <summary>
@@ -44,69 +59,17 @@ namespace XCLNA.XNA.Animation
     /// </summary>
     public sealed class Util
     {
+        /// <summary>
+        /// Ticks per frame at 60 frames per second.
+        /// </summary>
         public const long TICKS_PER_60FPS = TimeSpan.TicksPerSecond / 60;
 
         /// <summary>
-        /// Initializes a basic effect to some reasonable values because I hate doing this
-        /// every time I start a new game projection
+        /// Gets info on what skinning info a vertex element array contains.
         /// </summary>
-        /// <param name="effect">The effect to be initialized</param>
-        public static void InitializeBasicEffect(BasicEffect effect)
-        {
-            // Create some lighting
-            effect.LightingEnabled = true;
-            effect.DirectionalLight0.Enabled = true;
-            effect.DirectionalLight0.Direction = new Vector3(0, 0, -1);
-            effect.DirectionalLight0.DiffuseColor = Color.White.ToVector3();
-            // Set the camera
-            effect.Projection = GetDefaultProjection(effect);
-            effect.View = DefaultView;
-            effect.World = Matrix.Identity;
-        }
-
-        /// <summary>
-        /// Gets a reasonable projection matrix for easy effect initialization.
-        /// 45 degrees FOV and viewport width/viewport height aspect ratio.
-        /// </summary>
-        /// <param name="effect">The effect attached to a device</param>
-        /// <returns>A reasonable default projection matrix</returns>
-        public static Matrix GetDefaultProjection(Effect effect)
-        {
-
-            return Matrix.CreatePerspectiveFieldOfView(
-              (float)Math.PI / 4.0f,
-              (float)effect.GraphicsDevice.Viewport.Width /
-              effect.GraphicsDevice.Viewport.Height,
-              .1f,
-              10000.0f);
-            
-        }
-
-        /// <summary>
-        /// Gets a reasonable default view matrix.
-        /// </summary>
-        public static Matrix DefaultView
-        {
-            get
-            {
-                return Matrix.CreateLookAt(new Vector3(0, 20, 20),
-                new Vector3(0, 0, 0),
-                Vector3.Up);
-            }
-        }
-
-        /// <summary>
-        /// Calls InitializeBasicEffect on every effect in a model
-        /// </summary>
-        /// <param name="model">The model</param>
-        public static void InitializeAllEffects(Model model)
-        {
-            foreach (ModelMesh mesh in model.Meshes)
-                foreach (BasicEffect effect in mesh.Effects)
-                    InitializeBasicEffect(effect);
-        }
-
-        public static SkinningType CheckSkinningType(VertexElement[] elements)
+        /// <param name="elements">The vertex elements.</param>
+        /// <returns>Info on what type of skinning the elements contain.</returns>
+        public static SkinningType GetSkinningType(VertexElement[] elements)
         {
             int numIndexChannels = 0;
             int numWeightChannels = 0;
@@ -166,12 +129,7 @@ namespace XCLNA.XNA.Animation
             return (T)max;
         }
 
-
-
-
-    
-
-
+        
         /// <summary>
         /// Converts from an array of bytes to any vertex type.
         /// </summary>
@@ -205,7 +163,7 @@ namespace XCLNA.XNA.Animation
         /// <param name="start">Source matrix for interpolation</param>
         /// <param name="end">Destination matrix for interpolation</param>
         /// <param name="slerpAmount">Ratio of interpolation</param>
-        /// <returns></returns>
+        /// <returns>The interpolated matrix</returns>
         public static Matrix SlerpMatrix(Matrix start, Matrix end,
             float slerpAmount)
         {
@@ -256,7 +214,7 @@ namespace XCLNA.XNA.Animation
         /// <param name="start">Source matrix for interpolation</param>
         /// <param name="end">Destination matrix for interpolation</param>
         /// <param name="slerpAmount">Ratio of interpolation</param>
-        /// <returns></returns>
+        /// <param name="result">Stores the result of hte interpolation.</param>
         public static void SlerpMatrix(
             ref Matrix start, 
             ref Matrix end,
@@ -304,7 +262,11 @@ namespace XCLNA.XNA.Animation
         }
 
 
-
+        /// <summary>
+        /// Determines whether or not a ModelMeshPart is skinned.
+        /// </summary>
+        /// <param name="meshPart">The part to check.</param>
+        /// <returns>True if the part is skinned.</returns>
         public static bool IsSkinned(ModelMeshPart meshPart)
         {
             VertexElement[] ves = meshPart.VertexDeclaration.GetVertexElements();
@@ -321,6 +283,11 @@ namespace XCLNA.XNA.Animation
             return false;
         }
 
+        /// <summary>
+        /// Determines whether or not a ModelMesh is skinned.
+        /// </summary>
+        /// <param name="mesh">The mesh to check.</param>
+        /// <returns>True if the mesh is skinned.</returns>
         public static bool IsSkinned(ModelMesh mesh)
         {
             foreach (ModelMeshPart mmp in mesh.MeshParts)
@@ -331,6 +298,11 @@ namespace XCLNA.XNA.Animation
             return false;
         }
 
+        /// <summary>
+        /// Determines whether or not a Model is skinned.
+        /// </summary>
+        /// <param name="model">The model to check.</param>
+        /// <returns>True if the model is skinned.</returns>
         public static bool IsSkinned(Model model)
         {
             foreach (ModelMesh mm in model.Meshes)

@@ -1,5 +1,5 @@
 /*
- * SkinTransform.cs
+ * SkinInfo.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -39,6 +39,13 @@ namespace XCLNA.XNA.Animation
     /// </summary>
     public struct SkinInfo
     {
+        /// <summary>
+        /// Creates a new SkinInfo.
+        /// </summary>
+        /// <param name="name">The name of the bone attached to the transform.</param>
+        /// <param name="transform">The transform for the bone.</param>
+        /// <param name="paletteIndex">The index in the MatrixPalette for the bone.</param>
+        /// <param name="boneIndex">The index of the bone.</param>
         public SkinInfo(string name, Matrix transform,
             int paletteIndex, int boneIndex)
         {
@@ -48,32 +55,50 @@ namespace XCLNA.XNA.Animation
             BoneIndex = boneIndex;
         }
         /// <summary>
-        /// The name of the bone attached to the transform
+        /// The name of the bone attached to the transform.
         /// </summary>
         public readonly string BoneName;
         /// <summary>
-        /// The transform for the bone
+        /// The transform for the bone.
         /// </summary>
         public readonly Matrix Transform;
+        /// <summary>
+        /// The index in the MatrixPalette for the bone.
+        /// </summary>
         public readonly int PaletteIndex;
+        /// <summary>
+        /// The index of the bone.
+        /// </summary>
         public readonly int BoneIndex;
     }
 
+    /// <summary>
+    /// A collection of SkinInfo objects.
+    /// </summary>
     public class SkinInfoCollection : ReadOnlyCollection<SkinInfo>
     {
+        // The model that contains the skinning info
         private Model model;
 
-        public SkinInfoCollection(Model model)
-            : base(FromModel(model))
+        private SkinInfoCollection(Model model, SkinInfo[] info)
+            : base(info)
         {
             this.model = model;
 
         }
 
-        private static SkinInfo[] FromModel(Model model)
+        /// <summary>
+        /// Finds the skinning info for the model and calculates the inverse
+        /// reference poses required for animation.
+        /// </summary>
+        /// <param name="model">The model that contains the skinning info.</param>
+        /// <returns>A collection of SkinInfo objects.</returns>
+        public static SkinInfoCollection FromModel(Model model)
         {
+            // This is created in the content pipeline
             Dictionary<string, object> modelTagData =
                     (Dictionary<string, object>)model.Tag;
+            // An array of bone names that are used by the palette
             string[] skinnedBones;
             // An AnimationLibrary processor was not used if this is null
             if (modelTagData == null || !modelTagData.ContainsKey("SkinnedBones"))
@@ -85,10 +110,12 @@ namespace XCLNA.XNA.Animation
                 skinnedBones = (string[])modelTagData["SkinnedBones"];
             }
 
+            // Get the absolute transforms for the bones
             Matrix[] pose = new Matrix[model.Bones.Count];
             Matrix[] skinTransforms = new Matrix[model.Bones.Count];
             model.CopyAbsoluteBoneTransformsTo(pose);
             SkinInfo[] skinInfoArray = new SkinInfo[skinnedBones.Length];
+
 
             for (int i = 0; i < model.Meshes.Count; i++)
             {
@@ -101,6 +128,7 @@ namespace XCLNA.XNA.Animation
                         skinInfoArray[j] =
                             new SkinInfo(
                             bone.Name,
+                            // Calculate the inverse reference pose
                             absoluteMeshTransform * Matrix.Invert(pose[bone.Index]),
                             j,
                             bone.Index);
@@ -110,14 +138,12 @@ namespace XCLNA.XNA.Animation
             }
 
 
-            return skinInfoArray;
+            return new SkinInfoCollection(model, skinInfoArray);
         }
 
-
-
-
-
-
+        /// <summary>
+        /// The model associated with the skinning info.
+        /// </summary>
         public Model Model
         {
             get { return model; }

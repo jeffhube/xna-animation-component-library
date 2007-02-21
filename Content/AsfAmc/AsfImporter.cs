@@ -35,7 +35,7 @@ using System.Xml;
 using System.Globalization;
 #endregion
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Imports Acclaim ASF (motion capture skeleton).
@@ -43,7 +43,7 @@ namespace Animation.Content
     /// </summary>
     [ContentImporter(".ASF", CacheImportedData = true, DefaultProcessor = "AnimationProcessor",
         DisplayName = "Acclaim ASF - Animation Library")]
-    public sealed class AsfImporter : ContentImporter<BoneContent>
+    internal sealed class AsfImporter : ContentImporter<BoneContent>
     {
         private ContentImporterContext context;
         private StreamReader reader;

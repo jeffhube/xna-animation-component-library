@@ -1,5 +1,5 @@
 /*
- * ModelAnimationInfo.cs
+ * AnimationInfo.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -31,37 +31,71 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace XCLNA.XNA.Animation
 {
+    /// <summary>
+    /// A collection of BoneKeyFrames that represents an animation track.
+    /// </summary>
     public class BoneKeyframeCollection : ReadOnlyCollection<BoneKeyframe>
     {
+        #region Member Variables
+        // The name of the bone represented by this animation track
         private string boneName;
-
+        // Duration of the track
         private long duration;
+        #endregion
 
+        #region Constructors
+        // Only allow creation from inside the library (only in AnimationReader)
         internal BoneKeyframeCollection(string boneName,
             IList<BoneKeyframe> list) : base(list)
         {
             this.boneName = boneName;
             duration = list[list.Count - 1].Time;
         }
+        #endregion
 
+        #region Properties
+        /// <summary>
+        /// Gets the duration of the animation track.
+        /// </summary>
         public long Duration
         {
             get { return duration; }
         }
+
+        /// <summary>
+        /// Gets the name of the bone associated with the animation track.
+        /// </summary>
         public string BoneName
         { get { return boneName; } }
+        #endregion
 
+        #region Methods
+        /// <summary>
+        /// Gets the index in the track at the given time.
+        /// </summary>
+        /// <param name="ticks">The time for which the index is found.</param>
+        /// <returns>The index in the track at the given time.</returns>
         public int GetIndexByTime(long ticks)
         {
+            if (ticks < 0 || ticks > duration)
+                throw new ArgumentOutOfRangeException("ticks","The ticks for finding an " +
+                    "index in a BoneKeyframeCollection must be between 0 and the " +
+                    "duration of the animation track.");
+            // Since the animation is usually interpolated to 60 fps, this will
+            // almost always be the index to return
             int firstFrameIndexToCheck = (int)(ticks / Util.TICKS_PER_60FPS);
+            // Do out of bounds checking
             if (firstFrameIndexToCheck > base.Count)
                 firstFrameIndexToCheck = base.Count - 1;
-
+            // Increment the index until the time at the index is greater than the
+            // specified time
             while (firstFrameIndexToCheck < base.Count
                     && base[firstFrameIndexToCheck].Time < ticks)
             {
                 ++firstFrameIndexToCheck;
             }
+            // Decrement the index till the time at the (index-1) is not greater than the
+            // specified time
             while (firstFrameIndexToCheck > 0 && base[firstFrameIndexToCheck - 1].Time >
                 ticks)
             {
@@ -69,31 +103,54 @@ namespace XCLNA.XNA.Animation
             }
             return firstFrameIndexToCheck;
         }
-        
 
+        #endregion
     }
 
-
+    /// <summary>
+    /// Represents a keyframe in an animation track.
+    /// </summary>
     public struct BoneKeyframe
     {
-        public readonly Matrix Transform;
-        public readonly long Time;
+        /// <summary>
+        /// Creats a new BoneKeyframe.
+        /// </summary>
+        /// <param name="transform">The transform for the keyframe.</param>
+        /// <param name="time">The time in ticks for the keyframe.</param>
         public BoneKeyframe(Matrix transform, long time)
         {
             this.Transform = transform;
             this.Time = time;
-            
         }
+        /// <summary>
+        /// The transform for the keyframe.
+        /// </summary>
+        public readonly Matrix Transform;
+        /// <summary>
+        /// The time for the keyframe.
+        /// </summary>
+        public readonly long Time;
+
     }
 
+    /// <summary>
+    /// A collection of animation channels or tracks, which are sections of an
+    /// animation that run for one bone.
+    /// </summary>
     public class AnimationChannelCollection : ReadOnlyCollection<BoneKeyframeCollection>
     {
+        // Allow quick access to channels by BoneName
         private Dictionary<string, BoneKeyframeCollection> dict =
             new Dictionary<string, BoneKeyframeCollection>();
+
+        // The bones affected by the tracks contained in this collection
         private ReadOnlyCollection<string> affectedBones;
-        public AnimationChannelCollection(IList<BoneKeyframeCollection> channels)
+
+        // This immutable data structure should not be created by the library user
+        internal AnimationChannelCollection(IList<BoneKeyframeCollection> channels)
             : base(channels)
         {
+            // Find the affected bones
             List<string> affected = new List<string>();
             foreach (BoneKeyframeCollection frames in channels)
             {
@@ -103,26 +160,41 @@ namespace XCLNA.XNA.Animation
             affectedBones = new ReadOnlyCollection<string>(affected);
 
         }
+
+        /// <summary>
+        /// Gets the BoneKeyframeCollection that is associated with the given bone.
+        /// </summary>
+        /// <param name="boneName">The name of the bone that contains a track in this
+        /// AnimationChannelCollection.</param>
+        /// <returns>The track associated with the given bone.</returns>
         public BoneKeyframeCollection this[string boneName]
         {
             get { return dict[boneName]; }
         }
 
+        // See AnimationInfo's equivalent method for documentation
+        internal bool AffectsBone(string boneName)
+        { return dict.ContainsKey(boneName); }
+
+        // See AnimationInfo's equivalent method for documentation
         internal ReadOnlyCollection<string> AffectedBones
         {
             get { return affectedBones; }
         }
     }
 
+    /// <summary>
+    /// Contains information about an animation.
+    /// </summary>
     public class AnimationInfo
     {
         private long duration = 0;
         private string animationName;
-        private int maxNumFrames = 1;
 
+        // The bone animation tracks
         private AnimationChannelCollection boneAnimations;
         
-
+        // Internal because it should only be created by the AnimationReader
         internal AnimationInfo(string animationName, AnimationChannelCollection 
             anims)
         {
@@ -135,34 +207,63 @@ namespace XCLNA.XNA.Animation
             }
         }
 
-
+        /// <summary>
+        /// Gets a collection of channels that represent the bone animation
+        /// tracks for this animation.
+        /// </summary>
         public AnimationChannelCollection AnimationChannels
         { get { return boneAnimations; } }
 
+
+        /// <summary>
+        /// Gets a collection of bones that have tracks in this animation.
+        /// </summary>
         public ReadOnlyCollection<string> AffectedBones
         { get { return boneAnimations.AffectedBones; } }
 
-
+        /// <summary>
+        /// Gets the total duration of this animation in ticks.
+        /// </summary>
         public long Duration
         {
             get { return duration; }
         }
+
+        /// <summary>
+        /// Gets the name of the animation.
+        /// </summary>
         public string Name
         {
             get { return animationName; }
         }
-        public int MaxNumFrames
-        {
-            get { return maxNumFrames; }
-        }
+
+
+        /// <summary>
+        /// Returns true if the animation contains any tracks that affect the given
+        /// bone.
+        /// </summary>
+        /// <param name="boneName">The bone to test for track information.</param>
+        /// <returns>True if the animation contains any tracks that affect the given
+        /// bone.</returns>
+        public bool AffectsBone(string boneName)
+        { return boneAnimations.AffectsBone(boneName); }
     }
 
+    /// <summary>
+    /// A collection of AnimationInfo objects.
+    /// </summary>
     public class AnimationInfoCollection : SortedList<string, AnimationInfo>
     {
+        // New instances should only be created by the AnimationReader
         internal AnimationInfoCollection()
         {
         }
 
+        /// <summary>
+        /// Gets a collection of animations stored in the model.
+        /// </summary>
+        /// <param name="model">The model that contains the animations.</param>
+        /// <returns>The animations stored in the model.</returns>
         public static AnimationInfoCollection FromModel(Model model)
         {
             // Grab the tag that was set in the processor; this is a dictionary so that users can extend
@@ -174,12 +275,16 @@ namespace XCLNA.XNA.Animation
             }
             else
             {
-                // Now grab the animation info and store local references
                 AnimationInfoCollection animations = (AnimationInfoCollection)modelTagData["Animations"];
                 return animations;
             }
         }
 
+        /// <summary>
+        /// Gets the AnimationInfo object at the given index.
+        /// </summary>
+        /// <param name="index">The index of the AnimationInfo object.</param>
+        /// <returns>The AnimationInfo object at the given index.</returns>
         public AnimationInfo this[int index]
         {
             get

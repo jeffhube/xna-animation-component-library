@@ -1,5 +1,5 @@
 /*
- * BoneAnimation.cs
+ * BonePose.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -32,14 +32,18 @@ using System.Collections.ObjectModel;
 namespace XCLNA.XNA.Animation
 {
 
-
-
+    /// <summary>
+    /// A collection of BonePose objects that represent the bone transforms of a model
+    /// as affected by animations.
+    /// </summary>
     public class BonePoseCollection 
         : System.Collections.ObjectModel.ReadOnlyCollection<BonePose>
     {
+        // A dictionary for quick access to bone poses based on bone name
         private Dictionary<string, BonePose> boneDict 
             = new Dictionary<string, BonePose>();
 
+        // This class should not be externally instantiated
         internal BonePoseCollection(IList<BonePose> anims)
             :
             base(anims)
@@ -54,6 +58,7 @@ namespace XCLNA.XNA.Animation
             }
         }
 
+        // Creates a set of bonepose objects from a skeleton
         internal static BonePoseCollection FromModelBoneCollection(
             ModelBoneCollection bones)
         {
@@ -73,12 +78,20 @@ namespace XCLNA.XNA.Animation
             return new BonePoseCollection(anims);
         }
 
+        /// <summary>
+        /// Computes the absolute transforms for the collection and copies
+        /// the values.
+        /// </summary>
+        /// <param name="transforms">The array into which the transforms will be 
+        /// copied.</param>
         public void CopyAbsoluteTransformsTo(Matrix[] transforms)
         {
             for (int i = 0; i < transforms.Length; i++)
             {
                 if (i > 0) // not root
                 {
+                    // This works because the skeleton is always flattened;
+                    // the parent index is always lower than the child index.
                     transforms[i] = this[i].GetCurrentTransform() *
                         transforms[this[i].Parent.Index];
                 }
@@ -90,8 +103,12 @@ namespace XCLNA.XNA.Animation
         }
 
 
-
-
+        /// <summary>
+        /// Gets a BonePose object.
+        /// </summary>
+        /// <param name="boneName">The name of the bone for which the BonePose 
+        /// will be returned.</param>
+        /// <returns>The BonePose associated with the bone name.</returns>
         public BonePose this[string boneName]
         {
             get { return boneDict[boneName]; }
@@ -99,6 +116,9 @@ namespace XCLNA.XNA.Animation
 
     }
 
+    /// <summary>
+    /// Represents the current pose of a model bone.
+    /// </summary>
     public class BonePose
     {
         // Used when no animation is set
@@ -106,26 +126,36 @@ namespace XCLNA.XNA.Animation
         // Buffers for interpolation when blending
         private static Matrix returnMatrix, blendMatrix, currentMatrixBuffer;
         private int index;
+
+        // The bone name
         private string name;
         private BonePose parent = null;
         private IAnimationController currentAnimation = null;
         private IAnimationController currentBlendAnimation = null;
+        // THe amount to interpolate between the current animation and 
+        // the current blend animation
         private float blendFactor = 0;
         private BonePoseCollection children;
+
+        // True if the current animation contains a track for this bone
         private bool doesAnimContainChannel = false;
+        // True if the current blend animation contains a track for this bone
         private bool doesBlendContainChannel = false;
 
-
+        // Internal creation
         internal BonePose(ModelBone bone, 
             ModelBoneCollection bones,
             BonePose[] anims)
         {
+            // Set the values according to the bone
             index = bone.Index;
             name = bone.Name;
             defaultMatrix = bone.Transform;
             if (bone.Parent != null)
                 parent = anims[bone.Parent.Index];
             anims[index] = this;
+
+            // Recurse on children
             List<BonePose> childList = new List<BonePose>();
             foreach (ModelBone child in bone.Children)
             {
@@ -146,6 +176,7 @@ namespace XCLNA.XNA.Animation
             get { return children; }
         }
 
+        // Finds the hierarchy for which this bone is the root
         private void FindHierarchy(List<BonePose> poses)
         {
             poses.Add(this);
@@ -156,7 +187,7 @@ namespace XCLNA.XNA.Animation
         }
 
         /// <summary>
-        /// Gets a collection of bones that represents the tree of BonePoses with
+        /// Finds a collection of bones that represents the tree of BonePoses with
         /// the current BonePose as the root.
         /// </summary>
         public BonePoseCollection GetHierarchy()
@@ -202,17 +233,20 @@ namespace XCLNA.XNA.Animation
             get { return currentAnimation; }
             set
             {
+                // Don't do anything if the animation hasn't changed
                 if (currentAnimation != value)
                 {
                     if (value != null)
                     {
                         if (name != null)
                         {
+                            // Update info on whether or not the current anim
+                            // contains a track for this bone
                             doesAnimContainChannel = 
                                 value.ContainsAnimationTrack(this);
                         }
                     }
-                    else
+                    else // A null animation; use defaulttransform
                         doesAnimContainChannel = false;
                     currentAnimation = value;
                 }
@@ -229,6 +263,7 @@ namespace XCLNA.XNA.Animation
             get { return currentBlendAnimation; }
             set
             {
+                // Don't do anything if the animation hasn't changed
                 if (currentBlendAnimation != value)
                 {
 
@@ -236,6 +271,8 @@ namespace XCLNA.XNA.Animation
                     {
                         if (name != null)
                         {
+                            // Update info on whether or not the current anim
+                            // contains a track for this bone
                             doesBlendContainChannel =
                                 value.ContainsAnimationTrack(this);
                         }
@@ -269,7 +306,7 @@ namespace XCLNA.XNA.Animation
         }
 
         /// <summary>
-        /// Returns the current transform, based on the animations, for the bone
+        /// Calculates the current transform, based on the animations, for the bone
         /// represented by the BonePose object.
         /// </summary>
         public Matrix GetCurrentTransform()

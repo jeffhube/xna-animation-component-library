@@ -33,9 +33,6 @@ using System;
 namespace XCLNA.XNA.Animation
 {
 
-
-
-
     /// <summary>
     /// Animates and draws a model that was processed with AnimatedModelProcessor
     /// </summary>
@@ -52,7 +49,7 @@ namespace XCLNA.XNA.Animation
 
         // This stores all of the "World" matrix parameters for an unskinned model
         private readonly EffectParameter[] worldParams, matrixPaletteParams;
-
+        // Skeletal structure containg transforms
         private BonePoseCollection bonePoses;
 
         private AnimationInfoCollection animations;
@@ -60,8 +57,13 @@ namespace XCLNA.XNA.Animation
         // Store the number of meshes in the model
         private readonly int numMeshes;
 
+        // Used to avoid reallocation
+        private static Matrix skinTransform;
+        // Buffer for storing absolute bone transforms
         private Matrix[] pose;
+        // Array used for the matrix palette
         private Matrix[] palette;
+        // Inverse reference pose transforms
         private SkinInfoCollection skinInfo;
 
         #endregion
@@ -91,6 +93,10 @@ namespace XCLNA.XNA.Animation
         public Model Model
         { get { return model; } }
 
+        /// <summary>
+        /// Gets the animations that were loaded in from the content pipeline
+        /// for this model.
+        /// </summary>
         public AnimationInfoCollection Animations
         { get { return animations; } }
 
@@ -98,6 +104,11 @@ namespace XCLNA.XNA.Animation
 
         #region Constructors
 
+        /// <summary>
+        /// Creates a new instance of ModelAnimator.
+        /// </summary>
+        /// <param name="game">The game to which this component will belong.</param>
+        /// <param name="model">The model to be animated.</param>
         public ModelAnimator(Game game, Model model) : base(game)
         {
             this.model = model;
@@ -113,14 +124,15 @@ namespace XCLNA.XNA.Animation
             // Initialize the arrays that store effect parameters
             worldParams = new EffectParameter[numEffects];
             matrixPaletteParams = new EffectParameter[numEffects];
-
             InitializeEffectParams();
 
             pose = new Matrix[model.Bones.Count];
             model.CopyAbsoluteBoneTransformsTo(pose);
 
-            skinInfo = new SkinInfoCollection(model);
+            // Get all the skinning info for the model
+            skinInfo = SkinInfoCollection.FromModel(model);
             palette = new Matrix[skinInfo.Count];
+            // Update after AnimationController by default
             base.UpdateOrder = 1;
             game.Components.Add(this);
 
@@ -129,11 +141,14 @@ namespace XCLNA.XNA.Animation
 
 
 
-
+        /// <summary>
+        /// Initializes the effect parameters.  Should be called after the effects
+        /// on the model are changed.
+        /// </summary>
         public void InitializeEffectParams()
         {
 
-            // Now store the parameters in the arrays so the values they refer to can quickly be set
+            // store the parameters in the arrays so the values they refer to can quickly be set
             int index = 0;
             foreach (ModelMesh mesh in model.Meshes)
             {
@@ -156,8 +171,10 @@ namespace XCLNA.XNA.Animation
         #region Animation and Update Routines
 
 
-
-        private static Matrix skinTransform;
+        /// <summary>
+        /// Updates the animator by finding the current absolute transforms.
+        /// </summary>
+        /// <param name="gameTime">The GameTime.</param>
         public override void Update(GameTime gameTime)
         {
             bonePoses.CopyAbsoluteTransformsTo(pose);
@@ -170,12 +187,20 @@ namespace XCLNA.XNA.Animation
         }
 
 
-
+        /// <summary>
+        /// Copies the current absolute transforms to the specified array.
+        /// </summary>
+        /// <param name="transforms">The array to which the transforms will be copied.</param>
         public void CopyAbsoluteTransformsTo(Matrix[] transforms)
         {
             pose.CopyTo(transforms, 0);
         }
 
+        /// <summary>
+        /// Gets the current absolute transform for the given bone index.
+        /// </summary>
+        /// <param name="boneIndex"></param>
+        /// <returns>The current absolute transform for the bone index.</returns>
         public Matrix GetAbsoluteTransform(int boneIndex)
         {
             return pose[boneIndex];
@@ -184,7 +209,9 @@ namespace XCLNA.XNA.Animation
 
 
 
-
+        /// <summary>
+        /// Gets the BonePoses associated with this ModelAnimator.
+        /// </summary>
         public BonePoseCollection BonePoses
         {
             get { return bonePoses; }
@@ -197,6 +224,7 @@ namespace XCLNA.XNA.Animation
         public override void Draw(GameTime gameTime)
         {
             int index = 0;
+            // Update all the effects with the palette and world and draw the meshes
             for (int i = 0; i < numMeshes; i++)
             {
                 ModelMesh mesh = model.Meshes[i];

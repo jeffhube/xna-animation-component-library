@@ -32,7 +32,7 @@ using System.IO;
 using System.Globalization;
 #endregion
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Imports Acclaim AMC (motion capture data).
@@ -41,7 +41,7 @@ namespace Animation.Content
     /// </summary>
     [ContentImporter(".AMC", CacheImportedData = true, DefaultProcessor = "AnimationProcessor",
         DisplayName="Acclaim AMC - Animation Library")]
-    public sealed class AmcImporter : ContentImporter<BoneContent>
+    internal sealed class AmcImporter : ContentImporter<BoneContent>
     {
 
         #region Member Variables

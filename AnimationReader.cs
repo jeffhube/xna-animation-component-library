@@ -1,5 +1,5 @@
 /*
- * ModelAnimationInfoReader.cs
+ * AnimationReader.cs
  * Copyright (c) 2006 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -32,10 +32,9 @@ using Microsoft.Xna.Framework.Content;
 namespace XCLNA.XNA.Animation.Content
 {
 
-    /// <summary>
-    /// A class that reads in an XNB stream and converts it to a ModelInfo object
-    /// </summary>
-    public sealed class AnimationReader : ContentTypeReader<AnimationInfoCollection>
+
+    // Reads in processed animation info written in the pipeline
+    internal sealed class AnimationReader : ContentTypeReader<AnimationInfoCollection>
     {
         /// <summary>
         /// Reads in an XNB stream and converts it to a ModelInfo object
@@ -46,23 +45,25 @@ namespace XCLNA.XNA.Animation.Content
         protected override AnimationInfoCollection Read(ContentReader input, AnimationInfoCollection existingInstance)
         {
             AnimationInfoCollection dict = new AnimationInfoCollection();
-
             int numAnimations = input.ReadInt32();
             
-
+            // Read all the animations
             for (int i = 0; i < numAnimations; i++)
             {
                 string animationName = input.ReadString();
                 int numBoneAnimations = input.ReadInt32();
 
-
                 List<BoneKeyframeCollection> animList 
                     = new List<BoneKeyframeCollection>();
+
+                // Read all the animation tracks for the current animation
                 for (int j = 0; j < numBoneAnimations; j++)
                 {
                     string boneName = input.ReadString();
                     int numKeyFrames = input.ReadInt32();
                     List<BoneKeyframe> boneAnimationList = new List<BoneKeyframe>();
+
+                    // Read all the keyframes for the current animation track
                     for (int k = 0; k < numKeyFrames; k++)
                     {
                         BoneKeyframe frame = new BoneKeyframe(

@@ -32,21 +32,48 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace XCLNA.XNA.Animation.Content
 {
-
+    /// <summary>
+    /// Info on how a model is skinned.
+    /// </summary>
     public enum SkinningType
     {
+        /// <summary>
+        /// No skinning.
+        /// </summary>
         None,
+        /// <summary>
+        /// A max of four influences per vertex.
+        /// </summary>
         FourBonesPerVertex,
+        /// <summary>
+        /// A max of eight influences per vertex.
+        /// </summary>
         EightBonesPerVertex,
+        /// <summary>
+        /// A max of twelve influences per vertex.
+        /// </summary>
         TwelveBonesPerVertex
     }
 
-    internal class ContentUtil
+    /// <summary>
+    /// Contains utility functions for the content pipeline relating to animation.
+    /// </summary>
+    public static class ContentUtil
     {
+        // The current version of the library
         internal const string VERSION = "1.0.0.51";
+        /// <summary>
+        /// Ticks per frame at 60 frames per second.
+        /// </summary>
         public const long TICKS_PER_60FPS = TimeSpan.TicksPerSecond / 60;
 
-        public static SkinningType CheckSkinningType(VertexElement[] elements)
+
+        /// <summary>
+        /// Gets info on what skinning info a vertex element array contains.
+        /// </summary>
+        /// <param name="elements">The vertex elements.</param>
+        /// <returns>Info on what type of skinning the elements contain.</returns>
+        public static SkinningType GetSkinningType(VertexElement[] elements)
         {
             int numIndexChannels = 0;
             int numWeightChannels = 0;
@@ -67,17 +94,7 @@ namespace XCLNA.XNA.Animation.Content
 
         }
 
-        private static void InitializeFrames(ref AnimationKeyframe[] frames)
-        {
-            SortFrames(ref frames);
-            if (frames[0].Time != TimeSpan.Zero)
-            {
-                AnimationKeyframe[] newFrames = new AnimationKeyframe[frames.Length + 1];
-                Array.ConstrainedCopy(frames, 0, newFrames, 1, frames.Length);
-                newFrames[0] = frames[0];
-                frames = newFrames;
-            }
-        }
+
 
         /// <summary>
         /// Reflects a matrix across the Z axis by multiplying both the Z
@@ -108,9 +125,17 @@ namespace XCLNA.XNA.Animation.Content
 
         }
 
+        /// <summary>
+        /// Merges scale, translation, and rotation keyframes into matrix keyframes.
+        /// </summary>
+        /// <param name="scale">The scale keyframes.</param>
+        /// <param name="translation">The translation keyframes.</param>
+        /// <param name="rotation">The rotation keyframes.</param>
+        /// <returns>The merged matrix keyframes.</returns>
         public static List<AnimationKeyframe> MergeKeyFrames(AnimationKeyframe[] scale,
     AnimationKeyframe[] translation, AnimationKeyframe[] rotation)
         {
+
             if (scale == null)
             {
                 scale = new AnimationKeyframe[] {new AnimationKeyframe(new TimeSpan(0),
@@ -123,9 +148,14 @@ namespace XCLNA.XNA.Animation.Content
                 throw new Exception("Animation data is not stored as matrices and " +
                     "has no rotation component");
 
+            // Sort the frames by time and make sure they start at time 0 and
+            // have length >= 1
             InitializeFrames(ref scale);
             InitializeFrames(ref translation);
             InitializeFrames(ref rotation);
+
+            // Get a sorted list of the timespans for all 3 keyframe types,
+            // not counting duplicates
             SortedList<TimeSpan, object> keyframeTimes
                 = new SortedList<TimeSpan, object>();
             foreach (AnimationKeyframe frame in scale)
@@ -137,32 +167,47 @@ namespace XCLNA.XNA.Animation.Content
             foreach (AnimationKeyframe frame in rotation)
                 if (!keyframeTimes.ContainsKey(frame.Time))
                     keyframeTimes.Add(frame.Time, null);
+
+
             IList<TimeSpan> times = keyframeTimes.Keys;
+
+            // Allocate the interpolated frame matrices
             Matrix[] newScales = new Matrix[keyframeTimes.Count];
             Matrix[] newTrans = new Matrix[keyframeTimes.Count];
             Matrix[] newRot = new Matrix[keyframeTimes.Count];
             List<AnimationKeyframe> returnFrames = new List<AnimationKeyframe>();
 
+            // Interpolate the frames based on the times
             InterpFrames(ref scale, ref newScales, times);
             InterpFrames(ref translation, ref newTrans, times);
-
             InterpFrames(ref rotation, ref newRot, times);
+
+            // Merge the 3 keyframe types into one.
             for (int i = 0; i < times.Count; i++)
             {
-
-
                 Matrix m = newRot[i];
                 m = m * newTrans[i];
                 m = newScales[i] * m;
-
-
-
                 returnFrames.Add(new AnimationKeyframe(times[i], m));
             }
 
             return returnFrames;
 
         }
+
+
+        private static void InitializeFrames(ref AnimationKeyframe[] frames)
+        {
+            SortFrames(ref frames);
+            if (frames[0].Time != TimeSpan.Zero)
+            {
+                AnimationKeyframe[] newFrames = new AnimationKeyframe[frames.Length + 1];
+                Array.ConstrainedCopy(frames, 0, newFrames, 1, frames.Length);
+                newFrames[0] = frames[0];
+                frames = newFrames;
+            }
+        }
+
 
         private static Quaternion qStart, qEnd, qResult;
         private static Vector3 curTrans, nextTrans, lerpedTrans;
@@ -176,7 +221,7 @@ namespace XCLNA.XNA.Animation.Content
         /// <param name="start">Source matrix for interpolation</param>
         /// <param name="end">Destination matrix for interpolation</param>
         /// <param name="slerpAmount">Ratio of interpolation</param>
-        /// <returns></returns>
+        /// <returns>The interpolated matrix</returns>
         public static Matrix SlerpMatrix(Matrix start, Matrix end,
             float slerpAmount)
         {
@@ -221,39 +266,43 @@ namespace XCLNA.XNA.Animation.Content
             return returnMatrix;
         }
 
-
+        // Interpolates a set of animation key frames to align with 
+        // a set of times and copies it into the destination array.
         private static void InterpFrames(
             ref AnimationKeyframe[] source,
             ref Matrix[] dest,
             IList<TimeSpan> times)
         {
+            // The index of hte source frame
             int sourceIndex = 0;
             for (int i = 0; i < times.Count; i++)
             {
-
+                // Increment the index till the next index is greater than the current time
                 while (sourceIndex != source.Length-1 && source[sourceIndex + 1].Time < times[i])
                 {
                     sourceIndex++;
                 }
+                // If we are at the last index use the last transform for the rest of the times
                 if (sourceIndex==source.Length-1)
                 {
                     dest[i] = source[sourceIndex].Transform;
                     continue;
                 }
+                // If the keyframe time is equal to the current time use the keyframe transform
                 if (source[sourceIndex].Time == times[i])
                 {
                     dest[i] = source[sourceIndex].Transform;
                 }
-                else
+                else // else interpolate
                 {
                     double interpAmount = ((double)times[i].Ticks - source[sourceIndex].Time.Ticks) /
                         ((double)source[sourceIndex + 1].Time.Ticks - source[sourceIndex].Time.Ticks);
-
-
                     Matrix m1 = source[sourceIndex].Transform;
                     Matrix m2 = source[sourceIndex + 1].Transform;
-
-                    dest[i] = Matrix.Lerp(m1, m2, (float)interpAmount);
+                    if (m1 == m2)
+                        dest[i] = m1;
+                    else
+                        dest[i] = Matrix.Lerp(m1, m2, (float)interpAmount);
 
                 }
 
