@@ -29,7 +29,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-namespace Animation
+using System.Collections.ObjectModel;
+namespace XCLNA.XNA.Animation
 {
     public enum SkinningType
     {
@@ -304,71 +305,51 @@ namespace Animation
 
 
 
+        public static bool IsSkinned(ModelMeshPart meshPart)
+        {
+            VertexElement[] ves = meshPart.VertexDeclaration.GetVertexElements();
+            foreach (VertexElement ve in ves)
+            {
+                //(BlendIndices with UsageIndex = 0) specifies matrix indices for fixed-function vertex 
+                // processing using indexed paletted skinning.
+                if (ve.VertexElementUsage == VertexElementUsage.BlendIndices
+                    && ve.UsageIndex == 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsSkinned(ModelMesh mesh)
+        {
+            foreach (ModelMeshPart mmp in mesh.MeshParts)
+            {
+                if (IsSkinned(mmp))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool IsSkinned(Model model)
+        {
+            foreach (ModelMesh mm in model.Meshes)
+            {
+                if (IsSkinned(mm))
+                    return true;
+            }
+            return false;
+        }
+
+
          
     }
 
 
 
-    public abstract class FiniteStateMachine : GameComponent
-    {
-        private List<string> states = new List<string>();
-        private string currentState;
-        private TimeSpan timeInState;
-        private bool transitioned = false;
-
-        public FiniteStateMachine(Game game,
-            string initialState)
-            : base(game)
-        {
-            states.Add(initialState);
-            currentState = initialState;
-            game.Components.Add(this);
-        }
-
-
-        public List<string> States
-        { get { return states; } }
-
-        public string CurrentState
-        {
-            get { return currentState; }
-        }
-
-        protected void Transition(string targetStateName)
-        {
-            string oldName = currentState;
-            currentState = targetStateName;
-            timeInState = new TimeSpan();
-            transitioned = true;
-        }
 
 
 
-        public TimeSpan TimeInState
-        {
-            get { return timeInState; }
-        }
-
-        protected abstract void RunCurrentState(GameTime gameTime);
-
-        public override void Update(GameTime gameTime)
-        {
-            if (currentState != null)
-            {
-                transitioned = false;
-                RunCurrentState(gameTime);
-                while (transitioned)
-                {
-                    transitioned = false;
-                    if (currentState != null)
-                        RunCurrentState(gameTime);
-                }
-                timeInState += gameTime.ElapsedGameTime;
-            }
-            base.Update(gameTime);
-        }
-
-    }
 
 
 }

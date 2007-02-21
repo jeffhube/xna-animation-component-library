@@ -29,7 +29,7 @@ using Microsoft.Xna.Framework;
 using System.Collections.ObjectModel;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Animation
+namespace XCLNA.XNA.Animation
 {
     public class BoneKeyframeCollection : ReadOnlyCollection<BoneKeyframe>
     {
@@ -168,14 +168,16 @@ namespace Animation
             // Grab the tag that was set in the processor; this is a dictionary so that users can extend
             // the processor and pass their own data into the program without messing up the animation data
             Dictionary<string, object> modelTagData = (Dictionary<string, object>)model.Tag;
-            // An AnimationLibrary processor was not used if this is null
-            if (modelTagData == null)
-                throw new Exception("Model contains no animation info; the tag is not an instance of " +
-                    "Dictionary<string, object>.  Please use the \"Model - Animation Library\" processor or a subclass.");
-
-            // Now grab the animation info and store local references
-            AnimationInfoCollection animations = (AnimationInfoCollection)modelTagData["Animations"];
-            return animations;
+            if (modelTagData == null || !modelTagData.ContainsKey("Animations"))
+            {
+                return new AnimationInfoCollection();
+            }
+            else
+            {
+                // Now grab the animation info and store local references
+                AnimationInfoCollection animations = (AnimationInfoCollection)modelTagData["Animations"];
+                return animations;
+            }
         }
 
         public AnimationInfo this[int index]

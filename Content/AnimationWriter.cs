@@ -33,7 +33,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 #endregion
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
 
     /// <summary>
@@ -82,17 +82,19 @@ namespace Animation.Content
         /// <returns>The string that describes the reader used for a ModelInfo object</returns>
         public override string GetRuntimeReader(TargetPlatform targetPlatform)
         {
-
-            if (targetPlatform != TargetPlatform.Xbox360)
+            if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "Animation.Content.AnimationReader, Animationx86, "
-                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.Content.AnimationReader, "
+                    + "XCLNA.XNA.Animation360, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "Animation.Content.AnimationReader, Animation360, "
-                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.Content.AnimationReader, "
+                    + "XCLNA.XNA.Animationx86, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
+            
 
         }
         
@@ -105,16 +107,20 @@ namespace Animation.Content
         /// the stream</returns>
         public override string GetRuntimeType(TargetPlatform targetPlatform)
         {
-            if (targetPlatform != TargetPlatform.Xbox360)
+            if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "Animation.AnimationInfoCollection, Animationx86, "
-                    + "Verstion=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.Content.AnimationInfoCollection, "
+                    + "XCLNA.XNA.Animation360, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "Animation.AnimationInfoCollection, Animation360, "
-                    + "Verstion=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.Content.AnimationInfoCollection, "
+                    + "XCLNA.XNA.Animationx86, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
+
+
 
         }
     }

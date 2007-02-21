@@ -29,7 +29,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.ObjectModel;
 
-namespace Animation
+namespace XCLNA.XNA.Animation
 {
 
 
@@ -72,6 +72,23 @@ namespace Animation
 
             return new BonePoseCollection(anims);
         }
+
+        public void CopyAbsoluteTransformsTo(Matrix[] transforms)
+        {
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                if (i > 0) // not root
+                {
+                    transforms[i] = this[i].GetCurrentTransform() *
+                        transforms[this[i].Parent.Index];
+                }
+                else
+                {
+                    transforms[i] = this[i].GetCurrentTransform();
+                }
+            }
+        }
+
 
 
 
@@ -142,14 +159,13 @@ namespace Animation
         /// Gets a collection of bones that represents the tree of BonePoses with
         /// the current BonePose as the root.
         /// </summary>
-        public BonePoseCollection Hierarchy
+        public BonePoseCollection GetHierarchy()
         {
-            get
-            {
+ 
                 List<BonePose> poses = new List<BonePose>();
                 FindHierarchy(poses);
                 return new BonePoseCollection(poses);
-            }
+            
         }
 
 
@@ -256,54 +272,53 @@ namespace Animation
         /// Returns the current transform, based on the animations, for the bone
         /// represented by the BonePose object.
         /// </summary>
-        public Matrix CurrentTransform
+        public Matrix GetCurrentTransform()
         {
-            get
+ 
+            // If the bone is not currently affected by an animation
+            if (currentAnimation == null || !doesAnimContainChannel)
             {
-                // If the bone is not currently affected by an animation
-                if (currentAnimation == null || !doesAnimContainChannel)
+                // If the bone is affected by a blend animation,
+                // blend the defaultTransform with the blend animation
+                if (currentBlendAnimation != null && doesBlendContainChannel)
                 {
-                    // If the bone is affected by a blend animation,
-                    // blend the defaultTransform with the blend animation
-                    if (currentBlendAnimation != null && doesBlendContainChannel)
-                    {
-                        currentBlendAnimation.GetCurrentBoneTransform(this, out blendMatrix);
-                        Util.SlerpMatrix(
-                            ref defaultMatrix, 
-                            ref blendMatrix, 
-                            BlendFactor,
-                            out returnMatrix);
-                    }
-                        // else return the default transform
-                    else
-                        return defaultMatrix;
+                    currentBlendAnimation.GetCurrentBoneTransform(this, out blendMatrix);
+                    Util.SlerpMatrix(
+                        ref defaultMatrix, 
+                        ref blendMatrix, 
+                        BlendFactor,
+                        out returnMatrix);
                 }
-                    // The bone is affected by an animation
+                    // else return the default transform
                 else
-                {
-                    // Find the current transform in the animation for the bone
-                    currentAnimation.GetCurrentBoneTransform(this, 
-                        out currentMatrixBuffer);
-                    // If the bone is affected by a blend animation, blend the
-                    // current animation transform with the current blend animation
-                    // transform
-                    if (currentBlendAnimation != null && doesBlendContainChannel)
-                    {
-                        currentBlendAnimation.GetCurrentBoneTransform(this,
-                            out blendMatrix);
-                        Util.SlerpMatrix(
-                            ref currentMatrixBuffer,
-                            ref blendMatrix, 
-                            BlendFactor,
-                            out returnMatrix);
-                    }
-                        // Else just return the current animation transform
-                    else
-                        return currentMatrixBuffer;
-                }
-                
-                return returnMatrix;
+                    return defaultMatrix;
             }
+                // The bone is affected by an animation
+            else
+            {
+                // Find the current transform in the animation for the bone
+                currentAnimation.GetCurrentBoneTransform(this, 
+                    out currentMatrixBuffer);
+                // If the bone is affected by a blend animation, blend the
+                // current animation transform with the current blend animation
+                // transform
+                if (currentBlendAnimation != null && doesBlendContainChannel)
+                {
+                    currentBlendAnimation.GetCurrentBoneTransform(this,
+                        out blendMatrix);
+                    Util.SlerpMatrix(
+                        ref currentMatrixBuffer,
+                        ref blendMatrix, 
+                        BlendFactor,
+                        out returnMatrix);
+                }
+                    // Else just return the current animation transform
+                else
+                    return currentMatrixBuffer;
+            }
+            
+            return returnMatrix;
+            
         }
     }
 }

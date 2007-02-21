@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
 
     public enum SkinningType
@@ -43,6 +43,7 @@ namespace Animation.Content
 
     internal class ContentUtil
     {
+        internal const string VERSION = "1.0.0.51";
         public const long TICKS_PER_60FPS = TimeSpan.TicksPerSecond / 60;
 
         public static SkinningType CheckSkinningType(VertexElement[] elements)

@@ -30,7 +30,7 @@ using System.Collections.Generic;
 using System;
 #endregion
 
-namespace Animation
+namespace XCLNA.XNA.Animation
 {
 
 
@@ -60,12 +60,9 @@ namespace Animation
         // Store the number of meshes in the model
         private readonly int numMeshes;
 
-        private Matrix absoluteMeshTransform;
         private Matrix[] pose;
-        private List<Matrix[]> skinTransforms=new List<Matrix[]>();
         private Matrix[] palette;
-        private string[] skinnedBones;
-        private int[] paletteToBoneMapping;
+        private SkinInfoCollection skinInfo;
 
         #endregion
 
@@ -108,7 +105,6 @@ namespace Animation
             bonePoses = BonePoseCollection.FromModelBoneCollection(
                 model.Bones);
             numMeshes = model.Meshes.Count;
-            CheckForInvalidData();
             // Find total number of effects used by the model
             int numEffects = 0;
             foreach (ModelMesh mesh in model.Meshes)
@@ -122,9 +118,9 @@ namespace Animation
 
             pose = new Matrix[model.Bones.Count];
             model.CopyAbsoluteBoneTransformsTo(pose);
-            absoluteMeshTransform = Matrix.Identity;
 
-            InitializeSkinningInfo();
+            skinInfo = new SkinInfoCollection(model);
+            palette = new Matrix[skinInfo.Count];
             base.UpdateOrder = 1;
             game.Components.Add(this);
 
@@ -134,50 +130,6 @@ namespace Animation
 
 
 
-        private void InitializeSkinningInfo()
-        {
-            for (int i = 0; i < model.Meshes.Count; i++)
-            {
-                skinTransforms.Add(null);
-                if (isSkinned(model.Meshes[i]))
-                {
-                    absoluteMeshTransform = pose[model.Meshes[i].ParentBone.Index];
-                    skinTransforms[i] = new Matrix[model.Bones.Count];
-                    for (int j = 0; j < skinTransforms[i].Length; j++)
-                    {
-                        skinTransforms[i][j] = absoluteMeshTransform * Matrix.Invert(pose[j]);
-                    }
-                }
-            }
-            paletteToBoneMapping = new int[skinnedBones.Length];
-            for (int i = 0; i < skinnedBones.Length; i++)
-            {
-                paletteToBoneMapping[i] = model.Bones[skinnedBones[i]].Index;
-            }
-            palette = new Matrix[paletteToBoneMapping.Length];
-        }
-
-        private void CheckForInvalidData()
-        {
-            // Grab the tag that was set in the processor; this is a dictionary so that users can extend
-            // the processor and pass their own data into the program without messing up the animation data
-            Dictionary<string, object> modelTagData = (Dictionary<string, object>)model.Tag;
-            // An AnimationLibrary processor was not used if this is null
-            if (modelTagData == null)
-                throw new Exception("Please use the \"Model - Animation Library\" processor or a subclass.");
- 
-            skinnedBones = (string[])modelTagData["SkinnedBones"];
-            /*
-            if (isSkinned(model))
-            {
-                if (skinnedBones.Length > BasicPaletteEffect.PALETTE_SIZE)
-                    throw new Exception("Model uses too many bones for animation.\nMax number of bones: " +
-                        BasicPaletteEffect.PALETTE_SIZE.ToString() + "\nNumber of bones used: " +
-                            model.Bones.Count.ToString());
-            }
-             */
-        }
-
         public void InitializeEffectParams()
         {
 
@@ -185,7 +137,7 @@ namespace Animation
             int index = 0;
             foreach (ModelMesh mesh in model.Meshes)
             {
-                bool skinned = isSkinned(mesh);
+                bool skinned = Util.IsSkinned(mesh);
                 foreach (Effect effect in mesh.Effects)
                 {
                     worldParams[index] = effect.Parameters["World"];
@@ -198,41 +150,6 @@ namespace Animation
             }
         }
 
-        private bool isSkinned(ModelMeshPart meshPart)
-        {
-            VertexElement[] ves = meshPart.VertexDeclaration.GetVertexElements();
-            foreach (VertexElement ve in ves)
-            {
-                //(BlendIndices with UsageIndex = 0) specifies matrix indices for fixed-function vertex processing using indexed paletted skinning.
-                if (ve.VertexElementUsage == VertexElementUsage.BlendIndices
-                    && ve.VertexElementFormat == VertexElementFormat.Byte4
-                    && ve.UsageIndex == 0)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private bool isSkinned(ModelMesh mesh)
-        {
-            foreach (ModelMeshPart mmp in mesh.MeshParts)
-            {
-                if (isSkinned(mmp))
-                    return true;
-            }
-            return false;
-        }
-
-        private bool isSkinned(Model model)
-        {
-            foreach (ModelMesh mm in model.Meshes)
-            {
-                if (isSkinned(mm))
-                    return true;
-            }
-            return false;
-        }
 
         #endregion
 
@@ -240,20 +157,15 @@ namespace Animation
 
 
 
-
+        private static Matrix skinTransform;
         public override void Update(GameTime gameTime)
         {
-            for (int i = 0; i < pose.Length; i++)
+            bonePoses.CopyAbsoluteTransformsTo(pose);
+            foreach (SkinInfo info in skinInfo)
             {
-                if (i > 0) // not root
-                {
-                    pose[i] = bonePoses[i].CurrentTransform *
-                        pose[bonePoses[i].Parent.Index];
-                }
-                else
-                {
-                    pose[i] = bonePoses[i].CurrentTransform;
-                }
+                skinTransform = info.Transform;
+                Matrix.Multiply(ref skinTransform, ref pose[info.BoneIndex],
+                    out palette[info.PaletteIndex]);
             }
         }
 
@@ -290,11 +202,6 @@ namespace Animation
                 ModelMesh mesh = model.Meshes[i];
                 if (matrixPaletteParams[index] != null)
                 {
-                    for (int j = 0; j < palette.Length; j++)
-                    {
-                        int p = paletteToBoneMapping[j];
-                        Matrix.Multiply(ref skinTransforms[i][p], ref pose[p], out palette[j]);
-                    }
                     foreach (Effect effect in mesh.Effects)
                     {
                         worldParams[index].SetValue(world);

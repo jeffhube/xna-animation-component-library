@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     public struct SkinTransformContent
     {

@@ -28,24 +28,19 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 
-namespace Animation
+namespace XCLNA.XNA.Animation
 {
-    /// <summary>
-    /// Used for when an animation controller affects a new bone or does not
-    /// affect a bone that it used to affect.
-    /// </summary>
-    /// <param name="sender">The controller that has gained a new bone to affect
-    /// or lost an old bone that was affected.</param>
-    /// <param name="pose">The bone for which the event refers.</param>
-    public delegate void BonePoseEventHandler(AnimationController sender,
-    BonePose pose);
+    
+
 
     /// <summary>
     /// Used for events dealing with an animation controller.
     /// </summary>
-    /// <param name="sender">The AnimationController that fired this event.</param>
-    public delegate void AnimationEventHandler(AnimationController sender);
+    /// <param name="sender">The AnimationController that raised this event.</param>
+    public delegate void AnimationEventHandler(object sender,
+        EventArgs e);
 
     /// <summary>
     /// An interface used by BonePose that allows an animation to affect the bone
@@ -111,6 +106,12 @@ namespace Animation
 
         }
 
+        protected virtual void OnAnimationEnded(EventArgs args)
+        {
+            if (AnimationEnded != null)
+                AnimationEnded(this, args);
+        }
+
         public override void Update(GameTime gameTime)
         {
             elapsed = (long)(speedFactor * gameTime.ElapsedGameTime.Ticks);
@@ -118,9 +119,12 @@ namespace Animation
             {
                 if (elapsed != 0)
                 {
-                    elapsedTime = (elapsedTime + elapsed) % (animation.Duration+1);
-                    if (elapsedTime < 0)
-                        elapsedTime = animation.Duration;
+                    elapsedTime = (elapsedTime + elapsed);
+                    if (elapsedTime > animation.Duration)
+                    {
+                        OnAnimationEnded(null);
+                        elapsedTime %= (animation.Duration + 1);
+                    }
                 }
             }
             else if (elapsedTime != animation.Duration)
@@ -131,8 +135,7 @@ namespace Animation
                     if (elapsedTime >= animation.Duration || elapsedTime < 0)
                     {
                         elapsedTime = animation.Duration;
-                        if (AnimationEnded != null)
-                            AnimationEnded(this);
+                        OnAnimationEnded(null);
                     }
                 }
             }

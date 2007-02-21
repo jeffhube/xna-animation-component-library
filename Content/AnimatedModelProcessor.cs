@@ -39,7 +39,7 @@ using System.Globalization;
 using System.Xml;
 using System.Collections.ObjectModel;
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Processes a NodeContent object that was imported by SkinnedModelImporter

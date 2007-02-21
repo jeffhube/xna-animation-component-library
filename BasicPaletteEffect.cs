@@ -32,7 +32,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 #endregion
 
-namespace Animation
+namespace XCLNA.XNA.Animation
 {
 
     /// <summary>
@@ -45,7 +45,8 @@ namespace Animation
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
             alphaParam,
-            specColorParam, specPowerParam, texEnabledParam, texParam, paletteParam;
+            specColorParam, specPowerParam, texEnabledParam, texParam, paletteParam,
+            fogEnabledParam, fogStartParam, fogEndParam, fogColorParam;
         private BasicDirectionalLight light0, light1, light2;
         private Vector3 eye;
         private static Vector3 zero = Vector3.Zero;
@@ -106,9 +107,18 @@ namespace Animation
             specColorParam = Parameters["SpecularColor"];
             specPowerParam = Parameters["SpecularPower"];
             alphaParam = Parameters["Alpha"];
+            fogColorParam = Parameters["FogColor"];
+            fogEnabledParam = Parameters["FogEnable"];
+            fogStartParam = Parameters["FogStart"];
+            fogEndParam = Parameters["FogEnd"];
             light0 = new BasicDirectionalLight(this, 0);
             light1 = new BasicDirectionalLight(this, 1);
             light2 = new BasicDirectionalLight(this, 2);
+
+            FogColor = Vector3.Zero;
+            FogStart = 0;
+            FogEnd = 1;
+            FogEnabled = false;
         }
 
 
@@ -255,6 +265,54 @@ namespace Animation
             set
             {
                 texParam.SetValue(value);
+            }
+        }
+
+        public float FogStart
+        {
+            get
+            {
+                return fogStartParam.GetValueSingle();
+            }
+            set
+            {
+                fogStartParam.SetValue(value);
+            }
+        }
+
+        public float FogEnd
+        {
+            get
+            {
+                return fogEndParam.GetValueSingle();
+            }
+            set
+            {
+                fogEndParam.SetValue(value);
+            }
+        }
+
+        public bool FogEnabled
+        {
+            get
+            {
+                return fogEnabledParam.GetValueBoolean();
+            }
+            set
+            {
+                fogEnabledParam.SetValue(value); 
+            }
+        }
+
+        public Vector3 FogColor
+        {
+            get
+            {
+                return fogColorParam.GetValueVector3();
+            }
+            set
+            {
+                fogColorParam.SetValue(value);
             }
         }
 

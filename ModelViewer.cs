@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 #endregion
 
-namespace Animation
+namespace XCLNA.XNA.Animation
 {
     /// <summary>
     /// A viewer for animated models. To view your model, just do 
@@ -186,6 +186,9 @@ namespace Animation
                 return true;
             }
         }
+
+        public Vector3 CameraPosition
+        { get { return cameraPosition; } }
 
         public override void Update(GameTime gameTime)
         {

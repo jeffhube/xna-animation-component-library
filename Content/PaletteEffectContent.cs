@@ -33,7 +33,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
 
 
@@ -70,30 +70,33 @@ namespace Animation.Content
 
         public override string GetRuntimeReader(TargetPlatform targetPlatform)
         {
-            if (targetPlatform != TargetPlatform.Xbox360)
+            if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "Animation.Content.PaletteEffectReader, Animationx86, "
-                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.Content.PaletteEffectReader, "
+                    + "XCLNA.XNA.Animation360, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "Animation.Content.PaletteEffectReader, Animation360, "
-                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.Content.PaletteEffectReader, "
+                    + "XCLNA.XNA.Animationx86, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             
         }
 
         public override string GetRuntimeType(TargetPlatform targetPlatform)
         {
-            if (targetPlatform != TargetPlatform.Xbox360)
+
+            if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "Animation.BasicPaletteEffect, Animationx86, "
-                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.BasicPaletteEffect, XCLNA.XNA.Animation360, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "Animation.BasicPaletteEffect, Animation360, "
-                    + "Version=1.0.0.5, Culture=neutral, PublicKeyToken=null";
+                return "XCLNA.XNA.Animation.BasicPaletteEffect, XCLNA.XNA.Animationx86, "
+                    + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
         }
     }
@@ -178,8 +181,10 @@ namespace Animation.Content
 	output.color.xyz = saturate(AmbientLightColor+totalDiffuse + totalSpecular);
     output.color.w=1.0;
 	output.texcoord = input.texcoord;
+    output.distance = distance(EyePosition, output.position.xyz);
 	// This is the final position of the vertex, and where it will be drawn on the screen
 	output.position = mul(output.position,mul(World,mul(View,Projection)));
+
 ";
 
             }
@@ -198,6 +203,10 @@ float3 SpecularColor;
 float3 AmbientLightColor = float3(0,0,0);
 float3 EmissiveColor;
 float3 EyePosition;
+float3 FogColor;
+bool   FogEnable;
+float FogStart;
+float FogEnd;
 bool   DirLight0Enable;
 bool   DirLight1Enable;
 extern bool    DirLight2Enable;
@@ -233,7 +242,7 @@ sampler TextureSampler = sampler_state
                 return @"
 // This takes the transformed normal as influenced by the bones (all the matrix palette transformations
 // occur in TransformVertex), and applies 3 directional phong lights to them
-void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
+void TransformPixel (in PS_INPUT input, out PS_OUTPUT output)
 {
 	// The general formula for the final color without lights is (original color + diffuse color +
 	// emissive color).  When textures are active, we multiply this by the color of the texture
@@ -272,8 +281,18 @@ void TransformPixel (in VS_OUTPUT input, out PS_OUTPUT output)
             : input.color.xyz;
 
 	}
-        output.color.w   = 
-            TextureEnabled ? tex2D(TextureSampler, input.texcoord).w * Alpha : Alpha;
+    output.color.w   = 
+         TextureEnabled ? tex2D(TextureSampler, input.texcoord).w * Alpha : Alpha;
+    
+
+    if (FogEnable)
+    {
+        float dist = (input.distance - FogStart) / (FogEnd - FogStart);
+        dist = saturate(dist);
+        float3 distv = float3(dist,dist,dist);
+        distv = lerp(output.color.xyz,FogColor,distv);
+        output.color.xyz = distv;
+    }
 }
 ";
             }
@@ -500,6 +519,14 @@ struct VS_OUTPUT
 	float4 position : POSITION;
 	float4 color : COLOR;
 	float2 texcoord : TEXCOORD0;
+    float  distance : TEXCOORD1;
+};
+
+struct PS_INPUT
+{
+    float4 color : COLOR;
+    float2 texcoord : TEXCOORD0;
+    float  distance : TEXCOORD1;
 };
 
 struct PS_OUTPUT
@@ -573,6 +600,7 @@ technique TransformTechnique
             EffectProcessor effectProcessor = new EffectProcessor();
             EffectContent effectContent = new EffectContent();
             effectContent.EffectCode = input.SourceCode;
+
             CompiledEffect compiled = effectProcessor.Process(effectContent, context);
 
             PaletteMaterialContent content = new PaletteMaterialContent();
@@ -620,7 +648,6 @@ technique TransformTechnique
 
         public PaletteMaterialContent()
         {
-
         }
 
         public int PaletteSize

@@ -28,7 +28,7 @@ using System.Text;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Animation.Content
+namespace XCLNA.XNA.Animation.Content
 {
     /// <summary>
     /// Reads a BasicPaletteEffect from the content pipeline
