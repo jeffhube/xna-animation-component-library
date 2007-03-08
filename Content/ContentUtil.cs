@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Info on how a model is skinned.
@@ -61,7 +61,7 @@ namespace XCLNA.XNA.Animation.Content
     public static class ContentUtil
     {
         // The current version of the library
-        internal const string VERSION = "1.0.0.51";
+        internal const string VERSION = "1.0.1.0";
         /// <summary>
         /// Ticks per frame at 60 frames per second.
         /// </summary>

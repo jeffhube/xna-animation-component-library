@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Contains information for a skin transform.

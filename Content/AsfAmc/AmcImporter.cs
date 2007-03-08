@@ -32,7 +32,7 @@ using System.IO;
 using System.Globalization;
 #endregion
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Imports Acclaim AMC (motion capture data).

@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-namespace XCLNA.XNA.Animation
+namespace Xclna.Xna.Animation
 {
     /// <summary>
     /// Info on how a model is skinned.

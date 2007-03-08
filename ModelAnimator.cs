@@ -30,7 +30,7 @@ using System.Collections.Generic;
 using System;
 #endregion
 
-namespace XCLNA.XNA.Animation
+namespace Xclna.Xna.Animation
 {
 
     /// <summary>

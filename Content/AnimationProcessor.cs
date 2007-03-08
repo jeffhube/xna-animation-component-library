@@ -33,7 +33,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.IO;
 using System.Collections;
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Produces AnimationContentDictionary;

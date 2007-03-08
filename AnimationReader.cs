@@ -29,7 +29,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 #endregion
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
 
 

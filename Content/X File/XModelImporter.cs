@@ -32,7 +32,7 @@ using System.IO;
 using System.Globalization;
 #endregion
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Imports a directx model that contains skinning info.
@@ -105,7 +105,7 @@ namespace XCLNA.XNA.Animation.Content
             // Allow processor to access any skinning data we might have
             root.OpaqueData.Add("SkinTransforms", skinTransforms);
 
-            // Calculates bind pose as required for compatibility with XNA Content DOM
+            // Calculates bind pose as required for compatibility with Xna Content DOM
             Dictionary<string, Matrix> absTransformsDict = new Dictionary<string, Matrix>(skinTransforms.Count);
             foreach (SkinTransformContent[] sst in skinTransforms)
             {
@@ -124,7 +124,7 @@ namespace XCLNA.XNA.Animation.Content
 
 
 
-        // Hack to calculate bind pose as required for compatibility with XNA Content DOM
+        // Hack to calculate bind pose as required for compatibility with Xna Content DOM
         private void fixBindPose(NodeContent bone, Dictionary<string, Matrix> absTransformsDict)
         {
             Matrix abs = bone.AbsoluteTransform;

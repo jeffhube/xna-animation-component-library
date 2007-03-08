@@ -39,7 +39,7 @@ using System.Globalization;
 using System.Xml;
 using System.Collections.ObjectModel;
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Processes a NodeContent object that was imported by SkinnedModelImporter
@@ -131,11 +131,32 @@ namespace XCLNA.XNA.Animation.Content
         protected virtual void SubdivideAnimations(
             AnimationContentDictionary animDict, XmlDocument doc)
         {
+            string[] animNames = new string[animDict.Keys.Count];
+            animDict.Keys.CopyTo(animNames, 0);
+            if (animNames.Length == 0)
+                return;
+
             // Traverse each xml node that represents an animation to be subdivided
-            foreach (XmlElement child in doc)
+            foreach (XmlNode node in doc)
             {
-                // The name of the animation to be split
-                string animName = child["name"].InnerText;
+                XmlElement child = node as XmlElement;
+                if (child == null || child.Name != "animation")
+                    continue;
+
+                string animName = null;
+                if (child["name"] != null)
+                {
+                    // The name of the animation to be split
+                    animName = child["name"].InnerText;
+                }
+                else if (child["index"] != null)
+                {
+                    animName = animNames[int.Parse(child["index"].InnerText)];
+                }
+                else
+                {
+                    animName = animNames[0];
+                }
 
                 // If the tickspersecond node is filled, use that to calculate seconds per tick
                 double animTicksPerSecond = 1.0, secondsPerTick = 0;
@@ -145,135 +166,135 @@ namespace XCLNA.XNA.Animation.Content
                 }
                 secondsPerTick = 1.0 / animTicksPerSecond;
 
+                // Get the animation and remove it from the dict
                 // Check to see if the animation specified in the xml file exists
-                if (animDict.ContainsKey(animName))
+
+
+                AnimationContent anim = animDict[animName];
+                animDict.Remove(anim.Name);
+                // Get the list of new animations
+                XmlNodeList subAnimations = child.GetElementsByTagName("animationsubset");
+
+                foreach (XmlElement subAnim in subAnimations)
                 {
-                    // Get the animation and remove it from the dict
-                    AnimationContent anim = animDict[animName];
-                    animDict.Remove(animName);
-                    // Get the list of new animations
-                    XmlNodeList subAnimations = child.GetElementsByTagName("animationsubset");
+                    // Create the new sub animation
+                    AnimationContent newAnim = new AnimationContent();
+                    XmlElement subAnimNameElement = subAnim["name"];
 
-                    foreach (XmlElement subAnim in subAnimations)
+                    if (subAnimNameElement != null)
+                        newAnim.Name = subAnimNameElement.InnerText;
+
+                    // If a starttime node exists, use that to get the start time
+                    long startTime, endTime;
+                    if (subAnim["starttime"] != null)
                     {
-                        // Create the new sub animation
-                        AnimationContent newAnim = new AnimationContent();
-                        XmlElement subAnimNameElement = subAnim["name"];
 
-                        if (subAnimNameElement != null)
-                            newAnim.Name = subAnimNameElement.InnerText;
-
-                        // If a starttime node exists, use that to get the start time
-                        long startTime, endTime;
-                        if (subAnim["starttime"] != null)
-                        {
-
-                            startTime = TimeSpan.FromSeconds(double.Parse(subAnim["starttime"].InnerText)).Ticks;
-                        }
-                        else // else use the secondspertick combined with the startframe node value
-                        {
-                            double seconds = 
-                                double.Parse(subAnim["startframe"].InnerText) * secondsPerTick;
-
-                            startTime = TimeSpan.FromSeconds(
-                                seconds).Ticks;
-                        }
-
-                        // Same with endtime/endframe
-                        if (subAnim["endtime"] != null)
-                        {
-                            endTime = TimeSpan.FromSeconds(double.Parse(subAnim["endtime"].InnerText)).Ticks;
-                        }
-                        else
-                        {
-                            double seconds = double.Parse(subAnim["endframe"].InnerText)
-                                * secondsPerTick;
-                            endTime = TimeSpan.FromSeconds(
-                                seconds).Ticks;
-                        }
-
-                        // Now that we have the start and end times, we associate them with
-                        // start and end indices for each animation track/channel
-                        foreach (KeyValuePair<string, AnimationChannel> k in anim.Channels)
-                        {
-                            // The current difference between the start time and the
-                            // time at the current index
-                            long currentStartDiff;
-                            // The current difference between the end time and the
-                            // time at the current index
-                            long currentEndDiff;
-                            // The difference between the start time and the time
-                            // at the start index
-                            long bestStartDiff=long.MaxValue;
-                            // The difference between the end time and the time at
-                            // the end index
-                            long bestEndDiff=long.MaxValue;
-
-                            // The start and end indices
-                            int startIndex = -1;
-                            int endIndex = -1;
-
-                            // Create a new channel and reference the old channel
-                            AnimationChannel newChan = new AnimationChannel();
-                            AnimationChannel oldChan = k.Value;
-
-                            // Iterate through the keyframes in the channel
-                            for (int i = 0; i < oldChan.Count; i++)
-                            {
-                                // Update the startIndex, endIndex, bestStartDiff,
-                                // and bestEndDiff
-                                long ticks = oldChan[i].Time.Ticks;
-                                currentStartDiff = Math.Abs(startTime - ticks);
-                                currentEndDiff = Math.Abs(endTime - ticks);
-                                if (startIndex == -1 || currentStartDiff<bestStartDiff)
-                                {
-                                    startIndex = i;
-                                    bestStartDiff = currentStartDiff;
-                                }
-                                if (endIndex == -1 || currentEndDiff<bestEndDiff)
-                                {
-                                    endIndex = i;
-                                    bestEndDiff = currentEndDiff;
-                                }
-                            }
-
-
-                            // Now we have our start and end index for the channel
-                            for (int i = startIndex; i <= endIndex; i++)
-                            {
-                                AnimationKeyframe frame = oldChan[i];
-                                long time;
-                                // Clamp the time so that it can't be less than the
-                                // start time
-                                if (frame.Time.Ticks < startTime)
-                                    time = 0;
-                                // Clamp the time so that it can't be greater than the
-                                // end time
-                                else if (frame.Time.Ticks > endTime)
-                                    time = endTime - startTime;
-                                else // Else get the time
-                                    time = frame.Time.Ticks - startTime;
-
-                                // Finally... create the new keyframe and add it to the new channel
-                                AnimationKeyframe keyframe = new AnimationKeyframe(
-                                    TimeSpan.FromTicks(time),
-                                    frame.Transform);
-                                
-                                newChan.Add(keyframe);
-                            }
-                            
-                            // Add the channel and update the animation duration based on the
-                            // length of the animation track.
-                            newAnim.Channels.Add(k.Key, newChan);
-                            if (newChan[newChan.Count - 1].Time > newAnim.Duration)
-                                newAnim.Duration = newChan[newChan.Count - 1].Time;
-
-
-                        }
-                        // Add the subdived animation to the dictionary.
-                        animDict.Add(newAnim.Name, newAnim);
+                        startTime = TimeSpan.FromSeconds(double.Parse(subAnim["starttime"].InnerText)).Ticks;
                     }
+                    else // else use the secondspertick combined with the startframe node value
+                    {
+                        double seconds = 
+                            double.Parse(subAnim["startframe"].InnerText) * secondsPerTick;
+
+                        startTime = TimeSpan.FromSeconds(
+                            seconds).Ticks;
+                    }
+
+                    // Same with endtime/endframe
+                    if (subAnim["endtime"] != null)
+                    {
+                        endTime = TimeSpan.FromSeconds(double.Parse(subAnim["endtime"].InnerText)).Ticks;
+                    }
+                    else
+                    {
+                        double seconds = double.Parse(subAnim["endframe"].InnerText)
+                            * secondsPerTick;
+                        endTime = TimeSpan.FromSeconds(
+                            seconds).Ticks;
+                    }
+
+                    // Now that we have the start and end times, we associate them with
+                    // start and end indices for each animation track/channel
+                    foreach (KeyValuePair<string, AnimationChannel> k in anim.Channels)
+                    {
+                        // The current difference between the start time and the
+                        // time at the current index
+                        long currentStartDiff;
+                        // The current difference between the end time and the
+                        // time at the current index
+                        long currentEndDiff;
+                        // The difference between the start time and the time
+                        // at the start index
+                        long bestStartDiff=long.MaxValue;
+                        // The difference between the end time and the time at
+                        // the end index
+                        long bestEndDiff=long.MaxValue;
+
+                        // The start and end indices
+                        int startIndex = -1;
+                        int endIndex = -1;
+
+                        // Create a new channel and reference the old channel
+                        AnimationChannel newChan = new AnimationChannel();
+                        AnimationChannel oldChan = k.Value;
+
+                        // Iterate through the keyframes in the channel
+                        for (int i = 0; i < oldChan.Count; i++)
+                        {
+                            // Update the startIndex, endIndex, bestStartDiff,
+                            // and bestEndDiff
+                            long ticks = oldChan[i].Time.Ticks;
+                            currentStartDiff = Math.Abs(startTime - ticks);
+                            currentEndDiff = Math.Abs(endTime - ticks);
+                            if (startIndex == -1 || currentStartDiff<bestStartDiff)
+                            {
+                                startIndex = i;
+                                bestStartDiff = currentStartDiff;
+                            }
+                            if (endIndex == -1 || currentEndDiff<bestEndDiff)
+                            {
+                                endIndex = i;
+                                bestEndDiff = currentEndDiff;
+                            }
+                        }
+
+
+                        // Now we have our start and end index for the channel
+                        for (int i = startIndex; i <= endIndex; i++)
+                        {
+                            AnimationKeyframe frame = oldChan[i];
+                            long time;
+                            // Clamp the time so that it can't be less than the
+                            // start time
+                            if (frame.Time.Ticks < startTime)
+                                time = 0;
+                            // Clamp the time so that it can't be greater than the
+                            // end time
+                            else if (frame.Time.Ticks > endTime)
+                                time = endTime - startTime;
+                            else // Else get the time
+                                time = frame.Time.Ticks - startTime;
+
+                            // Finally... create the new keyframe and add it to the new channel
+                            AnimationKeyframe keyframe = new AnimationKeyframe(
+                                TimeSpan.FromTicks(time),
+                                frame.Transform);
+                            
+                            newChan.Add(keyframe);
+                        }
+                        
+                        // Add the channel and update the animation duration based on the
+                        // length of the animation track.
+                        newAnim.Channels.Add(k.Key, newChan);
+                        if (newChan[newChan.Count - 1].Time > newAnim.Duration)
+                            newAnim.Duration = newChan[newChan.Count - 1].Time;
+
+
+                    }
+                    // Add the subdived animation to the dictionary.
+                    animDict.Add(newAnim.Name, newAnim);
                 }
+                
             }
         }
 

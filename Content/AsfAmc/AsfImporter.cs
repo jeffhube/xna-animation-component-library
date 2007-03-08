@@ -35,7 +35,7 @@ using System.Xml;
 using System.Globalization;
 #endregion
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
     /// Imports Acclaim ASF (motion capture skeleton).

@@ -33,7 +33,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 #endregion
 
-namespace XCLNA.XNA.Animation.Content
+namespace Xclna.Xna.Animation.Content
 {
 
     /// <summary>
@@ -84,14 +84,14 @@ namespace XCLNA.XNA.Animation.Content
         {
             if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "XCLNA.XNA.Animation.Content.AnimationReader, "
-                    + "XCLNA.XNA.Animation360, "
+                return "Xclna.Xna.Animation.Content.AnimationReader, "
+                    + "Xclna.Xna.Animation360, "
                     + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "XCLNA.XNA.Animation.Content.AnimationReader, "
-                    + "XCLNA.XNA.Animationx86, "
+                return "Xclna.Xna.Animation.Content.AnimationReader, "
+                    + "Xclna.Xna.Animationx86, "
                     + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             
@@ -109,14 +109,14 @@ namespace XCLNA.XNA.Animation.Content
         {
             if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "XCLNA.XNA.Animation.Content.AnimationInfoCollection, "
-                    + "XCLNA.XNA.Animation360, "
+                return "Xclna.Xna.Animation.Content.AnimationInfoCollection, "
+                    + "Xclna.Xna.Animation360, "
                     + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "XCLNA.XNA.Animation.Content.AnimationInfoCollection, "
-                    + "XCLNA.XNA.Animationx86, "
+                return "Xclna.Xna.Animation.Content.AnimationInfoCollection, "
+                    + "Xclna.Xna.Animationx86, "
                     + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
 

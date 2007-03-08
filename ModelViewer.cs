@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 #endregion
 
-namespace XCLNA.XNA.Animation
+namespace Xclna.Xna.Animation
 {
     /// <summary>
     /// A viewer animated models.

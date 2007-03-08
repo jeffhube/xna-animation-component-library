@@ -30,7 +30,7 @@ using Microsoft.Xna.Framework;
 using System.Collections.ObjectModel;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace XCLNA.XNA.Animation
+namespace Xclna.Xna.Animation
 {
 
     /// <summary>

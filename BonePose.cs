@@ -29,7 +29,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.ObjectModel;
 
-namespace XCLNA.XNA.Animation
+namespace Xclna.Xna.Animation
 {
 
     /// <summary>
@@ -228,7 +228,7 @@ namespace XCLNA.XNA.Animation
         /// Gets or sets the current animation that affects this bone.  If null,
         /// then DefaultTransform will be used for this bone's transform.
         /// </summary>
-        public IAnimationController CurrentAnimation
+        public IAnimationController CurrentController
         {
             get { return currentAnimation; }
             set
@@ -258,7 +258,7 @@ namespace XCLNA.XNA.Animation
         /// Gets or sets the blend animation that affects this bone.  If the value
         /// is null, then no blending will occur.
         /// </summary>
-        public IAnimationController CurrentBlendAnimation
+        public IAnimationController CurrentBlendController
         {
             get { return currentBlendAnimation; }
             set

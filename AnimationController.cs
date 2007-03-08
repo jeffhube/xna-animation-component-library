@@ -31,7 +31,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 
-namespace XCLNA.XNA.Animation
+namespace Xclna.Xna.Animation
 {
    
     /// <summary>
