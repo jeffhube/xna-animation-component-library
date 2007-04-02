@@ -1,0 +1,134 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{23F9B3B0-EBEA-4E4C-9D21-D83BA47E8D58}</ProjectGuid>
+    <ProjectTypeGuids>{9F340DF3-2AED-4330-AC16-78AC2D9B4738};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Xclna.Xna.Animation.Content</RootNamespace>
+    <AssemblyName>Xclna.Xna.Animation.Content</AssemblyName>
+    <XnaFrameworkVersion>v1.0</XnaFrameworkVersion>
+    <XnaPlatform>Windows</XnaPlatform>
+    <XNAGlobalContentPipelineAssemblies>Microsoft.Xna.Framework.Content.Pipeline.EffectImporter.dll;Microsoft.Xna.Framework.Content.Pipeline.FBXImporter.dll;Microsoft.Xna.Framework.Content.Pipeline.TextureImporter.dll;Microsoft.Xna.Framework.Content.Pipeline.XImporter.dll</XNAGlobalContentPipelineAssemblies>
+    <XNAProjectContentPipelineAssemblies>
+    </XNAProjectContentPipelineAssemblies>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\x86\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>true</NoStdLib>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <PlatformTarget>x86</PlatformTarget>
+    <DocumentationFile>bin\x86\Debug\Xclna.Xna.Animation.Content.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x86\Release</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>true</NoStdLib>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <PlatformTarget>x86</PlatformTarget>
+    <DocumentationFile>bin\x86\Release\Xclna.Xna.Animation.Content.XML</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xna.Framework">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Content.Pipeline, Version=1.0.0.0, Culture=neutral, PublicKeyToken=6d5c3888ef60e27d, processorArchitecture=x86" />
+    <Reference Include="Microsoft.Xna.Framework.Game">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="mscorlib">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.XML" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Content\AnimatedModelProcessor.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>AnimatedModelProcessor</Name>
+    </Compile>
+    <Compile Include="Content\AnimationProcessor.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>AnimationProcessor</Name>
+    </Compile>
+    <Compile Include="Content\AnimationWriter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>AnimationWriter</Name>
+    </Compile>
+    <Compile Include="Content\AsfAmc\AmcImporter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>AmcImporter</Name>
+    </Compile>
+    <Compile Include="Content\AsfAmc\AsfImporter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>AsfImporter</Name>
+    </Compile>
+    <Compile Include="Content\BoneIndexer.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>BoneIndexer</Name>
+    </Compile>
+    <Compile Include="Content\Bvh\BvhImporter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>BvhImporter</Name>
+    </Compile>
+    <Compile Include="Content\ContentUtil.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>ContentUtil</Name>
+    </Compile>
+    <Compile Include="Content\PaletteEffectContent.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>PaletteEffectContent</Name>
+    </Compile>
+    <Compile Include="Content\PaletteSourceCode.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>PaletteSourceCode</Name>
+    </Compile>
+    <Compile Include="Content\SkinInfoContent.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>SkinInfoContent</Name>
+    </Compile>
+    <Compile Include="Content\SkinTransformContent.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>SkinTransformContent</Name>
+    </Compile>
+    <Compile Include="Content\X File\XFileTokenizer.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>XFileTokenizer</Name>
+    </Compile>
+    <Compile Include="Content\X File\XMeshImporter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>XMeshImporter</Name>
+    </Compile>
+    <Compile Include="Content\X File\XModelImporter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>XModelImporter</Name>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>AssemblyInfo</Name>
+    </Compile>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA\Game Studio Express\v1.0\Microsoft.Xna.ContentPipeline.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA\Game Studio Express\v1.0\Microsoft.Xna.Common.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
