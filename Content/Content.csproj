@@ -89,6 +89,10 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>ContentUtil</Name>
     </Compile>
+    <Compile Include="Content\MeshSplitter.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>MeshSplitter</Name>
+    </Compile>
     <Compile Include="Content\PaletteEffectContent.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>PaletteEffectContent</Name>

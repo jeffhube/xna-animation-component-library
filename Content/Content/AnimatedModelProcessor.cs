@@ -39,6 +39,7 @@ using System.Globalization;
 using System.Xml;
 using System.Collections.ObjectModel;
 
+
 namespace Xclna.Xna.Animation.Content
 {
     /// <summary>
@@ -55,7 +56,7 @@ namespace Xclna.Xna.Animation.Content
         private AnimationContentDictionary animations = new AnimationContentDictionary();
         private NodeContent input;
         private SkinInfoContentCollection[] skinInfo = null;
-
+        private bool modelSplit = false;
         private BoneIndexer[] indexers = null;
         List<Matrix> absoluteMeshTransforms = null;
         List<MeshContent> meshes = new List<MeshContent>();
@@ -124,7 +125,17 @@ namespace Xclna.Xna.Animation.Content
         /// <returns>A model with animation data on its tag</returns>
         public override ModelContent Process(NodeContent input, ContentProcessorContext context)
         {
-
+            ModelSplitter splitter;
+            if (context.TargetPlatform != TargetPlatform.Xbox360)
+            {
+                splitter = new ModelSplitter(input, 56);
+            }
+            else
+            {
+                splitter = new ModelSplitter(input, 40);
+            }
+            modelSplit = splitter.Split();
+            splitter = null;
             this.input = input;
             this.context = context;
             FindMeshes(input);
@@ -139,7 +150,7 @@ namespace Xclna.Xna.Animation.Content
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
 
-            if (input.OpaqueData.ContainsKey("AbsoluteMeshTransforms"))
+            if (!modelSplit && input.OpaqueData.ContainsKey("AbsoluteMeshTransforms"))
             {
                 absoluteMeshTransforms =
                     (List<Matrix>)input.OpaqueData["AbsoluteMeshTransforms"];
