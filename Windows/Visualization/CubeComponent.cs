@@ -28,7 +28,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Xclna.Xna.Animation.Vizualiation
+namespace Xclna.Xna.Animation.Visualization
 {
     /// <summary>
     /// A cube component to assist in visualization of drawable objects.
@@ -112,23 +112,23 @@ namespace Xclna.Xna.Animation.Vizualiation
 
             indices = new int[]
             {
-                2,1,0, // left face
-                0,3,2,
+                0,1,2, // left face
+                2,3,0,
 
-                6,2,3, // top face
-                3,7,6,
+                3,2,6, // top face
+                6,7,3,
 
-                5,6,7, // right face
-                7,4,5,
+                7,6,5, // right face
+                5,4,7,
 
-                1,5,4, // bottom face
-                4,0,1,
+                4,5,1, // bottom face
+                1,0,4,
 
-                2,6,5, // back face
-                5,1,2,
+                5,6,2, // back face
+                2,1,5,
                 
-                0,4,7, // front face
-                7,3,0
+                7,4,0, // front face
+                0,3,7
             };
 
 
