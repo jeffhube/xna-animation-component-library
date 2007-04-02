@@ -52,6 +52,8 @@
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnimationController.cs">
@@ -62,7 +64,7 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>AnimationInfo</Name>
     </Compile>
-    <Compile Include="AnimationReader.cs">
+    <Compile Include="Content\AnimationReader.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>AnimationReader</Name>
     </Compile>
@@ -74,6 +76,10 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>BonePose</Name>
     </Compile>
+    <Compile Include="IAttachable.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>IAttachable</Name>
+    </Compile>
     <Compile Include="ModelAnimator.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>ModelAnimator</Name>
@@ -82,7 +88,7 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>ModelViewer</Name>
     </Compile>
-    <Compile Include="PaletteEffectReader.cs">
+    <Compile Include="Content\PaletteEffectReader.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>PaletteEffectReader</Name>
     </Compile>
@@ -94,13 +100,17 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>SkinInfo</Name>
     </Compile>
-    <Compile Include="SkinInfoCollectionReader.cs">
+    <Compile Include="Content\SkinInfoCollectionReader.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>SkinInfoCollectionReader</Name>
     </Compile>
     <Compile Include="Util.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>Util</Name>
+    </Compile>
+    <Compile Include="Visualization\CubeComponent.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>CubeComponent</Name>
     </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

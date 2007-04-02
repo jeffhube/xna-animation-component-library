@@ -54,6 +54,9 @@ namespace Xclna.Xna.Animation
 
         private AnimationInfoCollection animations;
 
+        // List of attached objects
+        private IList<IAttachable> attachedObjects = new List<IAttachable>();
+
         // Store the number of meshes in the model
         private readonly int numMeshes;
 
@@ -109,7 +112,8 @@ namespace Xclna.Xna.Animation
         /// </summary>
         /// <param name="game">The game to which this component will belong.</param>
         /// <param name="model">The model to be animated.</param>
-        public ModelAnimator(Game game, Model model) : base(game)
+        public ModelAnimator(Game game, Model model)
+            : base(game)
         {
             this.model = model;
             animations = AnimationInfoCollection.FromModel(model);
@@ -147,9 +151,9 @@ namespace Xclna.Xna.Animation
             // Update after AnimationController by default
             base.UpdateOrder = 1;
             game.Components.Add(this);
-   
+
             // Test to see if model has too many bones
-            for (int i = 0; i < model.Meshes.Count; i++ )
+            for (int i = 0; i < model.Meshes.Count; i++)
             {
                 if (palette[i] != null && matrixPaletteParams[i] != null)
                 {
@@ -196,7 +200,7 @@ namespace Xclna.Xna.Animation
                         matrixPaletteParams[index] = effect.Parameters["MatrixPalette"];
                     }
                     else
-                        matrixPaletteParams[index]=null;
+                        matrixPaletteParams[index] = null;
                     index++;
                 }
             }
@@ -215,7 +219,7 @@ namespace Xclna.Xna.Animation
         public override void Update(GameTime gameTime)
         {
             bonePoses.CopyAbsoluteTransformsTo(pose);
-            for (int i = 0; i < skinInfo.Length; i ++) 
+            for (int i = 0; i < skinInfo.Length; i++)
             {
                 if (palette[i] == null)
                     continue;
@@ -228,7 +232,11 @@ namespace Xclna.Xna.Animation
                 }
             }
 
-  
+            foreach (IAttachable attached in attachedObjects)
+            {
+                attached.CombinedTransform = attached.LocalTransform *
+                    pose[attached.AttachedBone.Index] * world;
+            }
 
         }
 
@@ -253,7 +261,13 @@ namespace Xclna.Xna.Animation
         }
 
 
-
+        /// <summary>
+        /// Gets a list of objects that are attached to a bone in the model.
+        /// </summary>
+        public IList<IAttachable> AttachedObjects
+        {
+            get { return attachedObjects; }
+        }
 
         /// <summary>
         /// Gets the BonePoses associated with this ModelAnimator.
@@ -280,11 +294,11 @@ namespace Xclna.Xna.Animation
                     {
                         foreach (Effect effect in mesh.Effects)
                         {
-                   
-                                worldParams[index].SetValue(
-               
-                                    world);
-                            
+
+                            worldParams[index].SetValue(
+
+                                world);
+
 
                             matrixPaletteParams[index].SetValue(palette[i]);
                             index++;
@@ -313,7 +327,7 @@ namespace Xclna.Xna.Animation
                     "likely because the model uses too many bones for the matrix palette.  The default palette size "
                     + "is 56 for windows and 40 for Xbox.");
             }
-            
+
         }
         #endregion
     }

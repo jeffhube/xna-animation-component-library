@@ -54,6 +54,9 @@ namespace Xclna.Xna.Animation
 
         private AnimationInfoCollection animations;
 
+        // List of attached objects
+        private IList<IAttachable> attachedObjects = new List<IAttachable>();
+
         // Store the number of meshes in the model
         private readonly int numMeshes;
 
@@ -228,7 +231,11 @@ namespace Xclna.Xna.Animation
                 }
             }
 
-  
+            foreach (IAttachable attached in attachedObjects)
+            {
+                attached.CombinedTransform = attached.LocalTransform *
+                    pose[attached.AttachedBone.Index] * world;
+            }
 
         }
 
@@ -253,7 +260,13 @@ namespace Xclna.Xna.Animation
         }
 
 
-
+        /// <summary>
+        /// Gets a list of objects that are attached to a bone in the model.
+        /// </summary>
+        public IList<IAttachable> AttachedObjects
+        {
+            get { return attachedObjects; }
+        }
 
         /// <summary>
         /// Gets the BonePoses associated with this ModelAnimator.
