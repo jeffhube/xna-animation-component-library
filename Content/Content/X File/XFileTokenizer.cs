@@ -527,13 +527,32 @@ namespace Xclna.Xna.Animation.Content
                             // first  character
                             case 1:
                                 AddChar(c);
-                                groupLoc = 2;
+                                if (c == '"')
+                                    groupLoc = 3;
+                                else
+                                    groupLoc = 2;
                                 break;
-                            // now we can accept a wide variety of characters
+                            // not a string
                             case 2:
                                 if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
                                     || c == '_' || (c >= '0' && c <= '9') || c == '.' || c == '-'
                                     || c== '/' || c=='\\' || c==':')
+                                {
+                                    AddChar(c);
+                                    break;
+                                }
+
+
+                                strings.Add(CurrentString);
+                                ResetString();
+                                groupLoc = 1;
+                                groupnum = -1;
+                                goto FSMSTART;
+                            // is a string
+                            case 3:
+                                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+                                    || c == '_' || (c >= '0' && c <= '9') || c == '.' || c == '-'
+                                    || c == '/' || c == '\\' || c == ':' || c==' ')
                                 {
                                     AddChar(c);
                                     break;
@@ -554,6 +573,7 @@ namespace Xclna.Xna.Animation.Content
                                 groupLoc = 1;
                                 groupnum = -1;
                                 goto FSMSTART;
+
                             // token does not make a valid string; ignore and move on
                             default:
                                 groupLoc = 1;

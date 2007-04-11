@@ -109,13 +109,13 @@ namespace Xclna.Xna.Animation.Content
         {
             if (targetPlatform == TargetPlatform.Xbox360)
             {
-                return "Xclna.Xna.Animation.Content.AnimationInfoCollection, "
+                return "Xclna.Xna.Animation.AnimationInfoCollection, "
                     + "Xclna.Xna.Animation360, "
                     + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }
             else
             {
-                return "Xclna.Xna.Animation.Content.AnimationInfoCollection, "
+                return "Xclna.Xna.Animation.AnimationInfoCollection, "
                     + "Xclna.Xna.Animationx86, "
                     + "Version="+ContentUtil.VERSION+", Culture=neutral, PublicKeyToken=null";
             }

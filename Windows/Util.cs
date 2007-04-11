@@ -167,6 +167,8 @@ namespace Xclna.Xna.Animation
         public static Matrix SlerpMatrix(Matrix start, Matrix end,
             float slerpAmount)
         {
+            if (start == end)
+                return start;
             // Get rotation components and interpolate (not completely accurate but I don't want 
             // to get into polar decomposition and this seems smooth enough)
             Quaternion.CreateFromRotationMatrix(ref start, out qStart);
@@ -221,6 +223,11 @@ namespace Xclna.Xna.Animation
             float slerpAmount,
             out Matrix result)
         {
+            if (start == end)
+            {
+                result = start;
+                return;
+            }
             // Get rotation components and interpolate (not completely accurate but I don't want 
             // to get into polar decomposition and this seems smooth enough)
             Quaternion.CreateFromRotationMatrix(ref start, out qStart);
