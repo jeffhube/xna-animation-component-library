@@ -253,12 +253,15 @@ namespace Xclna.Xna.Animation
                 {
                     if (value != null)
                     {
+                        if (currentAnimation != null)
+                            currentAnimation.AnimationTracksChanged -= current_AnimationTracksChanged;
                         if (name != null)
                         {
                             // Update info on whether or not the current anim
                             // contains a track for this bone
                             doesAnimContainChannel = 
                                 value.ContainsAnimationTrack(this);
+                            value.AnimationTracksChanged += new EventHandler(current_AnimationTracksChanged);
                         }
                     }
                     else // A null animation; use defaulttransform
@@ -267,6 +270,11 @@ namespace Xclna.Xna.Animation
                 }
             }
 
+        }
+
+        void current_AnimationTracksChanged(object sender, EventArgs e)
+        {
+            doesAnimContainChannel = this.currentAnimation.ContainsAnimationTrack(this);
         }
 
         /// <summary>
@@ -284,12 +292,15 @@ namespace Xclna.Xna.Animation
 
                     if (value != null)
                     {
+                        if (currentBlendAnimation != null)
+                            currentBlendAnimation.AnimationTracksChanged -= blend_AnimationTracksChanged;
                         if (name != null)
                         {
                             // Update info on whether or not the current anim
                             // contains a track for this bone
                             doesBlendContainChannel =
                                 value.ContainsAnimationTrack(this);
+                            value.AnimationTracksChanged += new EventHandler(blend_AnimationTracksChanged);
                         }
                     }
                     else
@@ -297,6 +308,12 @@ namespace Xclna.Xna.Animation
                     currentBlendAnimation = value;
                 }
             }
+        }
+
+        void blend_AnimationTracksChanged(object sender, EventArgs e)
+        {
+            doesBlendContainChannel =
+                this.currentBlendAnimation.ContainsAnimationTrack(this);
         }
 
 
@@ -334,7 +351,7 @@ namespace Xclna.Xna.Animation
                 // blend the defaultTransform with the blend animation
                 if (currentBlendAnimation != null && doesBlendContainChannel)
                 {
-                    currentBlendAnimation.GetCurrentBoneTransform(this, out blendMatrix);
+                    blendMatrix = currentBlendAnimation.GetCurrentBoneTransform(this);
                     Util.SlerpMatrix(
                         ref defaultMatrix, 
                         ref blendMatrix, 
@@ -349,15 +366,13 @@ namespace Xclna.Xna.Animation
             else
             {
                 // Find the current transform in the animation for the bone
-                currentAnimation.GetCurrentBoneTransform(this, 
-                    out currentMatrixBuffer);
+                currentMatrixBuffer = currentAnimation.GetCurrentBoneTransform(this);
                 // If the bone is affected by a blend animation, blend the
                 // current animation transform with the current blend animation
                 // transform
                 if (currentBlendAnimation != null && doesBlendContainChannel)
                 {
-                    currentBlendAnimation.GetCurrentBoneTransform(this,
-                        out blendMatrix);
+                    blendMatrix = currentBlendAnimation.GetCurrentBoneTransform(this);
                     Util.SlerpMatrix(
                         ref currentMatrixBuffer,
                         ref blendMatrix, 

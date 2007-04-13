@@ -99,7 +99,7 @@ namespace Xclna.Xna.Animation
         /// column and the Z row by -1 such that the Z,Z element stays intact.
         /// </summary>
         /// <param name="m">The matrix to be reflected across the Z axis</param>
-        public static void ReflectMatrix(ref Matrix m)
+        public static  void ReflectMatrix(ref Matrix m)
         {
             m.M13 *= -1;
             m.M23 *= -1;
@@ -129,7 +129,7 @@ namespace Xclna.Xna.Animation
             return (T)max;
         }
 
-
+        
         /// <summary>
         /// Converts from an array of bytes to any vertex type.
         /// </summary>
@@ -218,7 +218,7 @@ namespace Xclna.Xna.Animation
         /// <param name="slerpAmount">Ratio of interpolation</param>
         /// <param name="result">Stores the result of hte interpolation.</param>
         public static void SlerpMatrix(
-            ref Matrix start,
+            ref Matrix start, 
             ref Matrix end,
             float slerpAmount,
             out Matrix result)
@@ -321,7 +321,7 @@ namespace Xclna.Xna.Animation
         }
 
 
-
+         
     }
 
 

@@ -35,58 +35,6 @@ namespace Xclna.Xna.Animation
 {
    
     /// <summary>
-    /// Used for events dealing with an animation controller.
-    /// </summary>
-    /// <param name="sender">The AnimationController that raised this event.</param>
-    /// <param name="e">The EventArgs.</param>
-    public delegate void AnimationEventHandler(object sender,
-        EventArgs e);
-
-    /// <summary>
-    /// An interface used by BonePose that allows an animation to affect the bone
-    /// as a function of time.
-    /// </summary>
-    public interface IAnimationController : IUpdateable
-    {
-        /// <summary>
-        /// Event fired when an animation ends.
-        /// </summary>
-        event AnimationEventHandler AnimationEnded;
-        /// <summary>
-        /// Gets or sets a value indicating whether or not the animation is looping.
-        /// </summary>
-        bool IsLooping { get; set;}
-        /// <summary>
-        /// Gets the duration of the animation in ticks.
-        /// </summary>
-        long Duration { get;}
-        /// <summary>
-        /// Gets the current transform for the given BonePose object in the animation.
-        /// This is only called when a bone pose is affected by the current animation.
-        /// </summary>
-        /// <param name="pose">The BonePose object querying for the current transform in
-        /// the animation.</param>
-        /// <param name="transform">The transform of the BonePose object to be set.</param>
-        void GetCurrentBoneTransform(BonePose pose, out Matrix transform);
-        /// <summary>
-        /// Gets or sets the elapsed time in ticks for the animation.
-        /// </summary>
-        long ElapsedTime { get;set;}
-        /// <summary>
-        /// Gets or sets the value that is multiplied by the elapsed game time.
-        /// </summary>
-        double SpeedFactor { get;set;}
-        /// <summary>
-        /// Gets a value determining whether the animation can potentially affect the
-        /// given BonePose.
-        /// </summary>
-        /// <param name="pose">The BonePose to test.</param>
-        /// <returns>True if the animation can affect the bone and contains a track
-        /// for it.</returns>
-        bool ContainsAnimationTrack(BonePose pose);
-    }
-    
-    /// <summary>
     /// Controls an animation by advancing it's time and affecting
     /// bone transforms
     /// </summary>
@@ -110,7 +58,7 @@ namespace Xclna.Xna.Animation
         /// <summary>
         /// Fired when the controller is not looping and the animation has ended.
         /// </summary>
-        public event AnimationEventHandler AnimationEnded;
+        public event EventHandler AnimationEnded;
         // True fi the animation is looping
         private bool isLooping = true;
         #endregion
@@ -256,13 +204,13 @@ namespace Xclna.Xna.Animation
         /// </summary>
         /// <param name="pose">The BonePose object querying for the current transform in
         /// the animation.</param>
-        /// <param name="transform">The transform of the BonePose object to be set.</param>
-        public void GetCurrentBoneTransform(BonePose pose, out Matrix transform)
+        /// <returns>The current transform of the bone.</returns>
+        public virtual Matrix GetCurrentBoneTransform(BonePose pose)
         {
             AnimationChannelCollection channels = animation.AnimationChannels;
             BoneKeyframeCollection channel = channels[pose.Name];
             int boneIndex = channel.GetIndexByTime(elapsedTime);
-            transform = channel[boneIndex].Transform;
+            return channel[boneIndex].Transform;
         }
 
 
@@ -276,8 +224,27 @@ namespace Xclna.Xna.Animation
             return animation.AnimationChannels.AffectsBone(pose.Name);
         }
 
+
+        /// <summary>
+        /// Fired when the tracks change so that different bones can be affected by the controller.
+        /// </summary>
+        /// <param name="e">The event args.</param>
+        protected virtual void OnAnimationTracksChanged(EventArgs e)
+        {
+            if (AnimationTracksChanged != null)
+                AnimationTracksChanged(this, e);
+        }
+        /// <summary>
+        /// Fired when the animation tracks change and different bones are affected.
+        /// </summary>
+        public event EventHandler AnimationTracksChanged;
+
         #endregion
 
+        #region IAnimationController Members
+
+
+        #endregion
     }
 
 }
