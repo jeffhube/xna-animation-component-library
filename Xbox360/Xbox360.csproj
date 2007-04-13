@@ -72,6 +72,10 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>BonePose</Name>
     </Compile>
+    <Compile Include="EffectInstancedAnimator.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>EffectInstancedAnimator</Name>
+    </Compile>
     <Compile Include="IAnimationController.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>IAnimationController</Name>

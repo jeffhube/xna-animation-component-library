@@ -28,6 +28,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System;
+using System.Collections.ObjectModel;
 #endregion
 
 namespace Xclna.Xna.Animation
@@ -49,6 +50,11 @@ namespace Xclna.Xna.Animation
 
         // This stores all of the "World" matrix parameters for an unskinned model
         private readonly EffectParameter[] worldParams, matrixPaletteParams;
+
+        // A flattened array of effects, one for each ModelMeshPart
+        private Effect[] modelEffects;
+        private ReadOnlyCollection<Effect> effectCollection;
+
         // Skeletal structure containg transforms
         private BonePoseCollection bonePoses;
 
@@ -59,6 +65,9 @@ namespace Xclna.Xna.Animation
 
         // Store the number of meshes in the model
         private readonly int numMeshes;
+        
+        // Stores the number of effects/ModelMeshParts
+        private readonly int numEffects;
 
         // Used to avoid reallocation
         private static Matrix skinTransform;
@@ -89,6 +98,13 @@ namespace Xclna.Xna.Animation
             }
         }
 
+        /// <summary>
+        /// Returns the number of effects used by the model, one for each ModelMeshPart
+        /// </summary>
+        protected int EffectCount
+        {
+            get { return numEffects; }
+        }
 
         /// <summary>
         /// Gets the model associated with this controller.
@@ -115,16 +131,20 @@ namespace Xclna.Xna.Animation
         public ModelAnimator(Game game, Model model) : base(game)
         {
             this.model = model;
+
             animations = AnimationInfoCollection.FromModel(model);
             bonePoses = BonePoseCollection.FromModelBoneCollection(
                 model.Bones);
             numMeshes = model.Meshes.Count;
             // Find total number of effects used by the model
-            int numEffects = 0;
+            numEffects = 0;
             foreach (ModelMesh mesh in model.Meshes)
                 foreach (Effect effect in mesh.Effects)
                     numEffects++;
+
+
             // Initialize the arrays that store effect parameters
+            modelEffects = new Effect[numEffects];
             worldParams = new EffectParameter[numEffects];
             matrixPaletteParams = new EffectParameter[numEffects];
             InitializeEffectParams();
@@ -168,7 +188,7 @@ namespace Xclna.Xna.Animation
                 }
             }
         }
-
+        #endregion
         /// <summary>
         /// Returns skinning information for a mesh.
         /// </summary>
@@ -180,33 +200,54 @@ namespace Xclna.Xna.Animation
         }
 
         /// <summary>
+        /// Called during creation and calls to InitializeEffectParams.  Returns the list of
+        /// effects used during rendering.
+        /// </summary>
+        /// <returns>A flattened list of effects used during rendering, one for each ModelMeshPart</returns>
+        protected virtual IList<Effect> CreateEffectList()
+        {
+            List<Effect> effects = new List<Effect>();
+            foreach (ModelMesh mesh in model.Meshes)
+            {
+                foreach (ModelMeshPart part in mesh.MeshParts)
+                {
+                    effects.Add(part.Effect);
+                }
+            }
+            return effects;
+        }
+
+        /// <summary>
         /// Initializes the effect parameters.  Should be called after the effects
         /// on the model are changed.
         /// </summary>
         public void InitializeEffectParams()
         {
-
+            IList<Effect> effects = CreateEffectList();
+            if (effects.Count != numEffects)
+                throw new Exception("The number of effects in the list returned by CreateEffectList "
+                    + "must be equal to the number of ModelMeshParts.");
+            effects.CopyTo(modelEffects, 0);
+            effectCollection = new ReadOnlyCollection<Effect>(modelEffects);
             // store the parameters in the arrays so the values they refer to can quickly be set
-            int index = 0;
-            foreach (ModelMesh mesh in model.Meshes)
+            for (int i = 0; i < numEffects; i++)
             {
-                bool skinned = Util.IsSkinned(mesh);
-                foreach (Effect effect in mesh.Effects)
-                {
-                    worldParams[index] = effect.Parameters["World"];
-                    if (skinned)
-                    {
-                        matrixPaletteParams[index] = effect.Parameters["MatrixPalette"];
-                    }
-                    else
-                        matrixPaletteParams[index]=null;
-                    index++;
-                }
+                worldParams[i] = modelEffects[i].Parameters["World"];
+                matrixPaletteParams[i] = modelEffects[i].Parameters["MatrixPalette"];
             }
         }
 
-
-        #endregion
+        /// <summary>
+        /// Gets a collection of effects, one per ModelMeshPart, that are used by 
+        /// the ModelAnimator. The first index of the collection corresponds to the
+        /// effect used to draw the first ModelMeshPart of the first Mesh, and the 
+        /// last index corresponds to the effect used to drwa the last ModelMeshPart
+        /// of the last Mesh.
+        /// </summary>
+        public ReadOnlyCollection<Effect> Effects
+        {
+            get { return effectCollection; }
+        }
 
         #region Animation and Update Routines
 
@@ -289,6 +330,8 @@ namespace Xclna.Xna.Animation
                 for (int i = 0; i < numMeshes; i++)
                 {
                     ModelMesh mesh = model.Meshes[i];
+                    // The starting index for the modelEffects array
+                    int effectStartIndex = index;
                     if (matrixPaletteParams[index] != null)
                     {
                         foreach (Effect effect in mesh.Effects)
@@ -312,7 +355,32 @@ namespace Xclna.Xna.Animation
                             index++;
                         }
                     }
-                    mesh.Draw();
+                    int numParts = mesh.MeshParts.Count;
+                    GraphicsDevice device = mesh.VertexBuffer.GraphicsDevice;
+                    device.Indices = mesh.IndexBuffer;
+                    for (int j = 0; j < numParts; j++ )
+                    {
+                        Effect currentEffect = modelEffects[effectStartIndex+j];
+      
+                        ModelMeshPart currentPart = mesh.MeshParts[j];
+                        device.VertexDeclaration = currentPart.VertexDeclaration;
+                        device.Vertices[0].SetSource(mesh.VertexBuffer, currentPart.StreamOffset,
+                            currentPart.VertexStride);
+
+                        currentEffect.Begin();
+                        EffectPassCollection passes = currentEffect.CurrentTechnique.Passes;
+                        int numPasses = passes.Count;
+                        for (int k = 0; k < numPasses; k++)
+                        {
+                            EffectPass pass = passes[k];
+                            pass.Begin();
+                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, currentPart.BaseVertex,
+                                0, currentPart.NumVertices, currentPart.StartIndex, currentPart.PrimitiveCount);
+                            pass.End();
+                        }
+
+                        currentEffect.End();
+                    }
                 }
             }
             catch (NullReferenceException)

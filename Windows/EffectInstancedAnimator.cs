@@ -1,5 +1,5 @@
 /*
- * IAttachable.cs
+ * EffectInstancedAnimator.cs
  * Copyright (c) 2007 David Astle
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,30 +21,46 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Xclna.Xna.Animation
 {
     /// <summary>
-    /// An object that can be attached to a BonePose.
+    /// A subclass of ModelAnimator that uses effects cloned from the model instead of
+    /// directly from the model.
     /// </summary>
-    public interface IAttachable
+    public class EffectInstancedAnimator : ModelAnimator
     {
         /// <summary>
-        /// The local transform of the object, before the transform of the attached bone is applied.
+        /// Creates a new EffectInstancedAnimator.
         /// </summary>
-        Matrix LocalTransform { get;}
+        /// <param name="game">The game.</param>
+        /// <param name="model">The model.</param>
+        public EffectInstancedAnimator(Game game, Model model)
+            : base(game, model)
+        {
+
+        }
+
         /// <summary>
-        /// The world space transform of the object as affected by the bone.
+        /// Creates a list of effects that are cloned from the model's current effects.
         /// </summary>
-        Matrix CombinedTransform { get; set;}
-        /// <summary>
-        /// The bone to which the object is attached.
-        /// </summary>
-        BonePose AttachedBone { get;}
+        /// <returns>A list of effects that are cloned from the model's current effects.</returns>
+        protected override IList<Effect> CreateEffectList()
+        {
+            List<Effect> effects = new List<Effect>();
+            foreach (ModelMesh mesh in base.Model.Meshes)
+            {
+                foreach (ModelMeshPart part in mesh.MeshParts)
+                {
+                    effects.Add(part.Effect.Clone(part.Effect.GraphicsDevice));
+                }
+            }
+            return effects;
+        }
     }
 }
