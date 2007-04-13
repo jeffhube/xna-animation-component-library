@@ -64,6 +64,110 @@ namespace Xclna.Xna.Animation.Content
         private int numMeshes = 0;
 
 
+        /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
+        /// <param name="input">The root of the X file tree</param>
+        /// <param name="context">The context for this processor</param>
+        /// <returns>A model with animation data on its tag</returns>
+        public override ModelContent Process(NodeContent input, ContentProcessorContext context)
+        {
+            ModelSplitter splitter;
+            if (context.TargetPlatform != TargetPlatform.Xbox360)
+            {
+                splitter = new ModelSplitter(input, 56);
+            }
+            else
+            {
+                splitter = new ModelSplitter(input, 40);
+            }
+            modelSplit = splitter.Split();
+            splitter = null;
+            this.input = input;
+            this.context = context;
+            FindMeshes(input);
+            indexers = new BoneIndexer[numMeshes];
+            for (int i = 0; i < indexers.Length; i++)
+            {
+                indexers[i] = new BoneIndexer();
+            }
+            foreach (MeshContent meshContent in meshes)
+                CreatePaletteIndices(meshContent);
+
+            // Get the process model minus the animation data
+            ModelContent c = base.Process(input, context);
+
+            if (!modelSplit && input.OpaqueData.ContainsKey("AbsoluteMeshTransforms"))
+            {
+                absoluteMeshTransforms =
+                    (List<Matrix>)input.OpaqueData["AbsoluteMeshTransforms"];
+            }
+            else
+            {
+
+                foreach (MeshContent mesh in meshes)
+                {
+                    if (!ValidateMeshSkeleton(mesh))
+                    {
+                        context.Logger.LogWarning(null, mesh.Identity, "Warning: Mesh found that has a parent that exists as "
+                            + "one of the bones in the skeleton attached to the mesh.  Change the mesh "
+                            + "skeleton structure or use X - File Animation Library importer if transforms are incorrect.");
+                    }
+                }
+
+            }
+
+            Dictionary<string, object> dict = new Dictionary<string, object>();
+
+
+
+            // Attach the animation and skinning data to the models tag
+            FindAnimations(input);
+            // Test to see if any animations have zero duration
+            foreach (AnimationContent anim in animations.Values)
+            {
+                string errorMsg =                         "One or more AnimationContent objects have an extremely small duration.  If the animation "
+                        + "was intended to last more than one frame, please add \n AnimTicksPerSecond \n{0} \nY; \n{1}\n to your .X "
+                        + "file, where Y is a positive integer.";
+                if (anim.Duration.Ticks < ContentUtil.TICKS_PER_60FPS)
+                {
+                    context.Logger.LogWarning("", anim.Identity, errorMsg, "{", "}");
+
+                    break;
+                }
+            }
+
+            XmlDocument xmlDoc = ReadAnimationXML(input);
+
+            if (xmlDoc != null)
+            {
+                SubdivideAnimations(animations, xmlDoc);
+            }
+
+            AnimationContentDictionary processedAnims
+                = new AnimationContentDictionary();
+            try
+            {
+                foreach (KeyValuePair<string, AnimationContent> animKey in animations)
+                {
+                    AnimationContent processedAnim = ProcessAnimation(animKey.Value);
+                    processedAnims.Add(animKey.Key, processedAnim);
+
+                }
+                dict.Add("Animations", processedAnims);
+            }
+            catch
+            {
+                throw new Exception("Error processing animations.");
+            }
+
+            foreach (ModelMeshContent meshContent in c.Meshes)
+                ReplaceBasicEffects(meshContent);
+            skinInfo = ProcessSkinInfo(c);
+            dict.Add("SkinInfo", skinInfo);
+            c.Tag = dict;
+            return c;
+        }
+
+
         private void FindMeshes (NodeContent root)
         {
             if (root is MeshContent)
@@ -119,96 +223,6 @@ namespace Xclna.Xna.Animation.Content
 
         }
 
-        /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
-        /// <param name="input">The root of the X file tree</param>
-        /// <param name="context">The context for this processor</param>
-        /// <returns>A model with animation data on its tag</returns>
-        public override ModelContent Process(NodeContent input, ContentProcessorContext context)
-        {
-            ModelSplitter splitter;
-            if (context.TargetPlatform != TargetPlatform.Xbox360)
-            {
-                splitter = new ModelSplitter(input, 56);
-            }
-            else
-            {
-                splitter = new ModelSplitter(input, 40);
-            }
-            modelSplit = splitter.Split();
-            splitter = null;
-            this.input = input;
-            this.context = context;
-            FindMeshes(input);
-            indexers = new BoneIndexer[numMeshes];
-            for (int i = 0; i < indexers.Length; i++)
-            {
-                indexers[i] = new BoneIndexer();
-            }
-            foreach (MeshContent meshContent in meshes)
-                CreatePaletteIndices(meshContent);
-
-            // Get the process model minus the animation data
-            ModelContent c = base.Process(input, context);
-
-            if (!modelSplit && input.OpaqueData.ContainsKey("AbsoluteMeshTransforms"))
-            {
-                absoluteMeshTransforms =
-                    (List<Matrix>)input.OpaqueData["AbsoluteMeshTransforms"];
-            }
-            else
-            {
-
-                foreach (MeshContent mesh in meshes)
-                {
-                    if (!ValidateMeshSkeleton(mesh))
-                    {
-                        context.Logger.LogWarning(null,mesh.Identity, "Warning: Mesh found that has a parent that exists as "
-                            + "one of the bones in the skeleton attached to the mesh.  Change the mesh "
-                            + "skeleton structure or use X - File Animation Library importer if transforms are incorrect.");
-                    }
-                }
-
-            }
-
-            Dictionary<string, object> dict = new Dictionary<string, object>();
-
-
-
-
-            // Attach the animation and skinning data to the models tag
-            FindAnimations(input);
-
-            XmlDocument xmlDoc = ReadAnimationXML(input);
-
-            if (xmlDoc != null)
-            {
-                SubdivideAnimations(animations, xmlDoc);
-            }
-
-            AnimationContentDictionary processedAnims
-                = new AnimationContentDictionary();
-            try
-            {
-                foreach (KeyValuePair<string, AnimationContent> animKey in animations)
-                {
-                    AnimationContent processedAnim = ProcessAnimation(animKey.Value);
-                    processedAnims.Add(animKey.Key, processedAnim);
-
-                }
-                dict.Add("Animations", processedAnims);
-            }
-            catch
-            {
-                throw new Exception("Error processing animations.");
-            }
-
-            foreach (ModelMeshContent meshContent in c.Meshes)
-                ReplaceBasicEffects(meshContent);
-            skinInfo = ProcessSkinInfo(c);
-            dict.Add("SkinInfo", skinInfo);
-            c.Tag = dict;
-            return c;
-        }
 
         private void CalculateAbsoluteTransforms(ModelBoneContent bone, Matrix[] transforms)
         {

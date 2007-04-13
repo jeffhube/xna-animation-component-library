@@ -72,9 +72,17 @@
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>BonePose</Name>
     </Compile>
+    <Compile Include="IAnimationController.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>IAnimationController</Name>
+    </Compile>
     <Compile Include="IAttachable.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>IAttachable</Name>
+    </Compile>
+    <Compile Include="InterpolationController.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>InterpolationController</Name>
     </Compile>
     <Compile Include="ModelAnimator.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
@@ -83,6 +91,10 @@
     <Compile Include="Content\PaletteEffectReader.cs">
       <XNAUseContentPipeline>false</XNAUseContentPipeline>
       <Name>PaletteEffectReader</Name>
+    </Compile>
+    <Compile Include="MultiBlendController.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>MultiBlendController</Name>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SkinInfo.cs">
