@@ -39,6 +39,10 @@ namespace Xclna.Xna.Animation
     public enum InterpolationMethod
     {
         /// <summary>
+        /// No interpolation.
+        /// </summary>
+        None,
+        /// <summary>
         /// Linear interpolation.
         /// </summary>
         Linear,
@@ -78,6 +82,10 @@ namespace Xclna.Xna.Animation
             BoneKeyframeCollection channel = base.AnimationSource.AnimationChannels[
                 pose.Name];
             int curIndex = channel.GetIndexByTime(base.ElapsedTime);
+            if (interpMethod == InterpolationMethod.None)
+            {
+                return channel[curIndex].Transform;
+            }
             int nextIndex = curIndex + 1;
             if (nextIndex >= channel.Count)
             {
@@ -105,6 +113,15 @@ namespace Xclna.Xna.Animation
                     (float)interpAmount, out transform);
             }
             return transform;
+        }
+
+        /// <summary>
+        /// Gets or sets the interpolation method.
+        /// </summary>
+        public InterpolationMethod InterpolationMethod
+        {
+            get { return interpMethod; }
+            set { interpMethod = value; }
         }
     }
 

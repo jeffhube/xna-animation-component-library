@@ -37,7 +37,7 @@ namespace Xclna.Xna.Animation
     /// <summary>
     /// Animates and draws a model that was processed with AnimatedModelProcessor
     /// </summary>
-    public partial class ModelAnimator : DrawableGameComponent
+    public  class ModelAnimator : DrawableGameComponent
     {
 
 
@@ -275,6 +275,7 @@ namespace Xclna.Xna.Animation
             foreach (IAttachable attached in attachedObjects)
             {
                 attached.CombinedTransform = attached.LocalTransform *
+                    Matrix.Invert(pose[model.Meshes[0].ParentBone.Index]) *
                     pose[attached.AttachedBone.Index] * world;
             }
 
@@ -360,9 +361,12 @@ namespace Xclna.Xna.Animation
                     device.Indices = mesh.IndexBuffer;
                     for (int j = 0; j < numParts; j++ )
                     {
+                        ModelMeshPart currentPart = mesh.MeshParts[j];
+                        if (currentPart.NumVertices == 0 || currentPart.PrimitiveCount == 0)
+                            continue;
                         Effect currentEffect = modelEffects[effectStartIndex+j];
       
-                        ModelMeshPart currentPart = mesh.MeshParts[j];
+
                         device.VertexDeclaration = currentPart.VertexDeclaration;
                         device.Vertices[0].SetSource(mesh.VertexBuffer, currentPart.StreamOffset,
                             currentPart.VertexStride);
