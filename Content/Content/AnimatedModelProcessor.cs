@@ -163,10 +163,6 @@ namespace Xclna.Xna.Animation.Content
                 ReplaceBasicEffects(meshContent);
             skinInfo = ProcessSkinInfo(c);
             dict.Add("SkinInfo", skinInfo);
-            dict.Add("VertexData", c.Meshes[0].VertexBuffer.VertexData);
-            int[] indices = new int[c.Meshes[0].IndexBuffer.Count];
-            c.Meshes[0].IndexBuffer.CopyTo(indices,0);
-            dict.Add("IndexData", indices);
             c.Tag = dict;
             return c;
         }
