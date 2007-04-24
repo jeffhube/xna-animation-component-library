@@ -204,6 +204,17 @@ namespace Xclna.Xna.Animation.Content
             AnimationContent output = new AnimationContent();
             long time = 0;
             long animationDuration = input.Duration.Ticks;
+
+            // default XNA importers, due to floating point errors or TimeSpan
+            // estimation, sometimes  have channels with a duration slightly longer than
+            // the animation duration.  So, set the animation duration to its true
+            // value
+            foreach (KeyValuePair<string, AnimationChannel> c in input.Channels)
+            {
+                if (c.Value[c.Value.Count - 1].Time.Ticks > animationDuration)
+                    animationDuration = c.Value[c.Value.Count - 1].Time.Ticks;
+            }
+
             foreach (KeyValuePair<string, AnimationChannel> c in input.Channels)
             {
                 time = 0;
@@ -287,11 +298,24 @@ namespace Xclna.Xna.Animation.Content
                     // Step the time forward by 1/60th of a second
                     time += ContentUtil.TICKS_PER_60FPS;
                 }
+
+                // Compensate for the time error,(animation duration % TICKS_PER_60FPS),
+                // caused by the interpolation by setting the last keyframe in the
+                // channel to the animation duration.
+                if (outChannel[outChannel.Count - 1].Time.Ticks < animationDuration)
+                {
+                    outChannel.Add(new AnimationKeyframe(
+                        TimeSpan.FromTicks(animationDuration),
+                        channel[channel.Count - 1].Transform));
+                }
+
+                outChannel.Add(new AnimationKeyframe(input.Duration, 
+                    channel[channel.Count-1].Transform));
                 // Add the interpolated channel to the animation
                 output.Channels.Add(channelName, outChannel);
             }
             // Set the interpolated duration to equal the inputs duration for consistency
-            output.Duration = input.Duration;
+            output.Duration = TimeSpan.FromTicks(animationDuration);
             return output;
 
         }
