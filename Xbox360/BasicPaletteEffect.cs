@@ -62,14 +62,14 @@ namespace Xclna.Xna.Animation
 
         internal BasicPaletteEffect(GraphicsDevice device, byte[] byteCode,
             int paletteSize)
-            : base(device, byteCode, CompilerOptions.PreferFlowControl, null)
+            : base(device, byteCode)
         {
             this.PALETTE_SIZE = paletteSize;
             InitializeParameters();
         }
 
-        internal BasicPaletteEffect(GraphicsDevice device, Effect cloneSource)
-            : base(device, cloneSource)
+        internal BasicPaletteEffect(Effect cloneSource)
+            : base(cloneSource)
         {
             this.PALETTE_SIZE = ((BasicPaletteEffect)cloneSource).PALETTE_SIZE;
             InitializeParameters();
@@ -133,9 +133,9 @@ namespace Xclna.Xna.Animation
         /// </summary>
         /// <param name="device">The device to contain the new instance.</param>
         /// <returns>A clone of the current instance.</returns>
-        public override Effect Clone(GraphicsDevice device)
+        public override Effect Clone()
         {
-            return new BasicPaletteEffect(device, this);
+            return new BasicPaletteEffect(this);
         }
 
 
@@ -162,7 +162,7 @@ namespace Xclna.Xna.Animation
             SetParamsFromBasicLight(effect.DirectionalLight2, light2);
         }
 
-        private void SetParamsFromBasicLight(Microsoft.Xna.Framework.Graphics.BasicDirectionalLight
+        private void SetParamsFromBasicLight(Microsoft.Xna.Framework.Graphics.DirectionalLight
             source,
             BasicPaletteEffect.BasicDirectionalLight target)
         {

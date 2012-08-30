@@ -357,33 +357,27 @@ namespace Xclna.Xna.Animation
                         }
                     }
                     int numParts = mesh.MeshParts.Count;
-                    GraphicsDevice device = mesh.VertexBuffer.GraphicsDevice;
-                    device.Indices = mesh.IndexBuffer;
+                    GraphicsDevice device = mesh.MeshParts[0].VertexBuffer.GraphicsDevice;
+                    device.Indices = mesh.MeshParts[0].IndexBuffer;
                     for (int j = 0; j < numParts; j++ )
                     {
                         ModelMeshPart currentPart = mesh.MeshParts[j];
                         if (currentPart.NumVertices == 0 || currentPart.PrimitiveCount == 0)
                             continue;
                         Effect currentEffect = modelEffects[effectStartIndex+j];
-      
-
-                        device.VertexDeclaration = currentPart.VertexDeclaration;
-                        device.Vertices[0].SetSource(mesh.VertexBuffer, currentPart.StreamOffset,
-                            currentPart.VertexStride);
-
-                        currentEffect.Begin();
+                                                
+                        device.SetVertexBuffer(currentPart.VertexBuffer);
+                        
                         EffectPassCollection passes = currentEffect.CurrentTechnique.Passes;
                         int numPasses = passes.Count;
                         for (int k = 0; k < numPasses; k++)
                         {
                             EffectPass pass = passes[k];
-                            pass.Begin();
-                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, currentPart.BaseVertex,
+                            pass.Apply();
+                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, currentPart.VertexOffset,
                                 0, currentPart.NumVertices, currentPart.StartIndex, currentPart.PrimitiveCount);
-                            pass.End();
+                           
                         }
-
-                        currentEffect.End();
                     }
                 }
             }

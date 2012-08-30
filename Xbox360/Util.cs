@@ -29,7 +29,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+
 namespace Xclna.Xna.Animation
 {
     /// <summary>
@@ -142,7 +142,9 @@ namespace Xclna.Xna.Animation
             GraphicsDevice device) where T : struct
         {
             T[] verts = new T[data.Length / vertexSize];
-            using (VertexBuffer vb = new VertexBuffer(device, data.Length, ResourceUsage.None))
+            VertexDeclaration vertexDeclaration = new VertexDeclaration(verts.Length);
+
+            using (VertexBuffer vb = new VertexBuffer(device, vertexDeclaration, data.Length, BufferUsage.None))            
             {
                 vb.SetData<byte>(data);
                 vb.GetData<T>(verts);
@@ -276,7 +278,7 @@ namespace Xclna.Xna.Animation
         /// <returns>True if the part is skinned.</returns>
         public static bool IsSkinned(ModelMeshPart meshPart)
         {
-            VertexElement[] ves = meshPart.VertexDeclaration.GetVertexElements();
+            VertexElement[] ves = meshPart.VertexBuffer.VertexDeclaration.GetVertexElements();
             foreach (VertexElement ve in ves)
             {
                 //(BlendIndices with UsageIndex = 0) specifies matrix indices for fixed-function vertex 

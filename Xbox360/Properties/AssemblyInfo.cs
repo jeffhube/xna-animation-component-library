@@ -5,21 +5,24 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Xbox360")]
-[assembly: AssemblyProduct("XNA Animation Library for Windows")]
+[assembly: AssemblyTitle("Xclna.Xna.Animation360")]
+[assembly: AssemblyProduct("AnimationComponentXbox360")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyCompany("XCLNA")]
-[assembly: AssemblyCopyright("Copyright David Astle ©  2007")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyCopyright("Copyright ©  2010")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
-// to COM components.  
-// This should never be true for Xbox 360 assemblies.
+// to COM components.  If you need to access a type in this assembly from 
+// COM, set the ComVisible attribute to true on that type. Only Windows
+// assemblies support COM.
 [assembly: ComVisible(false)]
 
-// The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("463f7bc5-706c-482f-a1af-4ebd3cdc1f08")]
+// On Windows, the following GUID is for the ID of the typelib if this
+// project is exposed to COM. On other platforms, it unique identifies the
+// title storage container when deploying this assembly to the device.
+[assembly: Guid("85dd7c26-4ee9-4d6e-9fd3-961f26d13471")]
 
 // Version information for an assembly consists of the following four values:
 //

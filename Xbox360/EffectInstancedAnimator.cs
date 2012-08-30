@@ -57,7 +57,7 @@ namespace Xclna.Xna.Animation
             {
                 foreach (ModelMeshPart part in mesh.MeshParts)
                 {
-                    effects.Add(part.Effect.Clone(part.Effect.GraphicsDevice));
+                    effects.Add(part.Effect.Clone());
                 }
             }
             return effects;
