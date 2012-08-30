@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Xclna.Xna.Animationx86</RootNamespace>
-    <AssemblyName>Xclna.Xna.Animationx86</AssemblyName>
+    <RootNamespace>Xclna.Xna.AnimationContent</RootNamespace>
+    <AssemblyName>Xclna.Xna.AnimationContent</AssemblyName>
     <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
