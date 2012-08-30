@@ -122,7 +122,7 @@ namespace Xclna.Xna.Animation.Content
             EffectProcessor effectProcessor = new EffectProcessor();
             EffectContent effectContent = new EffectContent();
             effectContent.EffectCode = input.SourceCode;
-            CompiledEffect compiled = effectProcessor.Process(effectContent, context);
+            CompiledEffectContent compiled = effectProcessor.Process(effectContent, context);
             PaletteMaterialContent content = new PaletteMaterialContent();
             content.PaletteSize = input.PaletteSize;
             content.ByteCode = compiled.GetEffectCode();

@@ -38,7 +38,7 @@ using Microsoft.Xna.Framework.Content;
 using System.Globalization;
 using System.Xml;
 using System.Collections.ObjectModel;
-
+using System.ComponentModel;
 
 namespace Xclna.Xna.Animation.Content
 {
@@ -61,9 +61,9 @@ namespace Xclna.Xna.Animation.Content
         List<Matrix> absoluteMeshTransforms = null;
         List<MeshContent> meshes = new List<MeshContent>();
 
-        private int numMeshes = 0;
+        private int numMeshes = 0;      
 
-
+        String directory;
         /// <summary>Processes a SkinnedModelImporter NodeContent root</summary>
         /// <param name="input">The root of the X file tree</param>
         /// <param name="context">The context for this processor</param>
@@ -90,7 +90,7 @@ namespace Xclna.Xna.Animation.Content
                 indexers[i] = new BoneIndexer();
             }
             foreach (MeshContent meshContent in meshes)
-                CreatePaletteIndices(meshContent);
+                CreatePaletteIndices(meshContent);            
 
             // Get the process model minus the animation data
             ModelContent c = base.Process(input, context);
@@ -116,8 +116,6 @@ namespace Xclna.Xna.Animation.Content
             }
 
             Dictionary<string, object> dict = new Dictionary<string, object>();
-
-
 
             // Attach the animation and skinning data to the models tag
             FindAnimations(input);
@@ -166,7 +164,6 @@ namespace Xclna.Xna.Animation.Content
             c.Tag = dict;
             return c;
         }
-
 
         private void FindMeshes (NodeContent root)
         {
@@ -223,7 +220,6 @@ namespace Xclna.Xna.Animation.Content
 
         }
 
-
         private void CalculateAbsoluteTransforms(ModelBoneContent bone, Matrix[] transforms)
         {
             if (bone.Parent == null)
@@ -235,7 +231,6 @@ namespace Xclna.Xna.Animation.Content
             foreach (ModelBoneContent child in bone.Children)
                 CalculateAbsoluteTransforms(child, transforms);
         }
-
 
 
         private SkinInfoContentCollection[] ProcessSkinInfo(ModelContent model)
@@ -288,9 +283,7 @@ namespace Xclna.Xna.Animation.Content
         /// </summary>
         protected ReadOnlyCollection<SkinInfoContentCollection> SkinnedBones
         { get { return new ReadOnlyCollection<SkinInfoContentCollection>(skinInfo); } }
-
-
-
+                
         /// <summary>
         /// Gets the processor context.
         /// </summary>
@@ -574,8 +567,6 @@ namespace Xclna.Xna.Animation.Content
             return doc;
         }
 
-
-
         /// <summary>
         /// Called when a basic effect is encountered and potentially replaced by
         /// BasicPaletteEffect (if not overridden).  This is called afer effects have been processed.
@@ -614,14 +605,13 @@ namespace Xclna.Xna.Animation.Content
         {
             foreach (ModelMeshPartContent part in input.MeshParts)
             {
-                SkinningType skinType = ContentUtil.GetSkinningType(part.GetVertexDeclaration());
+                SkinningType skinType = ContentUtil.GetSkinningType(VertexPositionColor.VertexDeclaration.GetVertexElements());
                 if (skinType != SkinningType.None)
                 {
                     ReplaceBasicEffect(skinType, part);
                 }
             }
         }
-
 
         /// <summary>
         /// Searches through the NodeContent tree for all animations and puts them in
@@ -649,7 +639,7 @@ namespace Xclna.Xna.Animation.Content
             foreach (NodeContent child in node.Children)
                 FindAnimations(child);
         }
-        
+
         /// <summary>
         /// Go through the vertex channels in the geometry and replace the 
         /// BoneWeightCollection objects with weight and index channels.
@@ -732,7 +722,6 @@ namespace Xclna.Xna.Animation.Content
                 context.Logger.LogWarning("", geometry.Identity,
                     "BonesWeightCollections with zero weights found in geometry.");
         }
-
 
     }
 }
