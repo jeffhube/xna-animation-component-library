@@ -37,7 +37,7 @@ namespace Xclna.Xna.Animation
     /// <summary>
     /// Animates and draws a model that was processed with AnimatedModelProcessor
     /// </summary>
-    public  class ModelAnimator : DrawableGameComponent
+    public class ModelAnimator : DrawableGameComponent
     {
 
 
@@ -65,7 +65,7 @@ namespace Xclna.Xna.Animation
 
         // Store the number of meshes in the model
         private readonly int numMeshes;
-        
+
         // Stores the number of effects/ModelMeshParts
         private readonly int numEffects;
 
@@ -172,7 +172,7 @@ namespace Xclna.Xna.Animation
             game.Components.Add(this);
    
             // Test to see if model has too many bones
-            for (int i = 0; i < model.Meshes.Count; i++ )
+            for (int i = 0; i < model.Meshes.Count; i++)
             {
                 if (palette[i] != null && matrixPaletteParams[i] != null)
                 {
@@ -259,7 +259,7 @@ namespace Xclna.Xna.Animation
         public override void Update(GameTime gameTime)
         {
             bonePoses.CopyAbsoluteTransformsTo(pose);
-            for (int i = 0; i < skinInfo.Length; i ++) 
+            for (int i = 0; i < skinInfo.Length; i++)
             {
                 if (palette[i] == null)
                     continue;
@@ -337,11 +337,11 @@ namespace Xclna.Xna.Animation
                     {
                         foreach (Effect effect in mesh.Effects)
                         {
-                   
-                                worldParams[index].SetValue(
-               
-                                    world);
-                            
+
+                            worldParams[index].SetValue(
+
+                                world);
+
 
                             matrixPaletteParams[index].SetValue(palette[i]);
                             index++;
@@ -357,33 +357,27 @@ namespace Xclna.Xna.Animation
                         }
                     }
                     int numParts = mesh.MeshParts.Count;
-                    GraphicsDevice device = mesh.VertexBuffer.GraphicsDevice;
-                    device.Indices = mesh.IndexBuffer;
-                    for (int j = 0; j < numParts; j++ )
+                    GraphicsDevice device = mesh.MeshParts[0].VertexBuffer.GraphicsDevice;
+                    device.Indices = mesh.MeshParts[0].IndexBuffer;
+                    for (int j = 0; j < numParts; j++)
                     {
                         ModelMeshPart currentPart = mesh.MeshParts[j];
                         if (currentPart.NumVertices == 0 || currentPart.PrimitiveCount == 0)
                             continue;
-                        Effect currentEffect = modelEffects[effectStartIndex+j];
-      
+                        Effect currentEffect = modelEffects[effectStartIndex + j];
 
-                        device.VertexDeclaration = currentPart.VertexDeclaration;
-                        device.Vertices[0].SetSource(mesh.VertexBuffer, currentPart.StreamOffset,
-                            currentPart.VertexStride);
+                        device.SetVertexBuffer(currentPart.VertexBuffer);
 
-                        currentEffect.Begin();
                         EffectPassCollection passes = currentEffect.CurrentTechnique.Passes;
                         int numPasses = passes.Count;
                         for (int k = 0; k < numPasses; k++)
                         {
                             EffectPass pass = passes[k];
-                            pass.Begin();
-                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, currentPart.BaseVertex,
+                            pass.Apply();
+                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, currentPart.VertexOffset,
                                 0, currentPart.NumVertices, currentPart.StartIndex, currentPart.PrimitiveCount);
-                            pass.End();
-                        }
 
-                        currentEffect.End();
+                        }
                     }
                 }
             }
@@ -398,7 +392,7 @@ namespace Xclna.Xna.Animation
                     "likely because the model uses too many bones for the matrix palette.  The default palette size "
                     + "is 56 for windows and 40 for Xbox.");
             }
-            
+
         }
         #endregion
     }

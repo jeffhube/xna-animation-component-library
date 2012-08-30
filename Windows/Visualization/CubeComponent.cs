@@ -46,6 +46,7 @@ namespace Xclna.Xna.Animation.Visualization
         private Vector3[] buffer;
         private BonePose pose = null;
         private Matrix localTransform = Matrix.Identity;
+        private VertexBuffer vertexBuffer;
 
         /// <summary>
         /// Gets or sets the world matrix.
@@ -102,12 +103,13 @@ namespace Xclna.Xna.Animation.Visualization
         /// <param name="sideLength">The length of one side of the cube.</param>
         public CubeComponent(Game game,
             Color color,
-            float sideLength) : base(game)
+            float sideLength)
+            : base(game)
         {
             this.sideLength = sideLength;
             this.graphics = (IGraphicsDeviceService)game.Services.GetService(
                 typeof(IGraphicsDeviceService));
-            effect = new BasicEffect(graphics.GraphicsDevice, null);
+            effect = new BasicEffect(graphics.GraphicsDevice);
 
 
             indices = new int[]
@@ -151,9 +153,7 @@ namespace Xclna.Xna.Animation.Visualization
                 originalVerts[i].Y *= sideLength / 2;
                 originalVerts[i].Z *= sideLength / 2;
             }
-            vertexDeclaration = new VertexDeclaration(
-                graphics.GraphicsDevice,
-                VertexPositionColor.VertexElements);
+            vertexDeclaration = new VertexDeclaration(VertexPositionColor.VertexDeclaration.GetVertexElements());
             verts = new VertexPositionColor[8];
             buffer = new Vector3[8];
             for (int i = 0; i < verts.Length; i++)
@@ -162,6 +162,8 @@ namespace Xclna.Xna.Animation.Visualization
                 verts[i].Color = color;
 
             }
+
+            vertexBuffer.SetData(verts);
 
             effect.VertexColorEnabled = true;
             game.Components.Add(this);
@@ -202,12 +204,10 @@ namespace Xclna.Xna.Animation.Visualization
         /// <param name="gameTime">The game time.</param>
         public override void Draw(GameTime gameTime)
         {
-
-            effect.Begin();
             foreach (EffectPass pass in effect.CurrentTechnique.Passes)
             {
-                pass.Begin();
-                graphics.GraphicsDevice.VertexDeclaration = vertexDeclaration;
+                pass.Apply();
+                graphics.GraphicsDevice.SetVertexBuffer(vertexBuffer);
                 graphics.GraphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(
                     PrimitiveType.TriangleList,
                     verts,
@@ -216,10 +216,7 @@ namespace Xclna.Xna.Animation.Visualization
                     indices,
                     0,
                     12);
-
-                pass.End();
             }
-            effect.End();
         }
 
         #region IAttachable Members

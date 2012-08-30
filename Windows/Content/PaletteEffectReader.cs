@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 
 namespace Xclna.Xna.Animation.Content
 {
@@ -50,7 +51,7 @@ namespace Xclna.Xna.Animation.Content
             byte[] effectCode = input.ReadRawObject<byte[]>();
             int paletteSize = input.ReadInt32();
             BasicPaletteEffect effect = new BasicPaletteEffect(graphics.GraphicsDevice,
-                effectCode,paletteSize);
+                effectCode, paletteSize);
             if (input.ReadBoolean())
             {
                 effect.Texture = input.ReadExternalReference<Texture2D>();

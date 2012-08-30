@@ -29,7 +29,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+
 namespace Xclna.Xna.Animation
 {
     /// <summary>
@@ -99,7 +99,7 @@ namespace Xclna.Xna.Animation
         /// column and the Z row by -1 such that the Z,Z element stays intact.
         /// </summary>
         /// <param name="m">The matrix to be reflected across the Z axis</param>
-        public static  void ReflectMatrix(ref Matrix m)
+        public static void ReflectMatrix(ref Matrix m)
         {
             m.M13 *= -1;
             m.M23 *= -1;
@@ -129,7 +129,7 @@ namespace Xclna.Xna.Animation
             return (T)max;
         }
 
-        
+
         /// <summary>
         /// Converts from an array of bytes to any vertex type.
         /// </summary>
@@ -142,7 +142,9 @@ namespace Xclna.Xna.Animation
             GraphicsDevice device) where T : struct
         {
             T[] verts = new T[data.Length / vertexSize];
-            using (VertexBuffer vb = new VertexBuffer(device, data.Length, ResourceUsage.None))
+            VertexDeclaration vertexDeclaration = new VertexDeclaration(verts.Length);
+
+            using (VertexBuffer vb = new VertexBuffer(device, vertexDeclaration, data.Length, BufferUsage.None))
             {
                 vb.SetData<byte>(data);
                 vb.GetData<T>(verts);
@@ -218,7 +220,7 @@ namespace Xclna.Xna.Animation
         /// <param name="slerpAmount">Ratio of interpolation</param>
         /// <param name="result">Stores the result of hte interpolation.</param>
         public static void SlerpMatrix(
-            ref Matrix start, 
+            ref Matrix start,
             ref Matrix end,
             float slerpAmount,
             out Matrix result)
@@ -276,7 +278,7 @@ namespace Xclna.Xna.Animation
         /// <returns>True if the part is skinned.</returns>
         public static bool IsSkinned(ModelMeshPart meshPart)
         {
-            VertexElement[] ves = meshPart.VertexDeclaration.GetVertexElements();
+            VertexElement[] ves = meshPart.VertexBuffer.VertexDeclaration.GetVertexElements();
             foreach (VertexElement ve in ves)
             {
                 //(BlendIndices with UsageIndex = 0) specifies matrix indices for fixed-function vertex 
@@ -321,7 +323,7 @@ namespace Xclna.Xna.Animation
         }
 
 
-         
+
     }
 
 
