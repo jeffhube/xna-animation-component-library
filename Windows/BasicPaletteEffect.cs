@@ -39,7 +39,7 @@ namespace Xclna.Xna.Animation
     /// Provides functionality similar to that of BasicEffect, but uses a 
     /// Matrix Palette.
     /// </summary>
-    public sealed class BasicPaletteEffect : Effect
+    public sealed class BasicPaletteEffect : Effect, IEffectMatrices, IEffectFog
     {
         // All the effect parameters
         private EffectParameter worldParam, viewParam, projectionParam,
