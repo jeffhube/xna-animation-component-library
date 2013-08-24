@@ -73,7 +73,7 @@ namespace Xclna.Xna.Animation.Content
         /// </summary>
         /// <param name="elements">The vertex elements.</param>
         /// <returns>Info on what type of skinning the elements contain.</returns>
-        public static SkinningType GetSkinningType(VertexElement[] elements)
+        public static SkinningType GetSkinningType(IEnumerable<VertexElement> elements)
         {
             int numIndexChannels = 0;
             int numWeightChannels = 0;

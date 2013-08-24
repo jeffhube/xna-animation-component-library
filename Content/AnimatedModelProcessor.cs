@@ -605,7 +605,7 @@ namespace Xclna.Xna.Animation.Content
         {
             foreach (ModelMeshPartContent part in input.MeshParts)
             {
-                SkinningType skinType = ContentUtil.GetSkinningType(VertexPositionColor.VertexDeclaration.GetVertexElements());
+                SkinningType skinType = ContentUtil.GetSkinningType(part.VertexBuffer.VertexDeclaration.VertexElements);
                 if (skinType != SkinningType.None)
                 {
                     ReplaceBasicEffect(skinType, part);
