@@ -44,10 +44,11 @@ namespace Xclna.Xna.Animation
         // All the effect parameters
         private EffectParameter worldParam, viewParam, projectionParam,
             ambientParam, eyeParam, emissiveParam, diffuseParam, lightEnabledParam,
-            alphaParam,
+            alphaParam, emissiveDiffuseParam,
             specColorParam, specPowerParam, texEnabledParam, texParam, paletteParam,
             fogEnabledParam, fogStartParam, fogEndParam, fogColorParam;
         private BasicDirectionalLight light0, light1, light2;
+        private Vector3 diffuseColor, emissiveColor;
         // The location of the camera
         private Vector3 eye;
         // Used to help determine the eye position
@@ -109,6 +110,7 @@ namespace Xclna.Xna.Animation
             emissiveParam = Parameters["EmissiveColor"];
             lightEnabledParam = Parameters["LightingEnable"];
             diffuseParam = Parameters["DiffuseColor"];
+            emissiveDiffuseParam = Parameters["EmissiveDiffuseColor"];
             specColorParam = Parameters["SpecularColor"];
             specPowerParam = Parameters["SpecularPower"];
             alphaParam = Parameters["Alpha"];
@@ -467,11 +469,13 @@ namespace Xclna.Xna.Animation
         {
             get
             {
-                return diffuseParam.GetValueVector3();
+                return diffuseColor;
             }
             set
             {
+                diffuseColor = value;
                 diffuseParam.SetValue(value);
+                emissiveDiffuseParam.SetValue(emissiveColor + diffuseColor);
             }
         }
 
@@ -497,11 +501,13 @@ namespace Xclna.Xna.Animation
         {
             get
             {
-                return emissiveParam.GetValueVector3();
+                return emissiveColor;
             }
             set
             {
+                emissiveColor = value;
                 emissiveParam.SetValue(value);
+                emissiveDiffuseParam.SetValue(emissiveColor + diffuseColor);
             }
         }
 

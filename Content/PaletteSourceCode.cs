@@ -189,6 +189,7 @@ float3 DiffuseColor;
 float3 SpecularColor;
 float3 AmbientLightColor = float3(0,0,0);
 float3 EmissiveColor;
+float3 EmissiveDiffuseColor;
 float3 EyePosition;
 float3 FogColor;
 bool   FogEnable;
@@ -232,14 +233,17 @@ void TransformPixel (in PS_INPUT input, out PS_OUTPUT output)
 {
     // If lighting is disabled, just weight the texture color by the sum of the emissive and
     // diffuse materials.
-	if (LightingEnable == false && TextureEnabled)
+    if (!LightingEnable)
     {
-		output.color.xyz = tex2D(TextureSampler,input.texcoord).xyz * saturate(EmissiveColor + DiffuseColor);
-    }
-    // Same as above, except no texture
-    else if (LightingEnable == false)
-    {
-       output.color.xyz = saturate(EmissiveColor + DiffuseColor);
+        if (TextureEnabled)
+        {
+            output.color.xyz = tex2D(TextureSampler,input.texcoord).xyz * EmissiveDiffuseColor;
+        }
+        // Same as above, except no texture
+        else
+        {
+            output.color.xyz = EmissiveDiffuseColor;
+        }
     }
 	else
 	{
